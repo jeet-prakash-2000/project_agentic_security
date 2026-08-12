@@ -1,0 +1,6 @@
+azure-functions==1.*
+requests
+pan-os-python
+openpyxl
+azure-identity
+azure-keyvault-secrets

@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — LTM Security Platform{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+        <span class="hero-eyebrow">Security Operations</span>
+        <h1>Welcome Back, Jeet</h1>
+        <p>Monitor and manage your AI Security Workspace</p>
+        <div class="hero-meta">
+            <span class="hero-chip">
+                <span class="pulse-dot"></span>
+                Firewall Auditor — Connected
+            </span>
+            <span class="hero-chip" id="dataSourceBadge">Connecting…</span>
+            <button class="hero-chip hero-chip-btn" id="refreshBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 102.6-8L1 10"/></svg>
+                Refresh
+            </button>
+        </div>
+    </div>
+</section>
+
+<section class="kpi-grid">
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <span class="kpi-icon kpi-icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/></svg>
+            </span>
+            <span class="kpi-trend">Scope</span>
+        </div>
+        <div class="kpi-value" data-count="{{ total_controls }}">{{ total_controls }}</div>
+        <div class="kpi-label">Total Controls</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <span class="kpi-icon kpi-icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <span class="kpi-trend kpi-trend-good">Compliant</span>
+        </div>
+        <div class="kpi-value kpi-value-good" data-count="{{ compliant }}">{{ compliant }}</div>
+        <div class="kpi-label">Compliant Controls</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <span class="kpi-icon kpi-icon-red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+            </span>
+            <span class="kpi-trend kpi-trend-bad">Needs Action</span>
+        </div>
+        <div class="kpi-value kpi-value-bad" data-count="{{ non_compliant }}">{{ non_compliant }}</div>
+        <div class="kpi-label">Non-Compliant Controls</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <span class="kpi-icon kpi-icon-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            </span>
+            <span class="kpi-trend">Pending</span>
+        </div>
+        <div class="kpi-value" data-count="{{ not_assessed }}">{{ not_assessed }}</div>
+        <div class="kpi-label">Not Assessed Controls</div>
+    </div>
+</section>
+
+<section class="kpi-grid-alt">
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <span class="kpi-icon kpi-icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M9.5 12l1.8 1.8 3.2-3.6"/></svg>
+            </span>
+            <span class="kpi-trend kpi-trend-good">Posture</span>
+        </div>
+        <div class="kpi-value" id="kpiComplianceScore" data-count="0">-</div>
+        <div class="kpi-label">Compliance Score</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <span class="kpi-icon kpi-icon-red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
+            </span>
+            <span class="kpi-trend kpi-trend-bad">Needs Action</span>
+        </div>
+        <div class="kpi-value kpi-value-bad" id="kpiCritical" data-count="0">-</div>
+        <div class="kpi-label">Critical Findings</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <span class="kpi-icon kpi-icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M12 8v4M12 15.5v.5"/></svg>
+            </span>
+            <span class="kpi-trend">Engine</span>
+        </div>
+        <div class="kpi-value" id="kpiAssessments" data-count="0">-</div>
+        <div class="kpi-label">Assessments Run</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <span class="kpi-icon kpi-icon-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            </span>
+            <span class="kpi-trend">Usage</span>
+        </div>
+        <div class="kpi-value" id="kpiTokens" data-count="0">-</div>
+        <div class="kpi-label">Token Consumption</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <span class="kpi-icon kpi-icon-red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            </span>
+            <span class="kpi-trend">Spend</span>
+        </div>
+        <div class="kpi-value" id="kpiCost" data-count="0">-</div>
+        <div class="kpi-label">Est. AI Cost</div>
+    </div>
+
+    <div class="kpi-card">
+        <div class="kpi-top">
+            <span class="kpi-icon kpi-icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <span class="kpi-trend kpi-trend-good">Agents</span>
+        </div>
+        <div class="kpi-value" id="kpiAgentHealth" data-count="0">-</div>
+        <div class="kpi-label">Agent Health</div>
+    </div>
+</section>
+
+<section class="quick-actions">
+    <div class="section-head">
+        <h3>Quick Actions</h3>
+        <span class="section-sub">One-click operations powered by the Firewall Auditor agent</span>
+    </div>
+    <div class="quick-grid">
+        <a href="{{ url_for('run_assessment') }}" class="quick-card">
+            <span class="quick-icon quick-icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M12 8v4M12 15.5v.5"/></svg>
+            </span>
+            <div class="quick-body">
+                <h4>Run Assessment</h4>
+                <p>Execute a complete Palo Alto firewall compliance assessment across all controls.</p>
+            </div>
+            <span class="quick-arrow">→</span>
+        </a>
+
+        <a href="{{ url_for('executive_report') }}" class="quick-card">
+            <span class="quick-icon quick-icon-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <div class="quick-body">
+                <h4>Executive Summary</h4>
+                <p>Generate a management-level summary of your security posture and risk exposure.</p>
+            </div>
+            <span class="quick-arrow">→</span>
+        </a>
+
+        <a href="{{ url_for('generate_excel') }}" class="quick-card">
+            <span class="quick-icon quick-icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8l4 4V21.5H6V2.5z"/><path d="M14 2.5v4h4"/><path d="M9 12h6M9 16h6"/></svg>
+            </span>
+            <div class="quick-body">
+                <h4>Generate Report</h4>
+                <p>Produce the detailed assessment workbook with findings and remediation guidance.</p>
+            </div>
+            <span class="quick-arrow">→</span>
+        </a>
+    </div>
+</section>
+
+<section class="agent-health card">
+    <div class="section-head">
+        <div>
+            <h3>Agent Health</h3>
+            <span class="section-sub">Live status of your connected security agents</span>
+        </div>
+        <a href="{{ url_for('telemetry_map') }}" class="btn btn-ghost btn-sm">Open Telemetry Map</a>
+    </div>
+    <div class="agent-health-grid" id="agentHealthGrid">
+        <div class="agent-health-skeleton"></div>
+    </div>
+</section>
+
+<section class="dashboard-lower">
+    <div class="overview-card card">
+        <div class="section-head">
+            <h3>Security Overview</h3>
+            <span class="section-sub">Active integrations and available capabilities</span>
+        </div>
+        <div class="overview-rows">
+            <div class="overview-row">
+                <span class="overview-key">Connected Agent</span>
+                <span class="overview-val">
+                    <span class="agent-avatar">FA</span>
+                    <strong>Firewall Auditor</strong>
+                    <span class="status-chip status-on">Online</span>
+                </span>
+            </div>
+            <div class="overview-row">
+                <span class="overview-key">Assessment Engine</span>
+                <span class="overview-val">Azure Functions — Compliance Assessment</span>
+            </div>
+            <div class="overview-row">
+                <span class="overview-key">AI Reasoning</span>
+                <span class="overview-val">Azure AI Foundry — {{ base_model }}</span>
+            </div>
+            <div class="overview-row">
+                <span class="overview-key">Available Functions</span>
+                <span class="overview-val overview-tags">
+                    <span class="tag">Compliance Assessment</span>
+                    <span class="tag">Executive Summary</span>
+                    <span class="tag">Excel Report Generation</span>
+                    <span class="tag">Firewall Findings Review</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="posture-card card">
+        <div class="section-head">
+            <h3>Security Posture</h3>
+            <span class="section-sub">Current compliance health</span>
+        </div>
+        <div class="posture-ring">
+            <svg viewBox="0 0 120 120" class="ring-chart">
+                <defs>
+                    <linearGradient id="gradientStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#E4002B"></stop>
+                        <stop offset="100%" stop-color="#FF4D4D"></stop>
+                    </linearGradient>
+                </defs>
+                <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+                <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="50"></circle>
+            </svg>
+            <div class="ring-center">
+                <strong id="ringPercent">—%</strong>
+                <span>Compliance</span>
+            </div>
+        </div>
+        <div class="posture-legend">
+            <span><i class="dot dot-green"></i> Compliant</span>
+            <span><i class="dot dot-red"></i> Non-Compliant</span>
+            <span><i class="dot dot-muted"></i> Not Assessed</span>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

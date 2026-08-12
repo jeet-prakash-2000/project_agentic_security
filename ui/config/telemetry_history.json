@@ -1,0 +1,734 @@
+{
+  "snapshots": [
+    {
+      "ts": 1785921401.3697863,
+      "label": "Aug 05, 09:16",
+      "agent_id": "firewall-audit-agent",
+      "agent_name": "Firewall-Audit-Agent",
+      "nodes": [
+        {
+          "id": "agent",
+          "label": "Firewall-Audit-Agent",
+          "type": "agent",
+          "status": "healthy"
+        },
+        {
+          "id": "legacy-llm",
+          "label": "Direct LLM Endpoint",
+          "type": "model",
+          "status": "healthy"
+        },
+        {
+          "id": "foundry",
+          "label": "Azure AI Foundry",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "model",
+          "label": "gpt-5.1",
+          "type": "model",
+          "status": "healthy"
+        },
+        {
+          "id": "appinsights",
+          "label": "Application Insights",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "sessions",
+          "label": "Session Store",
+          "type": "storage",
+          "status": "healthy"
+        },
+        {
+          "id": "firewall",
+          "label": "Palo Alto Firewall",
+          "type": "device",
+          "status": "healthy"
+        },
+        {
+          "id": "functions",
+          "label": "Azure Functions",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-compliance",
+          "label": "run_compliance_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-summary",
+          "label": "executive_summary",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-assessment",
+          "label": "run_full_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-excel",
+          "label": "generate_excel_report",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "storage",
+          "label": "Report Storage",
+          "type": "storage",
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "ts": 1786094201.3697863,
+      "label": "Aug 07, 09:16",
+      "agent_id": "firewall-audit-agent",
+      "agent_name": "Firewall-Audit-Agent",
+      "nodes": [
+        {
+          "id": "agent",
+          "label": "Firewall-Audit-Agent",
+          "type": "agent",
+          "status": "healthy"
+        },
+        {
+          "id": "foundry",
+          "label": "Azure AI Foundry",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "model",
+          "label": "gpt-5.1",
+          "type": "model",
+          "status": "healthy"
+        },
+        {
+          "id": "appinsights",
+          "label": "Application Insights",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "sessions",
+          "label": "Session Store",
+          "type": "storage",
+          "status": "healthy"
+        },
+        {
+          "id": "firewall",
+          "label": "Palo Alto Firewall",
+          "type": "device",
+          "status": "healthy"
+        },
+        {
+          "id": "functions",
+          "label": "Azure Functions",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-compliance",
+          "label": "run_compliance_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-summary",
+          "label": "executive_summary",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-assessment",
+          "label": "run_full_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-excel",
+          "label": "generate_excel_report",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "storage",
+          "label": "Report Storage",
+          "type": "storage",
+          "status": "healthy"
+        },
+        {
+          "id": "gateway",
+          "label": "Agent Gateway",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "keyvault",
+          "label": "Key Vault",
+          "type": "security",
+          "status": "error"
+        }
+      ]
+    },
+    {
+      "ts": 1786439801.376247,
+      "label": "Aug 11, 09:16",
+      "agent_id": "firewall-audit-agent",
+      "agent_name": "Firewall-Audit-Agent",
+      "nodes": [
+        {
+          "id": "agent",
+          "label": "Firewall-Audit-Agent",
+          "type": "agent",
+          "status": "healthy"
+        },
+        {
+          "id": "foundry",
+          "label": "Azure AI Foundry",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "model",
+          "label": "gpt-5.1",
+          "type": "model",
+          "status": "healthy"
+        },
+        {
+          "id": "gateway",
+          "label": "Agent Gateway",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "sessions",
+          "label": "Session Store",
+          "type": "storage",
+          "status": "healthy"
+        },
+        {
+          "id": "appinsights",
+          "label": "Application Insights",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "keyvault",
+          "label": "Key Vault",
+          "type": "security",
+          "status": "error"
+        },
+        {
+          "id": "functions",
+          "label": "Azure Functions",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-compliance",
+          "label": "run_compliance_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-summary",
+          "label": "executive_summary",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-assessment",
+          "label": "run_full_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-excel",
+          "label": "generate_excel_report",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "firewall",
+          "label": "Palo Alto Firewall",
+          "type": "device",
+          "status": "healthy"
+        },
+        {
+          "id": "storage",
+          "label": "Report Storage",
+          "type": "storage",
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "ts": 1786472335.8952217,
+      "label": "Aug 11, 18:18",
+      "agent_id": "firewall-audit-agent",
+      "agent_name": "Firewall-Audit-Agent",
+      "nodes": [
+        {
+          "id": "agent",
+          "label": "Firewall-Audit-Agent",
+          "type": "agent",
+          "status": "healthy"
+        },
+        {
+          "id": "foundry",
+          "label": "Azure AI Foundry",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "model",
+          "label": "gpt-5.1",
+          "type": "model",
+          "status": "healthy"
+        },
+        {
+          "id": "gateway",
+          "label": "Agent Gateway",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "sessions",
+          "label": "Session Store",
+          "type": "storage",
+          "status": "healthy"
+        },
+        {
+          "id": "appinsights",
+          "label": "Application Insights",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "keyvault",
+          "label": "Key Vault",
+          "type": "security",
+          "status": "stopped"
+        },
+        {
+          "id": "functions",
+          "label": "Azure Functions",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-compliance",
+          "label": "run_compliance_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-summary",
+          "label": "executive_summary",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-assessment",
+          "label": "run_full_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-excel",
+          "label": "generate_excel_report",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "firewall",
+          "label": "Palo Alto Firewall",
+          "type": "device",
+          "status": "stopped"
+        },
+        {
+          "id": "storage",
+          "label": "Report Storage",
+          "type": "storage",
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "ts": 1786479286.7512918,
+      "label": "Aug 11, 20:14",
+      "agent_id": "firewall-audit-agent",
+      "agent_name": "Firewall-Audit-Agent",
+      "nodes": [
+        {
+          "id": "agent",
+          "label": "Firewall-Audit-Agent",
+          "type": "agent",
+          "status": "healthy"
+        },
+        {
+          "id": "foundry",
+          "label": "Azure AI Foundry",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "model",
+          "label": "gpt-5.1",
+          "type": "model",
+          "status": "healthy"
+        },
+        {
+          "id": "gateway",
+          "label": "Agent Gateway",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "sessions",
+          "label": "Session Store",
+          "type": "storage",
+          "status": "healthy"
+        },
+        {
+          "id": "appinsights",
+          "label": "Application Insights",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "keyvault",
+          "label": "Key Vault",
+          "type": "security",
+          "status": "stopped"
+        },
+        {
+          "id": "functions",
+          "label": "Azure Functions",
+          "type": "platform",
+          "status": "error"
+        },
+        {
+          "id": "fn-compliance",
+          "label": "run_compliance_assessment",
+          "type": "function",
+          "status": "error"
+        },
+        {
+          "id": "fn-summary",
+          "label": "executive_summary",
+          "type": "function",
+          "status": "error"
+        },
+        {
+          "id": "fn-assessment",
+          "label": "run_full_assessment",
+          "type": "function",
+          "status": "error"
+        },
+        {
+          "id": "fn-excel",
+          "label": "generate_excel_report",
+          "type": "function",
+          "status": "error"
+        },
+        {
+          "id": "firewall",
+          "label": "Palo Alto Firewall",
+          "type": "device",
+          "status": "error"
+        },
+        {
+          "id": "storage",
+          "label": "Report Storage",
+          "type": "storage",
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "ts": 1786479411.2701023,
+      "label": "Aug 11, 20:16",
+      "agent_id": "firewall-audit-agent",
+      "agent_name": "Firewall-Audit-Agent",
+      "nodes": [
+        {
+          "id": "agent",
+          "label": "Firewall-Audit-Agent",
+          "type": "agent",
+          "status": "healthy"
+        },
+        {
+          "id": "foundry",
+          "label": "Azure AI Foundry",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "model",
+          "label": "gpt-5.1",
+          "type": "model",
+          "status": "healthy"
+        },
+        {
+          "id": "gateway",
+          "label": "Agent Gateway",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "sessions",
+          "label": "Session Store",
+          "type": "storage",
+          "status": "healthy"
+        },
+        {
+          "id": "appinsights",
+          "label": "Application Insights",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "keyvault",
+          "label": "Key Vault",
+          "type": "security",
+          "status": "stopped"
+        },
+        {
+          "id": "functions",
+          "label": "Azure Functions",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-compliance",
+          "label": "run_compliance_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-summary",
+          "label": "executive_summary",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-assessment",
+          "label": "run_full_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-excel",
+          "label": "generate_excel_report",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "firewall",
+          "label": "Palo Alto Firewall",
+          "type": "device",
+          "status": "stopped"
+        },
+        {
+          "id": "storage",
+          "label": "Report Storage",
+          "type": "storage",
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "ts": 1786481958.9245877,
+      "label": "Aug 11, 20:59",
+      "agent_id": "firewall-audit-agent",
+      "agent_name": "Firewall-Audit-Agent",
+      "nodes": [
+        {
+          "id": "agent",
+          "label": "Firewall-Audit-Agent",
+          "type": "agent",
+          "status": "healthy"
+        },
+        {
+          "id": "foundry",
+          "label": "Azure AI Foundry",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "model",
+          "label": "gpt-5.1",
+          "type": "model",
+          "status": "healthy"
+        },
+        {
+          "id": "gateway",
+          "label": "Agent Gateway",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "sessions",
+          "label": "Session Store",
+          "type": "storage",
+          "status": "healthy"
+        },
+        {
+          "id": "appinsights",
+          "label": "Application Insights",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "keyvault",
+          "label": "Key Vault",
+          "type": "security",
+          "status": "stopped"
+        },
+        {
+          "id": "functions",
+          "label": "Azure Functions",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-compliance",
+          "label": "run_compliance_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-summary",
+          "label": "executive_summary",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-assessment",
+          "label": "run_full_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-excel",
+          "label": "generate_excel_report",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "firewall",
+          "label": "Palo Alto Firewall",
+          "type": "device",
+          "status": "healthy"
+        },
+        {
+          "id": "storage",
+          "label": "Report Storage",
+          "type": "storage",
+          "status": "healthy"
+        }
+      ]
+    },
+    {
+      "ts": 1786494391.693867,
+      "label": "Aug 12, 00:26",
+      "agent_id": "firewall-audit-agent",
+      "agent_name": "Firewall-Audit-Agent",
+      "nodes": [
+        {
+          "id": "agent",
+          "label": "Firewall-Audit-Agent",
+          "type": "agent",
+          "status": "healthy"
+        },
+        {
+          "id": "foundry",
+          "label": "Azure AI Foundry",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "model",
+          "label": "gpt-5.1",
+          "type": "model",
+          "status": "healthy"
+        },
+        {
+          "id": "gateway",
+          "label": "Agent Gateway",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "sessions",
+          "label": "Session Store",
+          "type": "storage",
+          "status": "healthy"
+        },
+        {
+          "id": "appinsights",
+          "label": "Application Insights",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "keyvault",
+          "label": "Key Vault",
+          "type": "security",
+          "status": "stopped"
+        },
+        {
+          "id": "functions",
+          "label": "Azure Functions",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-compliance",
+          "label": "run_compliance_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-summary",
+          "label": "executive_summary",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-assessment",
+          "label": "run_full_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-excel",
+          "label": "generate_excel_report",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "firewall",
+          "label": "Palo Alto Firewall",
+          "type": "device",
+          "status": "stopped"
+        },
+        {
+          "id": "storage",
+          "label": "Report Storage",
+          "type": "storage",
+          "status": "healthy"
+        }
+      ]
+    }
+  ]
+}

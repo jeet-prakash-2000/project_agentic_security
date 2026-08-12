@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Agent Insights — LTM Security Platform{% endblock %}
+
+{% block page_title %}Agent Insights{% endblock %}
+
+{% block content %}
+
+<div class="insights-header">
+    <div>
+        <span class="hero-eyebrow">Telemetry</span>
+        <h1>Agent Insights</h1>
+        <p>Token usage, context, and latency tracked per agent conversation via Azure Application Insights.</p>
+    </div>
+    <button class="btn btn-ghost" id="refreshInsightsBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15"/></svg>
+        Refresh
+    </button>
+</div>
+
+<section class="insights-overview" id="insightsOverview">
+    <div class="kpi-card">
+        <div class="kpi-icon kpi-icon-blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>
+        </div>
+        <div>
+            <span class="kpi-label">Agents</span>
+            <span class="kpi-value" id="kpiAgents">-</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon kpi-icon-purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <div>
+            <span class="kpi-label">Conversations</span>
+            <span class="kpi-value" id="kpiConversations">-</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon kpi-icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        </div>
+        <div>
+            <span class="kpi-label">Total Tokens</span>
+            <span class="kpi-value" id="kpiTokens">-</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon kpi-icon-red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div>
+            <span class="kpi-label">Avg Latency</span>
+            <span class="kpi-value" id="kpiLatency">-</span>
+        </div>
+    </div>
+</section>
+
+<section class="agent-insights-grid" id="agentInsightsGrid">
+    <div class="empty-state card">
+        <div class="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0012 2z"/></svg>
+        </div>
+        <h3>No agent telemetry yet</h3>
+        <p>Chat with the Firewall Auditor in the AI Workspace to start collecting token and context insights.</p>
+        <a href="{{ url_for('workspace') }}" class="btn btn-primary">Open AI Workspace</a>
+    </div>
+</section>
+
+<section class="recent-conversations card">
+    <div class="section-head">
+        <h3>Recent Conversations</h3>
+        <span class="section-sub" id="recentCount">-</span>
+    </div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Agent</th>
+                    <th>Model</th>
+                    <th>Turns</th>
+                    <th class="text-right">Tokens</th>
+                    <th class="text-right">Latency</th>
+                    <th>Updated</th>
+                </tr>
+            </thead>
+            <tbody id="recentBody">
+                <tr><td colspan="6" class="empty-cell">No conversations recorded yet.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="cost-observability card">
+    <div class="section-head">
+        <div>
+            <h3>Cost Observability</h3>
+            <span class="section-sub">AI spend and token consumption tracked per agent</span>
+        </div>
+    </div>
+    <div class="cost-grid">
+        <div class="cost-kpi">
+            <span class="cost-kpi-label">Est. AI Cost</span>
+            <strong id="costTotal">-</strong>
+        </div>
+        <div class="cost-kpi">
+            <span class="cost-kpi-label">Token Consumption</span>
+            <strong id="costTokens">-</strong>
+        </div>
+        <div class="cost-kpi">
+            <span class="cost-kpi-label">Conversations</span>
+            <strong id="costConvs">-</strong>
+        </div>
+        <div class="cost-kpi">
+            <span class="cost-kpi-label">Avg Latency</span>
+            <strong id="costLatency">-</strong>
+        </div>
+    </div>
+    <div class="cost-drivers">
+        <h4>Top Cost Drivers</h4>
+        <div class="cost-driver-list" id="costDrivers">
+            <p class="cost-driver-empty">No token usage recorded yet. Chat with an agent in the AI Workspace to start tracking.</p>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/cytoscape.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/insights.js') }}"></script>
+{% endblock %}

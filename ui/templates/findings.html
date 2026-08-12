@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Security Ops — LTM Security Platform{% endblock %}
+
+{% block page_title %}Security Operations Center{% endblock %}
+
+{% block content %}
+
+<div class="findings-header">
+    <div>
+        <span class="hero-eyebrow">Unified Security Operations</span>
+        <h1>Security Operations Center</h1>
+        <p>Firewall compliance findings and assessment results in a single view.</p>
+    </div>
+    <a href="{{ url_for('run_assessment') }}" class="btn btn-primary" id="btnRunAssessment">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/></svg>
+        Run Assessment
+    </a>
+</div>
+
+{% if error %}
+<div class="alert alert-error"><strong>Error</strong><span>{{ error }}</span></div>
+{% endif %}
+
+<section class="findings-toolbar card" id="toolbarFilters">
+    <div class="toolbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" id="findingsSearch" placeholder="Search by control ID, finding, or domain..." aria-label="Search findings">
+    </div>
+    <div class="toolbar-filters">
+        <div class="filter-group">
+            <span class="filter-label">Severity</span>
+            <div class="filter-chips" id="severityChips">
+                <button class="chip is-active" data-value="all">All</button>
+                <button class="chip chip-critical" data-value="critical">Critical</button>
+                <button class="chip chip-high" data-value="high">High</button>
+                <button class="chip chip-medium" data-value="medium">Medium</button>
+                <button class="chip chip-low" data-value="low">Low</button>
+            </div>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Status</span>
+            <div class="filter-chips" id="statusChips">
+                <button class="chip is-active" data-value="all">All</button>
+                <button class="chip" data-value="non-compliant">Non-Compliant</button>
+                <button class="chip" data-value="compliant">Compliant</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="findings-summary" id="summaryChips">
+    <div class="summary-bar">
+        <div class="summary-total">
+            <span class="summary-number" id="summaryOpenCount">—</span>
+            <span class="summary-label">Open Findings</span>
+        </div>
+        <div class="summary-break">
+            <div class="summary-item summary-item-crit"><span class="summary-number" id="summaryCritCount">—</span><span>Critical</span></div>
+            <div class="summary-item summary-item-high"><span class="summary-number" id="summaryHiCount">—</span><span>High</span></div>
+            <div class="summary-item summary-item-med"><span class="summary-number" id="summaryMedCount">—</span><span>Medium</span></div>
+            <div class="summary-item summary-item-low"><span class="summary-number" id="summaryLoCount">—</span><span>Low</span></div>
+        </div>
+    </div>
+</section>
+
+<div class="findings-grid" id="findingsRoot">
+    <div class="empty-state card"><h3>Loading findings...</h3></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='js/findings.js') }}?v=5"></script>
+{% endblock %}

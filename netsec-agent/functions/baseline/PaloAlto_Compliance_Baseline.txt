@@ -1,0 +1,270 @@
+=========================================================
+PALO ALTO FIREWALL COMPLIANCE BASELINE
+VERSION: 1.0
+=========================================================
+
+SOFTWARE & PLATFORM
+
+PA-01
+Supported PAN-OS:
+11.1.x
+11.2.x
+12.1.x
+
+Preferred:
+12.1.x
+
+PA-02
+Critical CVEs = 0
+High CVEs = 0
+
+PA-03
+Apps & Threats Updates <= 24 Hours
+AV Updates <= 24 Hours
+
+PA-04
+WildFire Update Interval <= 5 Minutes
+
+PA-05
+GlobalProtect Client Version Current
+
+=========================================================
+
+HEALTH & CAPACITY
+
+PA-06
+CPU Utilization < 70%
+
+PA-07
+Session Utilization < 80%
+
+PA-08
+Memory Utilization < 80%
+
+PA-09
+Hardware Not EOL/EOS
+
+PA-10
+Disk Utilization < 80%
+
+=========================================================
+
+HIGH AVAILABILITY
+
+PA-11
+HA Enabled
+Peer Functional
+
+PA-12
+Config Sync = Synchronized
+
+PA-13
+Failover Tested <= 180 Days
+
+PA-14
+Preemption Matches Design
+
+PA-15
+Link Monitoring Enabled
+Path Monitoring Enabled
+
+=========================================================
+
+SECURITY POLICY
+
+PA-16
+Any-Any Rules = 0
+
+PA-17
+Unused Rules <= 5%
+
+PA-18
+Documented Rules = 100%
+
+PA-19
+Default Deny Rule Present
+
+PA-20
+Intrazone Inspected
+
+PA-21
+App-ID Rules >= 90%
+
+PA-22
+Management Access Restricted
+
+PA-23
+Shadowed Rules = 0
+
+=========================================================
+
+SECURITY SERVICES
+
+PA-24
+Threat Prevention Enabled
+
+PA-25
+Critical Signatures Block
+
+PA-26
+DNS Sinkhole Enabled
+
+PA-27
+WildFire Enabled
+
+PA-28
+URL Filtering Enabled
+
+PA-29
+DNS Security Enabled
+
+PA-30
+Threat Exceptions Approved
+
+=========================================================
+
+SSL DECRYPTION
+
+PA-31
+SSL Decryption Enabled
+
+PA-32
+Corporate CA Used
+
+PA-33
+Exceptions Approved
+
+PA-34
+TLS >= 1.2
+
+PA-35
+No RC4
+No 3DES
+
+=========================================================
+
+SEGMENTATION
+
+PA-36
+Minimum Zones >= 4
+
+PA-37
+Dedicated OT Zone
+
+PA-38
+DMZ Restricted
+
+PA-39
+Management Zone Isolated
+
+=========================================================
+
+ROUTING
+
+PA-40
+Stale NAT Rules = 0
+
+PA-41
+Outbound NAT = 100%
+
+PA-42
+Route Leaks = 0
+
+=========================================================
+
+VPN
+
+PA-43
+VPN MFA Enabled
+
+PA-44
+IKEv2
+AES256
+SHA256
+
+PA-45
+Tunnel Monitoring Enabled
+
+PA-46
+HIP Enabled
+
+PA-47
+Split Tunnel Approved
+
+=========================================================
+
+LOGGING
+
+PA-48
+Traffic Logging Enabled
+
+PA-49
+SIEM Forwarding Enabled
+
+PA-50
+Retention >= 90 Days
+
+PA-51
+Critical Alerts Enabled
+
+PA-52
+Admin Audit Logs Enabled
+
+=========================================================
+
+ADMINISTRATION
+
+PA-53
+Default Admin Disabled
+
+PA-54
+Least Privilege Applied
+
+PA-55
+HTTPS & SSH Only
+
+PA-56
+Management ACL Enabled
+
+PA-57
+Admin Timeout <= 30 Minutes
+
+PA-58
+NTP Servers >= 2
+
+PA-59
+SNMPv3 Only
+
+PA-60
+Panorama Managed
+
+=========================================================
+
+ZONE PROTECTION
+
+PA-61
+Zone Protection Applied
+
+PA-62
+DoS Protection Applied
+
+PA-63
+Packet Protection Enabled
+
+=========================================================
+
+BACKUP
+
+PA-64
+Daily Backups
+
+PA-65
+Restore Test <= 365 Days
+
+PA-66
+Change Ticket Required
+
+PA-67
+Snapshots >= 10
+
+=========================================================

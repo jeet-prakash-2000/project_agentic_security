@@ -1,0 +1,8 @@
+<step title="Incoming Request" date="2026-07-29T15:43:17.897" instance="fca0ad" url="/api/deployments/latest" method="GET" type="request" pid="830,1,63" Accept="*/*" Host="network-security-firewall-agent-frcrcqg0ejaddte2.scm.southindia-01.azurewebsites.net" User-Agent="AZURECLI/2.87.0 (RPM)" Accept-Encoding="gzip, deflate" Authorization="Bea..." x-ms-client-request-id="296ca730-8b64-11f1-95fc-00155da413b3" X-ARR-LOG-ID="296ca730-8b64-11f1-95fc-00155da413b3" CLIENT-IP="20.207.192.180:16947" X-SITE-DEPLOYMENT-ID="Network-Security-Firewall-Agent" WAS-DEFAULT-HOSTNAME="network-security-firewall-agent-frcrcqg0ejaddte2.scm.southindia-01.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/deployments/latest" X-Client-IP="20.207.192.180" X-Client-Port="16947" >
+  <step title="DeploymentService.GetResult" date="2026-07-29T15:43:17.921" >
+    <step title="DeploymentService.GetLatestDeployment" date="2026-07-29T15:43:17.938" >
+      <step title="DeploymentManager.GetResults" date="2026-07-29T15:43:17.972" /><!-- duration: 710ms -->
+    </step><!-- duration: 763ms -->
+  </step><!-- duration: 815ms -->
+  <step title="Outgoing response" date="2026-07-29T15:43:18.762" type="response" statusCode="202" statusText="Accepted" /><!-- duration: 40ms -->
+</step><!-- duration: 937ms -->

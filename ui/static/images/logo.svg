@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+    <defs>
+        <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FF4D4D"/>
+            <stop offset="100%" stop-color="#E4002B"/>
+        </linearGradient>
+    </defs>
+    <path d="M24 3.5 L41.5 13.75 L41.5 34.25 L24 44.5 L6.5 34.25 L6.5 13.75 Z" fill="url(#g)"/>
+    <text x="24" y="30" font-family="Space Grotesk, Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">LTM</text>
+</svg>

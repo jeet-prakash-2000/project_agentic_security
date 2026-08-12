@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<deployment>
+  <id>591f8453-af3b-493a-8f3c-362d9cc1dac6</id>
+  <author>SandboxHost-639208587753757067</author>
+  <deployer>Push-Deployer</deployer>
+  <authorEmail>N/A</authorEmail>
+  <message>Created via a push deployment</message>
+  <progress></progress>
+  <status>Success</status>
+  <statusText></statusText>
+  <lastSuccessEndTime>2026-07-28T21:27:36.4700438Z</lastSuccessEndTime>
+  <receivedTime>2026-07-28T21:27:21.6907986Z</receivedTime>
+  <startTime>2026-07-28T21:27:23.1940779Z</startTime>
+  <endTime>2026-07-28T21:27:36.4700438Z</endTime>
+  <complete>True</complete>
+  <is_temp>False</is_temp>
+  <is_readonly>True</is_readonly>
+  <containerId>e382ab9cf72e</containerId>
+  <buildSummary />
+</deployment>

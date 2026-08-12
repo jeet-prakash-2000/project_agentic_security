@@ -1,0 +1,131 @@
+.settings-header {
+    margin-bottom: 24px;
+}
+
+.settings-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 5px;
+}
+
+.settings-header p {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.settings-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.settings-card-wide {
+    grid-column: 1 / -1;
+}
+
+.settings-card-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 16px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.settings-card-head > div {
+    flex: 1;
+}
+
+.settings-card-head h3 {
+    font-size: 15px;
+    font-weight: 700;
+    font-family: var(--font-display);
+    margin-bottom: 2px;
+}
+
+.settings-card-head p {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.settings-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.settings-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.settings-icon-blue {
+    background: var(--blue-soft);
+    color: var(--blue);
+}
+
+.settings-icon-purple {
+    background: var(--purple-soft);
+    color: var(--purple);
+}
+
+.settings-icon-green {
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+.settings-icon-red {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.settings-icon-gold {
+    background: var(--warning-soft);
+    color: var(--gold);
+}
+
+.settings-body {
+    flex: 1;
+}
+
+.settings-body-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 22px;
+    align-content: start;
+}
+
+.settings-foot {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+}
+
+.settings-foot-full {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 1000px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .settings-body-grid {
+        grid-template-columns: 1fr;
+    }
+}

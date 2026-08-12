@@ -1,0 +1,393 @@
+/* ============================================================
+   SECURITY OPS — FINDINGS VIEW
+   Search / Filter / Summary / Rich Cards
+   ============================================================ */
+
+.findings-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+
+.findings-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 5px; }
+.findings-header p { color: var(--muted); font-size: 14px; }
+
+/* Toolbar */
+.findings-toolbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 15px 17px;
+    margin-bottom: 18px;
+}
+
+.toolbar-search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 280px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+}
+
+.toolbar-search svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--text-3); }
+.toolbar-search input {
+    border: none; background: transparent; outline: none; color: var(--text);
+    font-size: 13px; width: 100%;
+}
+.toolbar-search input::placeholder { color: var(--text-3); }
+
+.toolbar-filters { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end; }
+
+.filter-group { display: flex; flex-direction: column; gap: 6px; }
+.filter-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-3); }
+
+.filter-chips { display: flex; gap: 4px; flex-wrap: wrap; }
+
+/* Filter chips */
+.chip {
+    font-size: 11px; font-weight: 600; padding: 4px 10px;
+    border-radius: 7px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text-2); cursor: pointer;
+    transition: all 0.15s;
+}
+.chip:hover { border-color: var(--text-3); }
+.chip.is-active { background: var(--crimson); color: #fff; border-color: var(--crimson); }
+
+.chip-critical { border-color: rgba(239,68,68,0.25); color: #ef4444; }
+.chip-critical.is-active { background: #ef4444; color: #fff; border-color: #ef4444; }
+.chip-high { border-color: rgba(249,115,22,0.25); color: #f97316; }
+.chip-high.is-active { background: #f97316; color: #fff; border-color: #f97316; }
+.chip-medium { border-color: rgba(245,158,11,0.25); color: #f59e0b; }
+.chip-medium.is-active { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+.chip-low { border-color: rgba(34,197,94,0.25); color: #22c55e; }
+.chip-low.is-active { background: #22c55e; color: #fff; border-color: #22c55e; }
+
+/* Summary Bar */
+.findings-summary { margin-bottom: 18px; }
+.summary-bar {
+    display: flex; align-items: center; gap: 24px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 22px;
+    flex-wrap: wrap;
+}
+.summary-total { display: flex; align-items: baseline; gap: 10px; }
+.summary-number { font-size: 32px; font-weight: 800; color: var(--text); line-height: 1; }
+.summary-label { font-size: 13px; color: var(--text-2); font-weight: 500; }
+.summary-break { display: flex; gap: 16px; flex-wrap: wrap; }
+.summary-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; color: var(--text-2);
+    padding: 5px 12px; border-radius: 8px; background: var(--bg);
+}
+.summary-item .summary-number { font-size: 20px; font-weight: 700; }
+.summary-item-crit .summary-number { color: #ef4444; }
+.summary-item-high .summary-number { color: #f97316; }
+.summary-item-med .summary-number { color: #f59e0b; }
+.summary-item-low .summary-number { color: #22c55e; }
+
+/* Findings Grid */
+.findings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 16px;
+}
+
+/* Rich Finding Card */
+.finding-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.finding-card:hover {
+    border-color: var(--crimson);
+    box-shadow: 0 4px 24px rgba(220,38,38,0.15);
+}
+
+.finding-card.is-active {
+    border-color: var(--crimson);
+    box-shadow: 0 6px 32px rgba(220,38,38,0.22);
+}
+
+.finding-card-head {
+    padding: 20px 20px 0;
+}
+
+.finding-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.finding-card-id {
+    font-size: 13px; font-weight: 800; color: var(--text);
+    font-family: "SF Mono", "Fira Code", monospace;
+}
+
+.finding-card-title {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    line-height: 1.4; margin-bottom: 12px;
+}
+
+.finding-card-meta {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+}
+
+.meta-label {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--text-3);
+}
+.meta-value { font-size: 12px; color: var(--text-2); font-weight: 600; }
+.meta-value.mono { font-family: "SF Mono", "Fira Code", monospace; font-size: 11px; }
+
+/* Severity Badge inside card */
+.sev-badge {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.5px;
+    padding: 4px 10px; border-radius: 6px; text-transform: uppercase;
+    flex-shrink: 0;
+}
+.sev-critical { background: rgba(239,68,68,0.12); color: #ef4444; }
+.sev-high { background: rgba(249,115,22,0.12); color: #f97316; }
+.sev-medium { background: rgba(245,158,11,0.12); color: #f59e0b; }
+.sev-low { background: rgba(34,197,94,0.12); color: #22c55e; }
+.sev-compliant { background: rgba(34,197,94,0.12); color: #22c55e; }
+.sev-non-compliant { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+.meta-value.compliant { color: #22c55e; }
+.meta-value.non-compliant { color: #ef4444; }
+
+/* Compliance Check */
+.cmp-check {
+    padding: 0 20px 14px;
+}
+
+.cmp-metric {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.cmp-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-3);
+}
+
+.cmp-name {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+/* Comparison Row */
+.cmp-values {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.cmp-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 16px;
+    flex: 1;
+}
+
+.cmp-block-label {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-3);
+}
+
+.cmp-block-val {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.cmp-observed .cmp-block-val { color: var(--crimson); }
+
+.cmp-op {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 8px;
+    background: var(--bg);
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    min-width: 48px;
+}
+
+.cmp-op-sym {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-2);
+}
+
+.cmp-op-label {
+    font-size: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--text-3);
+    margin-top: 2px;
+}
+
+/* Gap & Impact — compact inline */
+.finding-gap {
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+}
+
+.finding-gap-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.finding-gap-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--warning);
+    background: var(--warning-soft);
+    padding: 3px 8px;
+    border-radius: 5px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.finding-gap p {
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.finding-impact {
+    padding: 8px 20px 10px;
+}
+
+.finding-impact-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.finding-impact-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--crimson);
+    background: rgba(220,38,38,0.08);
+    padding: 3px 8px;
+    border-radius: 5px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.finding-impact p {
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Remediation — highlighted action callout */
+.finding-rem {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    background: rgba(234,179,8,0.04);
+}
+
+.finding-rem .cmp-block-label {
+    margin-bottom: 4px;
+    color: var(--warning);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.finding-rem p {
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* Finding Details Section */
+.finding-detail-section {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+}
+
+.finding-detail-section h5 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--text-3);
+    margin: 0 0 8px;
+}
+
+.finding-detail-section p { font-size: 12px; color: var(--text-2); line-height: 1.5; margin: 0 0 6px; }
+
+.affected-list {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+}
+
+.affected-tag {
+    font-size: 10px; font-family: "SF Mono", "Fira Code", monospace;
+    padding: 3px 8px; border-radius: 5px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text-2);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .findings-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+    .findings-header { flex-direction: column; align-items: flex-start; }
+    .summary-bar { flex-direction: column; align-items: flex-start; }
+    .finding-card-top { flex-direction: column; }
+}

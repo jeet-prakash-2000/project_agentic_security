@@ -1,0 +1,15 @@
+<step title="Incoming Request" date="2026-07-28T21:27:17.413" instance="fca0ad" url="/api/zipdeploy?isAsync=true&amp;author=SandboxHost-639208587753757067" method="POST" type="request" pid="831,1,30" Host="network-security-firewall-agent-frcrcqg0ejaddte2.scm.southindia-01.azurewebsites.net" User-Agent="functions-core-tools/4.12.0" Authorization="Bea..." Content-Type="application/zip" If-Match="*" Content-Length="3583" X-ARR-LOG-ID="b7f06106-1fd4-4228-9339-6d524605ff63" CLIENT-IP="20.207.192.180:19219" X-SITE-DEPLOYMENT-ID="Network-Security-Firewall-Agent" WAS-DEFAULT-HOSTNAME="network-security-firewall-agent-frcrcqg0ejaddte2.scm.southindia-01.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/zipdeploy?isAsync=true&amp;author=SandboxHost-639208587753757067" X-Client-IP="20.207.192.180" X-Client-Port="19219" >
+  <step title="ZipPushDeploy" date="2026-07-28T21:27:17.444" >
+    <step title="Functions App ZipDeploy. Extract zip. Remote build." date="2026-07-28T21:27:17.470" /><!-- duration: 22ms -->
+    <step title="Starting PushDeployAsync" date="2026-07-28T21:27:17.516" /><!-- duration: 19ms -->
+    <step title="Writing artifact to /tmp/zipdeploy/2695ff70-a6d2-4b3a-83bb-f716aabb99c4.zip" date="2026-07-28T21:27:17.570" >
+      <step title="Writing multipart request body to /tmp/zipdeploy/2695ff70-a6d2-4b3a-83bb-f716aabb99c4.zip" date="2026-07-28T21:27:17.591" /><!-- duration: 22ms -->
+      <step title="Writing zip file to /tmp/zipdeploy/2695ff70-a6d2-4b3a-83bb-f716aabb99c4.zip" date="2026-07-28T21:27:17.630" /><!-- duration: 23ms -->
+    </step><!-- duration: 102ms -->
+    <step title="Start deployment in the background" date="2026-07-28T21:27:17.705" >
+      <step title="Acquiring Deployment Lock" date="2026-07-28T21:27:17.745" /><!-- duration: 21ms -->
+      <step title="Acquired Deployment Lock" date="2026-07-28T21:27:17.835" /><!-- duration: 19ms -->
+    </step><!-- duration: 327ms -->
+  </step><!-- duration: 615ms -->
+  <step title="Outgoing response" date="2026-07-28T21:27:18.079" type="response" statusCode="202" statusText="Accepted" /><!-- duration: 19ms -->
+</step><!-- duration: 705ms -->

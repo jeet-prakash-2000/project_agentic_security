@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}AI Workspace — LTM Security Platform{% endblock %}
+
+{% block page_title %}AI Workspace{% endblock %}
+
+{% block content %}
+
+<div class="workspace-header rise">
+    <div>
+        <span class="hero-eyebrow">Security Copilot</span>
+        <h1>AI Workspace</h1>
+        <p>Interact with your AI Security Agents to investigate, assess, and remediate.</p>
+    </div>
+    <button class="btn btn-primary btn-lg" id="openAddAgentBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add Agent
+    </button>
+</div>
+
+<section class="agents-section rise">
+    <div class="section-head">
+        <h3>Connected Agents</h3>
+        <span class="section-sub">Multi-agent ready — add more security copilots anytime</span>
+    </div>
+    <div class="agent-grid" id="agentGrid">
+        <div class="agent-card agent-add-card" id="addAgentTile">
+            <span class="agent-avatar agent-avatar-dashed">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            </span>
+            <h4>Add New Agent</h4>
+            <p>Connect a new security copilot to your workspace.</p>
+        </div>
+    </div>
+</section>
+
+<section class="chat-section card rise">
+    <div class="chat-header">
+        <div class="chat-title">
+            <span class="agent-avatar agent-avatar-blue">FA</span>
+            <div>
+                <strong id="chatAgentTitle">Firewall Auditor</strong>
+                <span class="chat-sub" id="chatAgentSub">Copilot session</span>
+            </div>
+        </div>
+        <div class="chat-actions">
+            <button class="icon-btn" id="clearChatBtn" title="Clear conversation">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="chat-window" id="chatWindow">
+        <div class="message message-assistant">
+            <span class="msg-avatar agent-avatar agent-avatar-blue">FA</span>
+            <div class="msg-bubble">
+                <span class="msg-agent">Firewall Auditor</span>
+                <p>Hello Jeet. I'm your security copilot. I can run compliance assessments against your Palo Alto firewall estate, generate executive summaries, and produce detailed assessment workbooks.</p>
+                <div class="msg-actions">
+                    <button class="quick-pill" data-action="assess">Run Assessment</button>
+                    <button class="quick-pill" data-action="summary">Executive Summary</button>
+                    <button class="quick-pill" data-action="excel">Generate Report</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="quick-actions-row">
+        <span class="quick-row-label">Quick actions</span>
+        <button class="quick-pill" data-action="assess">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/></svg>
+            Run Assessment
+        </button>
+        <button class="quick-pill" data-action="summary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            Executive Summary
+        </button>
+        <button class="quick-pill" data-action="excel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8l4 4V21.5H6V2.5z"/><path d="M14 2.5v4h4"/></svg>
+            Generate Report
+        </button>
+    </div>
+
+    <div class="chat-input-wrap">
+        <div class="chat-input-box">
+            <textarea id="promptInput" rows="1" placeholder="Ask the Firewall Auditor about your security posture..." aria-label="Prompt"></textarea>
+            <button class="send-btn" id="sendBtn" aria-label="Send message">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+            </button>
+        </div>
+        <span class="chat-disclaimer">AI-generated insights may require verification. LTM Platform may make mistakes.</span>
+    </div>
+</section>
+
+<div class="modal-backdrop" id="addAgentModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addAgentTitle">
+        <div class="modal-head">
+            <div>
+                <h3 id="addAgentTitle">Connect New Agent</h3>
+                <p>Register a security copilot in your AI Workspace.</p>
+            </div>
+            <button class="icon-btn" id="closeAddAgentBtn" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <form id="addAgentForm" class="modal-body">
+            <div class="form-group">
+                <label for="agentName">Agent Name</label>
+                <input type="text" id="agentName" name="agentName" placeholder="e.g. Cloud Workload Guardian" required>
+            </div>
+            <div class="form-group">
+                <label for="agentType">Agent Type</label>
+                <select id="agentType" name="agentType">
+                    <option value="Firewall Auditor">Firewall Auditor</option>
+                    <option value="Network Sentinel">Network Sentinel</option>
+                    <option value="Compliance Reviewer">Compliance Reviewer</option>
+                    <option value="Cloud Workload Guardian">Cloud Workload Guardian</option>
+                    <option value="Custom Agent">Custom Agent</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="agentEndpoint">Agent Endpoint</label>
+                <input type="url" id="agentEndpoint" name="agentEndpoint" placeholder="https://your-agent-app.azurewebsites.net/api" required>
+            </div>
+            <div class="form-group">
+                <label for="agentLlmEndpoint">LLM Endpoint <span class="form-hint">(optional)</span></label>
+                <input type="url" id="agentLlmEndpoint" name="agentLlmEndpoint" placeholder="https://your-resource.openai.azure.com/openai/v1">
+            </div>
+            <div class="form-group">
+                <label for="agentModel">Model</label>
+                <input type="text" id="agentModel" name="agentModel" value="gpt-5.1" placeholder="gpt-5.1">
+            </div>
+            <div class="form-group">
+                <label for="agentKey">API Key</label>
+                <div class="input-with-toggle">
+                    <input type="password" id="agentKey" name="agentKey" placeholder="Enter function access key" autocomplete="off" required>
+                    <button type="button" class="toggle-key" data-target="agentKey" aria-label="Toggle key visibility">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button type="button" class="btn btn-ghost" id="cancelAddAgentBtn">Cancel</button>
+                <button type="submit" class="btn btn-primary">Connect</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/workspace.js') }}?v=3"></script>
+{% endblock %}

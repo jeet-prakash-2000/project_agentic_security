@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — LTM Security Platform{% endblock %}
+
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+
+<div class="settings-header">
+    <div>
+        <span class="hero-eyebrow">Configuration</span>
+        <h1>Settings</h1>
+        <p>Manage platform integrations, agents, API keys, and security configuration.</p>
+    </div>
+</div>
+
+<section class="settings-grid">
+
+    <div class="settings-card card">
+        <div class="settings-card-head">
+            <span class="settings-icon settings-icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+            </span>
+            <div>
+                <h3>Azure Function Configuration</h3>
+                <p>Firewall API integration endpoint</p>
+            </div>
+            <span class="status-chip status-on">Connected</span>
+        </div>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="fnEndpoint">Function App Endpoint</label>
+                <input type="text" id="fnEndpoint" value="{{ azure_function_url or '' }}" placeholder="https://your-app.azurewebsites.net/api">
+            </div>
+            <div class="form-group">
+                <label for="fnKey">Function Access Key</label>
+                <div class="input-with-toggle">
+                    <input type="password" id="fnKey" placeholder="••••••••••••••••••••" autocomplete="off">
+                    <button type="button" class="toggle-key" data-target="fnKey" aria-label="Toggle key visibility">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="settings-foot">
+                <button class="btn btn-primary" data-save>Save Configuration</button>
+                <button class="btn btn-ghost" data-test>Test Connection</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card card">
+        <div class="settings-card-head">
+            <span class="settings-icon settings-icon-purple">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>
+            </span>
+            <div>
+                <h3>Azure AI Foundry</h3>
+                <p>LLM reasoning and copilot backend</p>
+            </div>
+            <span class="status-chip status-warn">Degraded</span>
+        </div>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="aiEndpoint">Foundry Endpoint</label>
+                <input type="text" id="aiEndpoint" placeholder="https://<project>.services.ai.azure.com">
+            </div>
+            <div class="form-group">
+                <label for="aiModel">Deployment / Model</label>
+                <input type="text" id="aiModel" placeholder="gpt-4o-mini">
+            </div>
+            <div class="form-group">
+                <label for="aiKey">API Key</label>
+                <div class="input-with-toggle">
+                    <input type="password" id="aiKey" placeholder="••••••••••••••••••••" autocomplete="off">
+                    <button type="button" class="toggle-key" data-target="aiKey" aria-label="Toggle key visibility">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="settings-foot">
+                <button class="btn btn-primary" data-save>Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card card">
+        <div class="settings-card-head">
+            <span class="settings-icon settings-icon-green">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0112 0"/><path d="M16 3.1a4 4 0 010 7.8"/><path d="M18 20a6 6 0 00-3-5.2"/></svg>
+            </span>
+            <div>
+                <h3>Agent Settings</h3>
+                <p>Default copilot behavior and scope</p>
+            </div>
+        </div>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="defaultAgent">Default Agent</label>
+                <select id="defaultAgent">
+                    <option>Firewall Auditor</option>
+                    <option>Network Sentinel</option>
+                    <option>Compliance Reviewer</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="agentScope">Assessment Scope</label>
+                <select id="agentScope">
+                    <option>Full Estate</option>
+                    <option>Production Firewalls Only</option>
+                    <option>Datacenter Segment</option>
+                </select>
+            </div>
+            <div class="toggle-row">
+                <div>
+                    <strong>Auto-refresh findings</strong>
+                    <span>Synchronize findings after every assessment</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-foot">
+                <button class="btn btn-primary" data-save>Save Agent Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card card">
+        <div class="settings-card-head">
+            <span class="settings-icon settings-icon-red">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5l8-3z"/><path d="M9 12l2 2 4-4"/></svg>
+            </span>
+            <div>
+                <h3>API Keys</h3>
+                <p>Rotate and manage access credentials</p>
+            </div>
+        </div>
+        <div class="settings-body">
+            <div class="form-group">
+                <label for="platformKey">Platform API Key</label>
+                <div class="input-with-toggle">
+                    <input type="password" id="platformKey" placeholder="••••••••••••••••••••" autocomplete="off">
+                    <button type="button" class="toggle-key" data-target="platformKey" aria-label="Toggle key visibility">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="webhookSecret">Webhook Secret</label>
+                <div class="input-with-toggle">
+                    <input type="password" id="webhookSecret" placeholder="••••••••••••••••••••" autocomplete="off">
+                    <button type="button" class="toggle-key" data-target="webhookSecret" aria-label="Toggle key visibility">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="settings-foot">
+                <button class="btn btn-primary" data-save>Rotate Keys</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-card card settings-card-wide">
+        <div class="settings-card-head">
+            <span class="settings-icon settings-icon-gold">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M9.5 12l1.8 1.8 3.2-3.6"/></svg>
+            </span>
+            <div>
+                <h3>Security Configuration</h3>
+                <p>Session, audit, and data handling policies</p>
+            </div>
+        </div>
+        <div class="settings-body settings-body-grid">
+            <div class="form-group">
+                <label for="sessionTimeout">Session Timeout (minutes)</label>
+                <input type="number" id="sessionTimeout" value="30" min="5" max="480">
+            </div>
+            <div class="form-group">
+                <label for="dataRetention">Data Retention (days)</label>
+                <input type="number" id="dataRetention" value="90" min="7">
+            </div>
+            <div class="toggle-row">
+                <div>
+                    <strong>Enforce MFA</strong>
+                    <span>Require multi-factor authentication for all admins</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <div>
+                    <strong>Audit logging</strong>
+                    <span>Persist all agent actions to the audit log</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <div>
+                    <strong>Sanitize sensitive data</strong>
+                    <span>Redact credentials from reports and logs</span>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="settings-foot settings-foot-full">
+                <button class="btn btn-primary" data-save>Save Security Settings</button>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+{% endblock %}

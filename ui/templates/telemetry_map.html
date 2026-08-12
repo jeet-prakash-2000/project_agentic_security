@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Telemetry Map — LTM Security Platform{% endblock %}
+
+{% block page_title %}Telemetry Map{% endblock %}
+
+{% block content %}
+
+<div class="telemetry-header">
+    <div>
+        <span class="hero-eyebrow">AI Ontology Explorer</span>
+        <h1>Telemetry Map</h1>
+        <p>Replay the infrastructure graph behind the selected agent — entities, dependencies, and live telemetry.</p>
+    </div>
+    <label class="map-agent-select">
+        <span>Agent</span>
+        <select id="mapAgentSelect">
+            <option value="">Select an agent…</option>
+        </select>
+    </label>
+</div>
+
+<section class="telemetry-map card" id="telemetryMapSection">
+
+    <div class="map-legend">
+        <span class="legend-item legend-healthy"><span class="legend-dot"></span>Operational</span>
+        <span class="legend-item legend-stopped"><span class="legend-dot"></span>Stopped</span>
+        <span class="legend-item legend-error"><span class="legend-dot"></span>Faulted</span>
+        <span class="legend-item legend-removed"><span class="legend-dot"></span>Changed / removed (history)</span>
+        <span class="legend-sep"></span>
+        <span class="legend-item legend-load"><span class="legend-flow"></span>Traffic flow (animated)</span>
+        <span class="map-source-chip" id="mapSourceChip" hidden>Sample Data</span>
+    </div>
+
+    <div class="map-kpis" id="mapKpis" hidden>
+        <div class="map-kpi">
+            <span class="map-kpi-label">Nodes online</span>
+            <strong id="mapKpiOnline">-</strong>
+        </div>
+        <div class="map-kpi">
+            <span class="map-kpi-label">Faults</span>
+            <strong id="mapKpiFaults">-</strong>
+        </div>
+        <div class="map-kpi">
+            <span class="map-kpi-label">Requests / min</span>
+            <strong id="mapKpiRps">-</strong>
+        </div>
+        <div class="map-kpi">
+            <span class="map-kpi-label">Avg latency</span>
+            <strong id="mapKpiLatency">-</strong>
+        </div>
+        <div class="map-kpi">
+            <span class="map-kpi-label">Avg health</span>
+            <strong id="mapKpiHealth">-</strong>
+        </div>
+    </div>
+
+    <div class="map-toolbar" id="mapToolbar" hidden>
+        <div class="map-filters" id="mapFilters">
+            <button class="map-chip is-active" data-filter="group" data-value="all">All</button>
+        </div>
+        <div class="map-status-filters" id="mapStatusFilters">
+            <button class="map-chip is-active" data-filter="status" data-value="all">All</button>
+            <button class="map-chip" data-filter="status" data-value="healthy">Healthy</button>
+            <button class="map-chip" data-filter="status" data-value="error">Faulted</button>
+            <button class="map-chip" data-filter="status" data-value="removed">Changed</button>
+        </div>
+    </div>
+
+    <div class="map-body">
+        <div class="map-canvas-wrap">
+            <div id="telemetryMap" class="map-canvas"></div>
+            <div class="map-zoom-controls">
+                <button type="button" id="mapZoomIn" title="Zoom in">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/></svg>
+                </button>
+                <button type="button" id="mapZoomOut" title="Zoom out">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3M8 11h6"/></svg>
+                </button>
+                <button type="button" id="mapZoomFit" title="Fit map">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/></svg>
+                </button>
+            </div>
+            <div class="map-empty" id="mapEmpty">
+                <div class="empty-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="12" cy="19" r="2"/><path d="M5.5 11.5l4-4M18.5 11.5l-4-4M5.5 12.5l4 4M18.5 12.5l-4 4"/></svg>
+                </div>
+                <h4>Select an agent to view its telemetry map</h4>
+                <p>Choose an agent from the dropdown to see the ontology graph of all connected entities.</p>
+            </div>
+        </div>
+        <aside class="map-detail-panel" id="mapDetailPanel">
+            <div class="map-detail-empty" id="mapDetailEmpty">
+                <p>Hover or click a node to view its telemetry.</p>
+            </div>
+            <div class="map-detail-content" id="mapDetailContent" hidden>
+                <div class="map-detail-head">
+                    <span class="map-node-status" id="mapNodeStatusDot"></span>
+                    <div>
+                        <h4 id="mapNodeLabel">-</h4>
+                        <p id="mapNodeType">-</p>
+                    </div>
+                    <span class="map-node-group" id="mapNodeGroup">-</span>
+                </div>
+                <p class="map-node-desc" id="mapNodeDesc"></p>
+                <div class="map-health-bar">
+                    <div class="map-health-row">
+                        <span>Health score</span>
+                        <strong id="mapNodeHealth">-</strong>
+                    </div>
+                    <div class="map-health-track">
+                        <div class="map-health-fill" id="mapNodeHealthFill"></div>
+                    </div>
+                </div>
+                <div class="map-telemetry-list">
+                    <div class="map-telemetry-item"><span>Requests/min</span><strong id="mapTReq">-</strong></div>
+                    <div class="map-telemetry-item"><span>Latency</span><strong id="mapTLat">-</strong></div>
+                    <div class="map-telemetry-item"><span>Errors</span><strong id="mapTErr">-</strong></div>
+                    <div class="map-telemetry-item"><span>Token Usage</span><strong id="mapTTok">-</strong></div>
+                    <div class="map-telemetry-item"><span>Cost</span><strong id="mapTCost">-</strong></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <div class="ontology-panel card" id="ontologyPanel" hidden>
+        <div class="section-head">
+            <h3>Agent Ontology</h3>
+            <span class="section-sub">How the agent connects, calls, depends on, and produces across the estate</span>
+        </div>
+        <div class="ontology-grid" id="ontologyGrid"></div>
+    </div>
+
+    <div class="map-history" id="mapHistory" hidden>
+        <div class="map-history-head">
+            <span class="section-sub">History timeline</span>
+            <strong id="mapHistoryDate">-</strong>
+        </div>
+        <input type="range" id="mapHistorySlider" min="0" max="0" value="0" step="1">
+        <div class="map-history-labels">
+            <span id="mapHistoryOldest">-</span>
+            <span id="mapHistoryNewest">-</span>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='vendor/cytoscape.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/telemetry_map.js') }}"></script>
+{% endblock %}

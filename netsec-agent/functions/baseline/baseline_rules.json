@@ -1,0 +1,309 @@
+{
+  "PA-01": {
+    "metric": "version",
+    "operator": "supported_version",
+    "value": ["11.1", "11.2", "12.1"],
+    "risk": "HIGH"
+  },
+
+  "PA-02": {
+    "metric": "critical_cves",
+    "operator": "==",
+    "value": 0,
+    "risk": "CRITICAL"
+  },
+
+  "PA-03": {
+    "metric": "content_update_hours",
+    "operator": "<=",
+    "value": 24,
+    "risk": "HIGH"
+  },
+
+  "PA-04": {
+    "metric": "wildfire_update_minutes",
+    "operator": "<=",
+    "value": 5,
+    "risk": "HIGH"
+  },
+
+  "PA-06": {
+    "metric": "cpu_usage",
+    "operator": "<",
+    "value": 70,
+    "risk": "HIGH"
+  },
+
+  "PA-07": {
+    "metric": "session_utilization",
+    "operator": "<",
+    "value": 80,
+    "risk": "CRITICAL"
+  },
+
+  "PA-08": {
+    "metric": "memory_usage",
+    "operator": "<",
+    "value": 80,
+    "risk": "HIGH"
+  },
+
+  "PA-10": {
+    "metric": "disk_usage",
+    "operator": "<",
+    "value": 80,
+    "risk": "MEDIUM"
+  },
+
+  "PA-11": {
+    "metric": "ha_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "CRITICAL"
+  },
+
+  "PA-12": {
+    "metric": "config_sync",
+    "operator": "==",
+    "value": "synchronized",
+    "risk": "HIGH"
+  },
+
+  "PA-15": {
+    "metric": "link_monitoring",
+    "operator": "==",
+    "value": true,
+    "risk": "HIGH"
+  },
+
+  "PA-16": {
+    "metric": "any_any_rules",
+    "operator": "==",
+    "value": 0,
+    "risk": "CRITICAL"
+  },
+
+  "PA-17": {
+    "metric": "unused_rule_percent",
+    "operator": "<=",
+    "value": 5,
+    "risk": "MEDIUM"
+  },
+
+  "PA-18": {
+    "metric": "documented_rule_percent",
+    "operator": ">=",
+    "value": 100,
+    "risk": "MEDIUM"
+  },
+
+  "PA-19": {
+    "metric": "default_deny_present",
+    "operator": "==",
+    "value": true,
+    "risk": "HIGH"
+  },
+
+  "PA-21": {
+    "metric": "appid_rule_percent",
+    "operator": ">=",
+    "value": 90,
+    "risk": "HIGH"
+  },
+
+  "PA-23": {
+    "metric": "shadowed_rules",
+    "operator": "==",
+    "value": 0,
+    "risk": "MEDIUM"
+  },
+
+  "PA-24": {
+    "metric": "threat_prevention",
+    "operator": "==",
+    "value": true,
+    "risk": "CRITICAL"
+  },
+
+  "PA-26": {
+    "metric": "dns_sinkhole_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "CRITICAL"
+  },
+
+  "PA-27": {
+    "metric": "wildfire_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "HIGH"
+  },
+
+  "PA-28": {
+    "metric": "url_filtering_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "HIGH"
+  },
+
+  "PA-29": {
+    "metric": "dns_security_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "HIGH"
+  },
+
+  "PA-31": {
+    "metric": "ssl_decryption_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "CRITICAL"
+  },
+
+  "PA-34": {
+    "metric": "tls_minimum_version",
+    "operator": ">=",
+    "value": "1.2",
+    "risk": "HIGH"
+  },
+
+  "PA-36": {
+    "metric": "zone_count",
+    "operator": ">=",
+    "value": 4,
+    "risk": "CRITICAL"
+  },
+
+  "PA-40": {
+    "metric": "stale_nat_rules",
+    "operator": "==",
+    "value": 0,
+    "risk": "MEDIUM"
+  },
+
+  "PA-42": {
+    "metric": "route_leaks",
+    "operator": "==",
+    "value": 0,
+    "risk": "HIGH"
+  },
+
+  "PA-43": {
+    "metric": "mfa_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "CRITICAL"
+  },
+
+  "PA-45": {
+    "metric": "tunnel_monitoring",
+    "operator": "==",
+    "value": true,
+    "risk": "MEDIUM"
+  },
+
+  "PA-48": {
+    "metric": "traffic_logging_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "HIGH"
+  },
+
+  "PA-49": {
+    "metric": "siem_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "HIGH"
+  },
+
+  "PA-50": {
+    "metric": "retention_days",
+    "operator": ">=",
+    "value": 90,
+    "risk": "HIGH"
+  },
+
+  "PA-53": {
+    "metric": "default_admin_disabled",
+    "operator": "==",
+    "value": true,
+    "risk": "CRITICAL"
+  },
+
+  "PA-55": {
+    "metric": "https_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "CRITICAL"
+  },
+
+  "PA-56": {
+    "metric": "management_acl_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "CRITICAL"
+  },
+
+  "PA-57": {
+    "metric": "admin_timeout_minutes",
+    "operator": "<=",
+    "value": 30,
+    "risk": "MEDIUM"
+  },
+
+  "PA-58": {
+    "metric": "ntp_server_count",
+    "operator": ">=",
+    "value": 2,
+    "risk": "MEDIUM"
+  },
+
+  "PA-59": {
+    "metric": "snmp_version",
+    "operator": "==",
+    "value": "v3",
+    "risk": "HIGH"
+  },
+
+  "PA-60": {
+    "metric": "panorama_managed",
+    "operator": "==",
+    "value": true,
+    "risk": "HIGH"
+  },
+
+  "PA-61": {
+    "metric": "zone_protection_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "HIGH"
+  },
+
+  "PA-62": {
+    "metric": "dos_protection_enabled",
+    "operator": "==",
+    "value": true,
+    "risk": "HIGH"
+  },
+
+  "PA-63": {
+    "metric": "packet_attack_protection",
+    "operator": "==",
+    "value": true,
+    "risk": "MEDIUM"
+  },
+
+  "PA-64": {
+    "metric": "scheduled_backups",
+    "operator": "==",
+    "value": true,
+    "risk": "CRITICAL"
+  },
+
+  "PA-67": {
+    "metric": "versioned_configs",
+    "operator": "==",
+    "value": true,
+    "risk": "MEDIUM"
+  }
+}

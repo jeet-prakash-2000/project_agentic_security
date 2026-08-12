@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Reports — LTM Security Platform{% endblock %}
+
+{% block page_title %}Reports Center{% endblock %}
+
+{% block content %}
+
+<div class="reports-header">
+    <div>
+        <span class="hero-eyebrow">Reporting Hub</span>
+        <h1>Reports Center</h1>
+        <p>Generate executive summaries, assessment workbooks, and review recently produced reports.</p>
+    </div>
+    {% if assessment_source %}
+    <span class="hero-chip">
+        <span class="pulse-dot"></span>
+        {{ 'Live Data' if assessment_source == 'live' else 'Sample Data' }}
+    </span>
+    {% endif %}
+</div>
+
+{% if error %}
+<div class="alert alert-error">
+    <strong>Report Generation Error</strong>
+    <span>{{ error }}</span>
+</div>
+{% endif %}
+
+<section class="gen-grid">
+    <div class="gen-card card">
+        <span class="gen-icon gen-icon-purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </span>
+        <h3>Executive Summary</h3>
+        <p>Management-level overview of the security posture, risk exposure, and top priorities.</p>
+        <ul class="gen-list">
+            <li>Overall risk rating</li>
+            <li>Compliance score</li>
+            <li>Executive recommendations</li>
+        </ul>
+        <a href="{{ url_for('executive_report') }}" class="btn btn-primary btn-block">Generate Summary</a>
+    </div>
+
+    <div class="gen-card card">
+        <span class="gen-icon gen-icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8l4 4V21.5H6V2.5z"/><path d="M14 2.5v4h4"/><path d="M9 12h6M9 16h6"/></svg>
+        </span>
+        <h3>Assessment Workbook</h3>
+        <p>Full detailed workbook with every control, finding, gap, and remediation step.</p>
+        <ul class="gen-list">
+            <li>Control-by-control results</li>
+            <li>Risk and impact mapping</li>
+            <li>Excel-formatted export</li>
+        </ul>
+        <a href="{{ url_for('generate_excel') }}" class="btn btn-primary btn-block">Generate Excel Report</a>
+    </div>
+</section>
+
+<section class="recent-reports card">
+    <div class="section-head">
+        <h3>Recent Reports</h3>
+        <span class="section-sub">Latest generated artifacts and their delivery status</span>
+    </div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Report Name</th>
+                    <th>Type</th>
+                    <th>Generated</th>
+                    <th>Status</th>
+                    <th>Size</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <span class="report-name">
+                            <span class="file-icon file-icon-purple">PDF</span>
+                            Executive_Summary_Jul_2026
+                        </span>
+                    </td>
+                    <td><span class="tag">Executive Summary</span></td>
+                    <td>2026-07-29 14:22</td>
+                    <td><span class="status-chip status-on">Completed</span></td>
+                    <td>184 KB</td>
+                    <td class="text-right">
+                        <button class="icon-btn" data-toast="Downloading Executive_Summary_Jul_2026...">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+                        </button>
+                        <button class="icon-btn" data-toast="Opening Executive_Summary_Jul_2026...">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span class="report-name">
+                            <span class="file-icon file-icon-green">XLS</span>
+                            Assessment_Workbook_Jul_2026
+                        </span>
+                    </td>
+                    <td><span class="tag">Workbook</span></td>
+                    <td>2026-07-29 12:05</td>
+                    <td><span class="status-chip status-on">Completed</span></td>
+                    <td>2.4 MB</td>
+                    <td class="text-right">
+                        <button class="icon-btn" data-toast="Downloading Assessment_Workbook_Jul_2026...">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+                        </button>
+                        <button class="icon-btn" data-toast="Opening Assessment_Workbook_Jul_2026...">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span class="report-name">
+                            <span class="file-icon file-icon-blue">SUM</span>
+                            Executive_Summary_Jun_2026
+                        </span>
+                    </td>
+                    <td><span class="tag">Executive Summary</span></td>
+                    <td>2026-06-30 09:41</td>
+                    <td><span class="status-chip status-warn">Regenerating</span></td>
+                    <td>—</td>
+                    <td class="text-right">
+                        <button class="icon-btn" data-toast="Report is currently regenerating...">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span class="report-name">
+                            <span class="file-icon file-icon-red">XLS</span>
+                            Assessment_Workbook_Jun_2026
+                        </span>
+                    </td>
+                    <td><span class="tag">Workbook</span></td>
+                    <td>2026-06-28 16:12</td>
+                    <td><span class="status-chip status-fail">Failed</span></td>
+                    <td>—</td>
+                    <td class="text-right">
+                        <button class="icon-btn retry-btn" data-toast="Retrying report generation...">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 102.6-8L1 10"/></svg>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% if summary %}
+<section class="result-card card">
+    <div class="section-head">
+        <h3>Executive Summary Result</h3>
+        <span class="section-sub">Generated by the Firewall Auditor agent</span>
+    </div>
+    <div class="result-meta">
+        <span class="hero-chip">
+            Device: {{ summary.device.hostname|default('Unknown') }}
+            {% if summary.device.model %}· {{ summary.device.model }}{% endif %}
+            {% if summary.device.version %}· {{ summary.device.version }}{% endif %}
+        </span>
+        <span class="risk-badge risk-{{ (summary.summary.overall_risk|default('LOW'))|lower }}">{{ summary.summary.overall_risk|default('LOW') }}</span>
+    </div>
+    <div class="counts-row">
+        <div class="count-box"><strong>{{ summary.summary.total_controls|default(0) }}</strong><span>Total Controls</span></div>
+        <div class="count-box count-good"><strong>{{ summary.summary.compliant|default(0) }}</strong><span>Compliant</span></div>
+        <div class="count-box count-bad"><strong>{{ summary.summary.non_compliant|default(0) }}</strong><span>Non-Compliant</span></div>
+        <div class="count-box"><strong>{{ summary.summary.not_assessed|default(0) }}</strong><span>Not Assessed</span></div>
+    </div>
+    {% if summary.top_findings %}
+    <h4 class="result-subhead">Top Findings</h4>
+    <ul class="result-list">
+        {% for finding in summary.top_findings %}
+        <li>
+            <span class="control-badge">{{ finding.control|default('—') }}</span>
+            <span class="risk-badge risk-{{ (finding.risk|default('low'))|lower }}">{{ finding.risk|default('LOW') }}</span>
+            <span>{{ finding.finding|default('—') }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% if summary.remediation_priorities %}
+    <h4 class="result-subhead">Remediation Priorities</h4>
+    <ul class="result-list">
+        {% for priority in summary.remediation_priorities %}
+        <li>{{ priority }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+</section>
+{% endif %}
+
+{% if excel_result %}
+<section class="result-card card">
+    <div class="section-head">
+        <h3>Assessment Workbook Result</h3>
+        <span class="section-sub">Generated by the Firewall Auditor agent</span>
+    </div>
+    <div class="result-meta">
+        <span class="status-chip status-on">{{ excel_result.status|default('SUCCESS') }}</span>
+        {% if excel_result._source %}
+        <span class="hero-chip"><span class="pulse-dot"></span> {{ 'Live Data' if excel_result._source == 'live' else 'Sample Data' }}</span>
+        {% endif %}
+    </div>
+    <p class="result-msg">{{ excel_result.message|default('Excel report generated successfully.') }}</p>
+    <div class="counts-row">
+        <div class="count-box"><strong>{{ excel_result.summary.total_controls|default(0) }}</strong><span>Total Controls</span></div>
+        <div class="count-box count-good"><strong>{{ excel_result.summary.compliant|default(0) }}</strong><span>Compliant</span></div>
+        <div class="count-box count-bad"><strong>{{ excel_result.summary.non_compliant|default(0) }}</strong><span>Non-Compliant</span></div>
+        <div class="count-box"><strong>{{ excel_result.summary.not_assessed|default(0) }}</strong><span>Not Assessed</span></div>
+    </div>
+    {% if excel_download_url %}
+    <a href="{{ excel_download_url }}" class="btn btn-primary" download>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+        Download Workbook (.xlsx)
+    </a>
+    {% endif %}
+</section>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+{% endblock %}

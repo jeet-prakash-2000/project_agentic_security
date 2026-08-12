@@ -1,0 +1,198 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "USC Firewall Auditor API",
+    "version": "1.0.0",
+    "description": "Palo Alto Firewall Security Assessment and Reporting API"
+  },
+  "servers": [
+    {
+      "url": "https://network-security-firewall-agent-frcrcqg0ejaddte2.southindia-01.azurewebsites.net/api"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "FunctionKey": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "code"
+      }
+    }
+  },
+  "security": [
+    {
+      "FunctionKey": []
+    }
+  ],
+  "paths": {
+    "/run_full_assessment": {
+      "get": {
+        "operationId": "RunFullAssessment",
+        "summary": "Collect all firewall assessment evidence",
+        "description": "Returns inventory, health, security services, routing, VPN, logging, administration, backup, and policy information.",
+        "responses": {
+          "200": {
+            "description": "Assessment data collected successfully"
+          }
+        }
+      }
+    },
+    "/run_compliance_assessment": {
+      "get": {
+        "operationId": "RunComplianceAssessment",
+        "summary": "Run firewall compliance assessment",
+        "description": "Evaluates collected firewall evidence against the assessment baseline and returns findings.",
+        "responses": {
+          "200": {
+            "description": "Compliance assessment completed successfully"
+          }
+        }
+      }
+    },
+    "/executive_summary": {
+      "get": {
+        "operationId": "GetExecutiveSummary",
+        "summary": "Generate executive summary",
+        "description": "Returns management-level summary including overall risk, key findings and priorities.",
+        "responses": {
+          "200": {
+            "description": "Executive summary generated successfully"
+          }
+        }
+      }
+    },
+    "/generate_excel_report": {
+      "get": {
+        "operationId": "GenerateExcelReport",
+        "summary": "Generate assessment workbook",
+        "description": "Creates the Palo Alto Assessment Excel workbook.",
+        "responses": {
+          "200": {
+            "description": "Excel report generated successfully"
+          }
+        }
+      }
+    },
+    "/get_inventory": {
+      "get": {
+        "operationId": "GetInventory",
+        "summary": "Retrieve device inventory",
+        "responses": {
+          "200": {
+            "description": "Inventory data returned"
+          }
+        }
+      }
+    },
+    "/get_health_status": {
+      "get": {
+        "operationId": "GetHealthStatus",
+        "summary": "Retrieve health status",
+        "responses": {
+          "200": {
+            "description": "Health information returned"
+          }
+        }
+      }
+    },
+    "/get_ha_configuration": {
+      "get": {
+        "operationId": "GetHAConfiguration",
+        "summary": "Retrieve HA configuration",
+        "responses": {
+          "200": {
+            "description": "HA configuration returned"
+          }
+        }
+      }
+    },
+    "/get_policy_configuration": {
+      "get": {
+        "operationId": "GetPolicyConfiguration",
+        "summary": "Retrieve security policy configuration",
+        "responses": {
+          "200": {
+            "description": "Policy configuration returned"
+          }
+        }
+      }
+    },
+    "/get_security_services": {
+      "get": {
+        "operationId": "GetSecurityServices",
+        "summary": "Retrieve security services configuration",
+        "responses": {
+          "200": {
+            "description": "Security services configuration returned"
+          }
+        }
+      }
+    },
+    "/get_routing_configuration": {
+      "get": {
+        "operationId": "GetRoutingConfiguration",
+        "summary": "Retrieve routing configuration",
+        "responses": {
+          "200": {
+            "description": "Routing configuration returned"
+          }
+        }
+      }
+    },
+    "/get_vpn_configuration": {
+      "get": {
+        "operationId": "GetVPNConfiguration",
+        "summary": "Retrieve VPN configuration",
+        "responses": {
+          "200": {
+            "description": "VPN configuration returned"
+          }
+        }
+      }
+    },
+    "/get_logging_configuration": {
+      "get": {
+        "operationId": "GetLoggingConfiguration",
+        "summary": "Retrieve logging configuration",
+        "responses": {
+          "200": {
+            "description": "Logging configuration returned"
+          }
+        }
+      }
+    },
+    "/get_administration_configuration": {
+      "get": {
+        "operationId": "GetAdministrationConfiguration",
+        "summary": "Retrieve administration configuration",
+        "responses": {
+          "200": {
+            "description": "Administration configuration returned"
+          }
+        }
+      }
+    },
+    "/get_zone_protection_configuration": {
+      "get": {
+        "operationId": "GetZoneProtectionConfiguration",
+        "summary": "Retrieve zone protection configuration",
+        "responses": {
+          "200": {
+            "description": "Zone protection configuration returned"
+          }
+        }
+      }
+    },
+    "/get_backup_configuration": {
+      "get": {
+        "operationId": "GetBackupConfiguration",
+        "summary": "Retrieve backup configuration",
+        "responses": {
+          "200": {
+            "description": "Backup configuration returned"
+          }
+        }
+      }
+    }
+  }
+}

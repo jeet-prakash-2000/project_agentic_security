@@ -1,0 +1,558 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CloudSec Agentic Incident Response API",
+    "version": "2.0.0",
+    "description": "Full-lifecycle Azure Agentic Incident Response Platform — Detection through Closure"
+  },
+  "servers": [
+    {
+      "url": "https://cloudsec-containment-agent-hook-etdrenhhghcncebe.centralindia-01.azurewebsites.net/api"
+    }
+  ],
+  "security": [
+    { "FunctionKey": [] }
+  ],
+  "tags": [
+    { "name": "Phase 1 — Detection", "description": "Incident intake from Sentinel" },
+    { "name": "Phase 2 — Enrichment", "description": "Context gathering before action" },
+    { "name": "Phase 3 — Investigation", "description": "Evidence, timeline, risk analysis" },
+    { "name": "Phase 5 — Containment", "description": "Stop attacker activity" },
+    { "name": "Phase 6 — Eradication", "description": "Remove the threat" },
+    { "name": "Phase 7 — Recovery", "description": "Return to production" },
+    { "name": "Phase 8 — Reporting", "description": "Executive and technical reports" },
+    { "name": "Phase 9 — Closure", "description": "Close the incident" },
+    { "name": "Phase 10 — Orchestration", "description": "End-to-end automated response" }
+  ],
+  "paths": {
+    "/GetSentinelIncident": {
+      "post": {
+        "tags": ["Phase 1 — Detection"],
+        "operationId": "GetSentinelIncident",
+        "summary": "Retrieve Sentinel Incident Details",
+        "description": "Retrieves details about a Microsoft Sentinel incident including severity, affected VM, and description.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": { "type": "string", "description": "Microsoft Sentinel Incident ID" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Incident details returned successfully." } }
+      }
+    },
+    "/GetIncidentEntities": {
+      "post": {
+        "tags": ["Phase 1 — Detection"],
+        "operationId": "GetIncidentEntities",
+        "summary": "Retrieve Incident Entities",
+        "description": "Returns all entities associated with an incident — VMs, IPs, accounts, and malicious indicators.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": { "type": "string", "description": "Microsoft Sentinel Incident ID" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Entities returned successfully." } }
+      }
+    },
+    "/GetVMContext": {
+      "post": {
+        "tags": ["Phase 2 — Enrichment"],
+        "operationId": "GetVMContext",
+        "summary": "Retrieve Azure VM Context",
+        "description": "Returns VM configuration, OS, power state, network interfaces, NSG rules, and risk score.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vm_name", "resource_group"],
+                "properties": {
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "VM context returned successfully." } }
+      }
+    },
+    "/GetDefenderAlertDetails": {
+      "post": {
+        "tags": ["Phase 2 — Enrichment"],
+        "operationId": "GetDefenderAlertDetails",
+        "summary": "Retrieve Defender Alert Details",
+        "description": "Returns Microsoft Defender for Cloud alert info including MITRE technique, severity, and recommended actions.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["alert_id"],
+                "properties": {
+                  "alert_id": { "type": "string", "description": "Defender for Cloud Alert ID" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Alert details returned successfully." } }
+      }
+    },
+    "/GetSecurityRecommendations": {
+      "post": {
+        "tags": ["Phase 2 — Enrichment"],
+        "operationId": "GetSecurityRecommendations",
+        "summary": "Retrieve Security Recommendations",
+        "description": "Returns Defender for Cloud security recommendations and secure score impact for a VM.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vm_name", "resource_group"],
+                "properties": {
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Recommendations returned successfully." } }
+      }
+    },
+    "/CollectVMEvidence": {
+      "post": {
+        "tags": ["Phase 3 — Investigation"],
+        "operationId": "CollectVMEvidence",
+        "summary": "Collect VM Forensic Evidence",
+        "description": "Collects running processes, network connections, open ports, logged-in users, services, and suspicious indicators from the target VM.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vm_name", "resource_group"],
+                "properties": {
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Evidence collected successfully." } }
+      }
+    },
+    "/BuildIncidentTimeline": {
+      "post": {
+        "tags": ["Phase 3 — Investigation"],
+        "operationId": "BuildIncidentTimeline",
+        "summary": "Build Incident Timeline",
+        "description": "Correlates Sentinel incidents, Defender alerts, and VM evidence into a chronological timeline of events.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": { "type": "string", "description": "Microsoft Sentinel Incident ID" },
+                  "alert_id": { "type": "string", "description": "Defender Alert ID" },
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Timeline built successfully." } }
+      }
+    },
+    "/AnalyzeRisk": {
+      "post": {
+        "tags": ["Phase 3 — Investigation"],
+        "operationId": "AnalyzeRisk",
+        "summary": "Analyze Incident Risk",
+        "description": "Evaluates incident severity, alert data, and forensic evidence to calculate a risk score and recommended course of action.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": { "type": "string", "description": "Microsoft Sentinel Incident ID" },
+                  "alert_id": { "type": "string", "description": "Defender Alert ID" },
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Risk analysis completed successfully." } }
+      }
+    },
+    "/IsolateAzureVM": {
+      "post": {
+        "tags": ["Phase 5 — Containment"],
+        "operationId": "IsolateAzureVM",
+        "summary": "Isolate Azure Virtual Machine",
+        "description": "Creates and applies an isolation NSG with DenyAll rules to block all inbound and outbound traffic on the target VM.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vm_name", "resource_group"],
+                "properties": {
+                  "vm_name": { "type": "string", "description": "Compromised Azure VM" },
+                  "resource_group": { "type": "string", "description": "Resource Group containing the VM" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "VM isolated successfully." },
+          "400": { "description": "Missing parameters." },
+          "500": { "description": "Containment failed." }
+        }
+      }
+    },
+    "/StopAzureVM": {
+      "post": {
+        "tags": ["Phase 5 — Containment"],
+        "operationId": "StopAzureVM",
+        "summary": "Stop (Deallocate) Azure VM",
+        "description": "Deallocates the target VM to immediately stop all processing and memory-resident threats.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vm_name", "resource_group"],
+                "properties": {
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "VM stopped and deallocated." } }
+      }
+    },
+    "/BlockMaliciousIP": {
+      "post": {
+        "tags": ["Phase 5 — Containment"],
+        "operationId": "BlockMaliciousIP",
+        "summary": "Block Malicious IP Address",
+        "description": "Creates an NSG deny rule to block all traffic from a malicious IP address.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["ip_address", "resource_group"],
+                "properties": {
+                  "ip_address": { "type": "string", "description": "Malicious IP address to block" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "IP blocked successfully." } }
+      }
+    },
+    "/RunSecurityScan": {
+      "post": {
+        "tags": ["Phase 6 — Eradication"],
+        "operationId": "RunSecurityScan",
+        "summary": "Run Security Scan",
+        "description": "Triggers a Defender for Cloud malware scan and vulnerability assessment on the target VM.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vm_name", "resource_group"],
+                "properties": {
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Security scan completed." } }
+      }
+    },
+    "/RemovePersistence": {
+      "post": {
+        "tags": ["Phase 6 — Eradication"],
+        "operationId": "RemovePersistence",
+        "summary": "Remove Persistence Mechanisms",
+        "description": "Scans for and removes persistence mechanisms: unknown services, malicious cron jobs, startup scripts, and unauthorized SSH keys.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vm_name", "resource_group"],
+                "properties": {
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Persistence mechanisms removed." } }
+      }
+    },
+    "/PatchVM": {
+      "post": {
+        "tags": ["Phase 6 — Eradication"],
+        "operationId": "PatchVM",
+        "summary": "Apply Security Patches",
+        "description": "Applies critical OS and security patches to the target VM to close known vulnerabilities.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vm_name", "resource_group"],
+                "properties": {
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Patches applied successfully." } }
+      }
+    },
+    "/RestoreVMConnectivity": {
+      "post": {
+        "tags": ["Phase 7 — Recovery"],
+        "operationId": "RestoreVMConnectivity",
+        "summary": "Restore VM Connectivity",
+        "description": "Removes the isolation NSG and restores the original network security group to re-enable VM connectivity.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vm_name", "resource_group"],
+                "properties": {
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "VM connectivity restored successfully." } }
+      }
+    },
+    "/ValidateVMHealth": {
+      "post": {
+        "tags": ["Phase 7 — Recovery"],
+        "operationId": "ValidateVMHealth",
+        "summary": "Validate VM Health",
+        "description": "Checks Defender status, power state, connectivity, boot diagnostics, and disk encryption to confirm VM is healthy.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["vm_name", "resource_group"],
+                "properties": {
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "VM health status returned." } }
+      }
+    },
+    "/GenerateIncidentSummary": {
+      "post": {
+        "tags": ["Phase 8 — Reporting"],
+        "operationId": "GenerateIncidentSummary",
+        "summary": "Generate Incident Summary",
+        "description": "Creates an executive-level incident summary with findings, actions taken, and current status.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": { "type": "string", "description": "Incident ID" },
+                  "action_log": { "type": "array", "items": { "type": "string" }, "description": "List of actions taken" },
+                  "status": { "type": "string", "description": "Current incident status" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Summary generated successfully." } }
+      }
+    },
+    "/GenerateTechnicalReport": {
+      "post": {
+        "tags": ["Phase 8 — Reporting"],
+        "operationId": "GenerateTechnicalReport",
+        "summary": "Generate Technical Incident Report",
+        "description": "Generates a detailed technical report including indicators, timeline, forensic evidence, risk assessment, and actions taken.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": { "type": "string", "description": "Incident ID" },
+                  "alert_id": { "type": "string", "description": "Defender Alert ID" },
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Technical report generated." } }
+      }
+    },
+    "/GenerateExecutiveReport": {
+      "post": {
+        "tags": ["Phase 8 — Reporting"],
+        "operationId": "GenerateExecutiveReport",
+        "summary": "Generate Executive Report",
+        "description": "Creates a CISO-level executive report with business impact, risk summary, and incident overview.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": { "type": "string", "description": "Incident ID" },
+                  "alert_id": { "type": "string", "description": "Defender Alert ID" },
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" },
+                  "status": { "type": "string", "description": "Current status" },
+                  "cost_impact": { "type": "string", "description": "Estimated cost impact" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Executive report generated." } }
+      }
+    },
+    "/CloseIncident": {
+      "post": {
+        "tags": ["Phase 9 — Closure"],
+        "operationId": "CloseIncident",
+        "summary": "Close Sentinel Incident",
+        "description": "Updates the Sentinel incident status to Closed with classification and comments.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": { "type": "string", "description": "Incident ID" },
+                  "classification": { "type": "string", "description": "TruePositive, FalsePositive, etc." },
+                  "comment": { "type": "string", "description": "Closure comment" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Incident closed successfully." } }
+      }
+    },
+    "/RunFullIncidentResponse": {
+      "post": {
+        "tags": ["Phase 10 — Orchestration"],
+        "operationId": "RunFullIncidentResponse",
+        "summary": "Run Full Incident Response Lifecycle",
+        "description": "Executes the complete Detection → Investigation → Containment → Eradication → Recovery → Reporting → Closure pipeline in a single call.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": { "type": "string", "description": "Sentinel Incident ID" },
+                  "alert_id": { "type": "string", "description": "Defender Alert ID" },
+                  "vm_name": { "type": "string", "description": "Azure VM Name" },
+                  "resource_group": { "type": "string", "description": "Azure Resource Group" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Full incident response lifecycle completed." } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "FunctionKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-functions-key",
+        "description": "Azure Function Host Key"
+      }
+    }
+  }
+}

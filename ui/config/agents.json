@@ -1,0 +1,15 @@
+{
+  "agents": [
+    {
+      "id": "firewall-audit-agent",
+      "name": "Firewall-Audit-Agent",
+      "type": "Firewall Auditor",
+      "model": "gpt-5.1",
+      "agent_endpoint": "https://network-security-agents.services.ai.azure.com/api/projects/network-security-agents-project",
+      "llm_endpoint": "https://network-security-agents.openai.azure.com/openai/v1",
+      "api_key": "PLACEHOLDER_REPLACE_WITH_YOUR_API_KEY",
+      "connected": true,
+      "created_at": "2026-08-06T00:00:00Z"
+    }
+  ]
+}

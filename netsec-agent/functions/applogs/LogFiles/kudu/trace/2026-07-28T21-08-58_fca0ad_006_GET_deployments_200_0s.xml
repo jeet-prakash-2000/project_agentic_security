@@ -1,0 +1,9 @@
+<step title="Incoming Request" date="2026-07-28T21:08:58.972" instance="fca0ad" url="/deployments" method="GET" type="request" pid="831,1,17" Host="network-security-firewall-agent-frcrcqg0ejaddte2.scm.southindia-01.azurewebsites.net" User-Agent="functions-core-tools/4.12.0" Authorization="Bea..." Cookie="ARRAffinity=fca0ad564edf51bc305ccaf5556589c7950c46f5832cc9a2d3400e8f063144e8; ARRAffinitySameSite=fca0ad564edf51bc305ccaf5556589c7950c46f5832cc9a2d3400e8f063144e8" X-ARR-LOG-ID="05526c49-9e25-4fd4-9c2a-ed0c56114299" CLIENT-IP="20.207.192.180:27578" X-SITE-DEPLOYMENT-ID="Network-Security-Firewall-Agent" WAS-DEFAULT-HOSTNAME="network-security-firewall-agent-frcrcqg0ejaddte2.scm.southindia-01.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/deployments" X-Client-IP="20.207.192.180" X-Client-Port="27578" >
+  <step title="DeploymentService.GetCurrentEtag" date="2026-07-28T21:08:59.000" >
+    <step title="Current Etag: &quot;f7211313a2414643&quot;, Cached Etag: &quot;f7211313bc1b244a&quot;" date="2026-07-28T21:08:59.105" /><!-- duration: 24ms -->
+  </step><!-- duration: 148ms -->
+  <step title="DeploymentService.GetDeployResults" date="2026-07-28T21:08:59.169" >
+    <step title="DeploymentManager.GetResults" date="2026-07-28T21:08:59.191" /><!-- duration: 179ms -->
+  </step><!-- duration: 220ms -->
+  <step title="Outgoing response" date="2026-07-28T21:08:59.409" type="response" statusCode="200" statusText="OK" /><!-- duration: 21ms -->
+</step><!-- duration: 478ms -->

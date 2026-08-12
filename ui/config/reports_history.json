@@ -1,0 +1,31 @@
+{
+  "reports": [
+    {
+      "name": "Assessment_Workbook_Aug_2026",
+      "type": "Workbook",
+      "generated_by": "Firewall Auditor",
+      "ts": 1786036747.6894364,
+      "status": "Completed",
+      "size": "2.4 MB",
+      "download_url": "reports/PaloAlto_Assessment.xlsx"
+    },
+    {
+      "name": "Executive_Summary_Aug_2026",
+      "type": "Executive Summary",
+      "generated_by": "Firewall Auditor",
+      "ts": 1785950347.689439,
+      "status": "Completed",
+      "size": "184 KB",
+      "download_url": null
+    },
+    {
+      "name": "Executive_Summary_Jul_2026",
+      "type": "Executive Summary",
+      "generated_by": "Firewall Auditor",
+      "ts": 1783876747.6894398,
+      "status": "Failed",
+      "size": null,
+      "download_url": null
+    }
+  ]
+}
