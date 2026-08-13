@@ -729,6 +729,98 @@
           "status": "healthy"
         }
       ]
+    },
+    {
+      "ts": 1786649137.8476932,
+      "label": "Aug 13, 19:25",
+      "agent_id": "firewall-audit-agent",
+      "agent_name": "Firewall-Audit-Agent",
+      "nodes": [
+        {
+          "id": "agent",
+          "label": "Firewall-Audit-Agent",
+          "type": "agent",
+          "status": "healthy"
+        },
+        {
+          "id": "foundry",
+          "label": "Azure AI Foundry",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "model",
+          "label": "gpt-5.1",
+          "type": "model",
+          "status": "healthy"
+        },
+        {
+          "id": "gateway",
+          "label": "Agent Gateway",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "sessions",
+          "label": "Session Store",
+          "type": "storage",
+          "status": "healthy"
+        },
+        {
+          "id": "appinsights",
+          "label": "Application Insights",
+          "type": "service",
+          "status": "healthy"
+        },
+        {
+          "id": "keyvault",
+          "label": "Key Vault",
+          "type": "security",
+          "status": "healthy"
+        },
+        {
+          "id": "functions",
+          "label": "Azure Functions",
+          "type": "platform",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-compliance",
+          "label": "run_compliance_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-summary",
+          "label": "executive_summary",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-assessment",
+          "label": "run_full_assessment",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "fn-excel",
+          "label": "generate_excel_report",
+          "type": "function",
+          "status": "healthy"
+        },
+        {
+          "id": "firewall",
+          "label": "Palo Alto Firewall",
+          "type": "device",
+          "status": "stopped"
+        },
+        {
+          "id": "storage",
+          "label": "Report Storage",
+          "type": "storage",
+          "status": "healthy"
+        }
+      ]
     }
   ]
 }
