@@ -49,6 +49,25 @@ def render_with_css(template_name, **context):
     )
 
 # --------------------------------------------------
+# HELPERS
+# --------------------------------------------------
+
+def file_size_label(path):
+    try:
+        size_bytes = (
+            os.path.getsize(path)
+            if path and os.path.exists(path)
+            else 0
+        )
+    except Exception:
+        return "—"
+    if not size_bytes:
+        return "—"
+    if size_bytes >= 1024 * 1024:
+        return "{0:.2f} MB".format(size_bytes / (1024 * 1024))
+    return "{0:.0f} KB".format(size_bytes / 1024)
+
+# --------------------------------------------------
 # HOME (AI Workspace is the primary landing page)
 # --------------------------------------------------
 
@@ -227,22 +246,7 @@ def generate_excel():
 
         agent = agents_service.get_connected_agent()
 
-        try:
-            size_bytes = (
-                os.path.getsize(result["local_file"])
-                if result.get("local_file")
-                and os.path.exists(result["local_file"])
-                else 0
-            )
-            size = "—"
-            if size_bytes:
-                size = (
-                    "{0:.2f} MB".format(size_bytes / (1024 * 1024))
-                    if size_bytes >= 1024 * 1024
-                    else "{0:.0f} KB".format(size_bytes / 1024)
-                )
-        except Exception:
-            size = "—"
+        size = file_size_label(result.get("local_file"))
 
         report_history_service.append_report(
             {
@@ -506,7 +510,7 @@ def api_excel():
             "generated_by": (agent or {}).get("name", "Firewall Auditor"),
             "ts": time.time(),
             "status": "Completed",
-            "size": payload.get("size", "—"),
+            "size": file_size_label(result.get("local_file")),
             "download_url": result.get("download_url"),
         })
 
