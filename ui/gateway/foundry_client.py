@@ -7,38 +7,31 @@ from config import keyvault
 
 CHAT_TIMEOUT = 90
 
+# Tool schemas in Azure AI Foundry Responses API format (flat function objects).
 TOOL_SCHEMAS = [
     {
         "type": "function",
-        "function": {
-            "name": "run_compliance_assessment",
-            "description": "Run a compliance assessment against the firewall and return the compliance results summary.",
-            "parameters": {"type": "object", "properties": {}},
-        },
+        "name": "run_compliance_assessment",
+        "description": "Run a compliance assessment against the firewall and return the compliance results summary.",
+        "parameters": {"type": "object", "properties": {}},
     },
     {
         "type": "function",
-        "function": {
-            "name": "run_full_assessment",
-            "description": "Run the full firewall assessment and return detailed results.",
-            "parameters": {"type": "object", "properties": {}},
-        },
+        "name": "run_full_assessment",
+        "description": "Run the full firewall assessment and return detailed results.",
+        "parameters": {"type": "object", "properties": {}},
     },
     {
         "type": "function",
-        "function": {
-            "name": "executive_summary",
-            "description": "Generate an executive summary of the latest firewall assessment.",
-            "parameters": {"type": "object", "properties": {}},
-        },
+        "name": "executive_summary",
+        "description": "Generate an executive summary of the latest firewall assessment.",
+        "parameters": {"type": "object", "properties": {}},
     },
     {
         "type": "function",
-        "function": {
-            "name": "generate_excel_report",
-            "description": "Generate an Excel report of the firewall assessment results.",
-            "parameters": {"type": "object", "properties": {}},
-        },
+        "name": "generate_excel_report",
+        "description": "Generate an Excel report of the firewall assessment results.",
+        "parameters": {"type": "object", "properties": {}},
     },
 ]
 
@@ -53,7 +46,7 @@ def _post(url, api_key, payload):
 
     if response.status_code != 200:
         raise RuntimeError(
-            "Azure OpenAI returned HTTP {status}: {body}".format(
+            "Azure AI Foundry returned HTTP {status}: {body}".format(
                 status=response.status_code,
                 body=response.text[:300],
             )
@@ -64,16 +57,6 @@ def _post(url, api_key, payload):
 
 def _resolve_api_key(agent):
     return keyvault.get_secret("foundry-api-key") or agent.get("api_key", "")
-
-
-def _extract_reply(data):
-    choices = data.get("choices") or []
-    if not choices:
-        return None, None
-    msg = choices[0].get("message") or {}
-    content = (msg.get("content") or "").strip() or None
-    tool_calls = msg.get("tool_calls") or None
-    return content, tool_calls
 
 
 def _system_prompt(agent):
@@ -102,88 +85,205 @@ def _system_prompt(agent):
     )
 
 
-def chat(agent, messages):
-    from gateway import tools as tool_registry
-
-    llm_endpoint = (agent.get("llm_endpoint") or "").rstrip("/")
-    api_key = _resolve_api_key(agent)
-    model = agent.get("model", "gpt-5.1")
-
-    if not llm_endpoint or not api_key:
-        raise ValueError("Agent is missing the Azure OpenAI endpoint or API key.")
-
-    url = llm_endpoint + "/chat/completions"
-
-    conversation = [
+def _normalize_messages(messages):
+    return [
         {"role": m.get("role", "user"), "content": m.get("content", "")}
         for m in messages
-        if m.get("role") in ("user", "assistant", "system")
+        if m.get("role") in ("user", "assistant")
     ]
 
-    sys_prompt = _system_prompt(agent)
+
+def _merge_usage(total, usage):
+    for key in ("total_tokens", "prompt_tokens", "completion_tokens", "input_tokens", "output_tokens"):
+        value = usage.get(key)
+        if value:
+            total[key] = total.get(key, 0) + value
+
+
+def _call_tool(tool_registry, function_call):
+    name = function_call.get("name", "")
+    arguments = function_call.get("arguments") or "{}"
+    try:
+        args = json.loads(arguments)
+    except json.JSONDecodeError:
+        args = {}
+    try:
+        result = tool_registry.call_tool(name, **args)
+        return json.dumps(result, default=str)
+    except Exception as error:
+        return json.dumps({"error": str(error)})
+
+
+def _extract_responses_reply(data):
+    content_parts = []
+    function_calls = []
+    for item in data.get("output") or []:
+        item_type = item.get("type")
+        if item_type == "message":
+            for part in item.get("content") or []:
+                if part.get("type") in ("output_text", "text"):
+                    text = (part.get("text") or "").strip()
+                    if text:
+                        content_parts.append(text)
+        elif item_type == "function_call":
+            function_calls.append(item)
+    content = "\n\n".join(content_parts).strip() or None
+    return content, function_calls
+
+
+def _function_call_item(function_call):
+    return {
+        "type": "function_call",
+        "id": function_call.get("id", ""),
+        "call_id": function_call.get("call_id", ""),
+        "name": function_call.get("name", ""),
+        "arguments": function_call.get("arguments", "{}"),
+    }
+
+
+def _responses_url(agent_endpoint):
+    endpoint = agent_endpoint.rstrip("/")
+    if endpoint.endswith("/openai/v1/responses"):
+        return endpoint
+    if endpoint.endswith("/openai/v1"):
+        return endpoint + "/responses"
+    return endpoint + "/openai/v1/responses"
+
+
+def _run_responses(agent_endpoint, api_key, model, conversation, sys_prompt, tool_registry):
+    url = _responses_url(agent_endpoint)
+
+    payload = {"model": model, "input": conversation, "tools": TOOL_SCHEMAS}
     if sys_prompt:
-        conversation.insert(0, {"role": "system", "content": sys_prompt})
+        payload["instructions"] = sys_prompt
 
-    started = time.monotonic()
-    total_usage = {}
+    data = _post(url, api_key, payload)
+    content, function_calls = _extract_responses_reply(data)
+    total_usage = dict(data.get("usage") or {})
 
-    # First LLM call — may return tool_calls
+    max_rounds = 3
+    while function_calls and max_rounds > 0:
+        max_rounds -= 1
+
+        next_input = list(conversation)
+        for function_call in function_calls:
+            next_input.append(_function_call_item(function_call))
+        for function_call in function_calls:
+            next_input.append({
+                "type": "function_call_output",
+                "call_id": function_call.get("call_id") or function_call.get("id"),
+                "output": _call_tool(tool_registry, function_call),
+            })
+
+        payload = {"model": model, "input": next_input, "tools": TOOL_SCHEMAS}
+        if sys_prompt:
+            payload["instructions"] = sys_prompt
+
+        data = _post(url, api_key, payload)
+        content, function_calls = _extract_responses_reply(data)
+        _merge_usage(total_usage, data.get("usage") or {})
+
+    return content, total_usage, data.get("model") or model
+
+
+def _chat_completion_tools():
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": tool["name"],
+                "description": tool["description"],
+                "parameters": tool.get("parameters", {"type": "object", "properties": {}}),
+            },
+        }
+        for tool in TOOL_SCHEMAS
+    ]
+
+
+def _extract_chat_reply(data):
+    choices = data.get("choices") or []
+    if not choices:
+        return None, None
+    message = choices[0].get("message") or {}
+    content = (message.get("content") or "").strip() or None
+    tool_calls = message.get("tool_calls") or None
+    return content, tool_calls
+
+
+def _run_chat_completions(llm_endpoint, api_key, model, conversation, sys_prompt, tool_registry):
+    url = llm_endpoint + "/chat/completions"
+
+    messages = list(conversation)
+    if sys_prompt:
+        messages.insert(0, {"role": "system", "content": sys_prompt})
+
     data = _post(url, api_key, {
         "model": model,
-        "messages": conversation,
-        "tools": TOOL_SCHEMAS,
+        "messages": messages,
+        "tools": _chat_completion_tools(),
     })
 
-    content, tool_calls = _extract_reply(data)
-    usage = data.get("usage") or {}
-    total_usage = dict(usage)
+    content, tool_calls = _extract_chat_reply(data)
+    total_usage = dict(data.get("usage") or {})
 
-    # Handle tool calls — loop until LLM stops requesting tools
     max_rounds = 3
     while tool_calls and max_rounds > 0:
         max_rounds -= 1
 
-        assistant_msg = {
-            "role": "assistant",
-            "tool_calls": tool_calls,
-        }
+        assistant_message = {"role": "assistant", "tool_calls": tool_calls}
         if content:
-            assistant_msg["content"] = content
-        conversation.append(assistant_msg)
+            assistant_message["content"] = content
+        messages.append(assistant_message)
 
-        for tc in tool_calls:
-            fn = tc.get("function") or {}
-            tool_name = fn.get("name", "")
-            args_str = fn.get("arguments") or "{}"
-            try:
-                args = json.loads(args_str)
-            except json.JSONDecodeError:
-                args = {}
-
-            try:
-                tool_result = tool_registry.call_tool(tool_name, **args)
-                result_text = json.dumps(tool_result, default=str)
-            except Exception as e:
-                result_text = json.dumps({"error": str(e)})
-
-            conversation.append({
+        for tool_call in tool_calls:
+            function = tool_call.get("function") or {}
+            result_text = _call_tool(tool_registry, {
+                "name": function.get("name", ""),
+                "arguments": function.get("arguments") or "{}",
+            })
+            messages.append({
                 "role": "tool",
-                "tool_call_id": tc.get("id", ""),
+                "tool_call_id": tool_call.get("id", ""),
                 "content": result_text,
             })
 
         data = _post(url, api_key, {
             "model": model,
-            "messages": conversation,
-            "tools": TOOL_SCHEMAS,
+            "messages": messages,
+            "tools": _chat_completion_tools(),
         })
+        content, tool_calls = _extract_chat_reply(data)
+        _merge_usage(total_usage, data.get("usage") or {})
 
-        content, tool_calls = _extract_reply(data)
-        usage = data.get("usage") or {}
-        if usage.get("total_tokens"):
-            total_usage["total_tokens"] = total_usage.get("total_tokens", 0) + usage.get("total_tokens", 0)
-            total_usage["prompt_tokens"] = total_usage.get("prompt_tokens", 0) + usage.get("prompt_tokens", 0)
-            total_usage["completion_tokens"] = total_usage.get("completion_tokens", 0) + usage.get("completion_tokens", 0)
+    return content, total_usage, data.get("model") or model
+
+
+def chat(agent, messages):
+    from gateway import tools as tool_registry
+
+    agent_endpoint = (agent.get("agent_endpoint") or "").rstrip("/")
+    llm_endpoint = (agent.get("llm_endpoint") or "").rstrip("/")
+    api_key = _resolve_api_key(agent)
+    model = agent.get("model", "gpt-5.1")
+
+    if not api_key:
+        raise ValueError("Agent is missing the API key.")
+    if not agent_endpoint and not llm_endpoint:
+        raise ValueError("Agent is missing the agent endpoint or Azure OpenAI endpoint.")
+
+    conversation = _normalize_messages(messages)
+    sys_prompt = _system_prompt(agent)
+
+    started = time.monotonic()
+
+    if agent_endpoint:
+        content, total_usage, resolved_model = _run_responses(
+            agent_endpoint, api_key, model, conversation, sys_prompt, tool_registry
+        )
+    else:
+        content, total_usage, resolved_model = _run_chat_completions(
+            llm_endpoint, api_key, model, conversation, sys_prompt, tool_registry
+        )
 
     if content is None:
         content = "Assessment completed. Check the outputs above for detailed results."
@@ -194,5 +294,5 @@ def chat(agent, messages):
         "reply": content,
         "usage": total_usage,
         "latency_ms": latency_ms,
-        "model": data.get("model") or model,
+        "model": resolved_model or model,
     }
