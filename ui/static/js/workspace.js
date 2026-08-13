@@ -31,18 +31,9 @@
     var cancelBtn = document.getElementById("cancelAddAgentBtn");
     var form = document.getElementById("addAgentForm");
 
-    var insightAvatar = document.getElementById("insightAvatar");
-    var insightAgentName = document.getElementById("insightAgentName");
-    var insightAgentModel = document.getElementById("insightAgentModel");
-    var insightAgentStatus = document.getElementById("insightAgentStatus");
-    var insightCompliance = document.getElementById("insightCompliance");
-    var insightFindings = document.getElementById("insightFindings");
-    var insightRuns = document.getElementById("insightRuns");
-    var insightLastAssessment = document.getElementById("insightLastAssessment");
     var insightMessages = document.getElementById("insightMessages");
     var insightTokens = document.getElementById("insightTokens");
     var insightCost = document.getElementById("insightCost");
-    var insightOutputs = document.getElementById("insightOutputs");
 
     // ============================================================
     // CONSTANTS — actions, prompts, tool metadata
@@ -644,11 +635,6 @@
             composerAgentBadge.innerHTML = '<span class="pulse-dot"></span>' + escapeHtml(agent.name || "Agent");
         }
 
-        if (insightAvatar) insightAvatar.textContent = avatarFor(agent.name);
-        if (insightAgentName) insightAgentName.textContent = agent.name || "Agent";
-        if (insightAgentModel) insightAgentModel.textContent = agent.model || "gpt-5.1";
-        if (insightAgentStatus) insightAgentStatus.classList.toggle("is-offline", !agent.connected);
-
         if (wsAgentSelect && agent.id && wsAgentSelect.value !== agent.id) {
             wsAgentSelect.value = agent.id;
         }
@@ -703,44 +689,9 @@
         return Number(n).toLocaleString("en-US");
     }
 
-    function relativeTime(ts) {
-        if (!ts) return "";
-        var diff = Math.floor(Date.now() / 1000) - ts;
-        if (diff < 60) return "just now";
-        if (diff < 3600) return Math.floor(diff / 60) + "m ago";
-        if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
-        return Math.floor(diff / 86400) + "d ago";
-    }
-
     function updateSessionMetrics() {
         if (!insightMessages) return;
         insightMessages.textContent = String(state.messages.length);
-    }
-
-    function renderRecentOutputs(reports) {
-        if (!insightOutputs) return;
-        insightOutputs.innerHTML = "";
-        if (!reports || !reports.length) {
-            var empty = document.createElement("div");
-            empty.className = "ws-insight-empty";
-            empty.textContent = "No reports generated yet.";
-            insightOutputs.appendChild(empty);
-            return;
-        }
-        reports.forEach(function (r) {
-            var el = document.createElement("div");
-            el.className = "ws-output";
-            var isExcel = (r.type || "").toLowerCase().indexOf("workbook") !== -1 || (r.type || "").toLowerCase().indexOf("excel") !== -1;
-            var icon = isExcel
-                ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8l4 4V21.5H6V2.5z"/><path d="M14 2.5v4h4"/></svg>'
-                : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8l4 4V21.5H6V2.5z"/><path d="M9 12h6M9 16h6"/></svg>';
-            var status = (r.status || "").toLowerCase();
-            el.innerHTML =
-                '<span class="ws-output-icon">' + icon + "</span>" +
-                '<span class="ws-output-meta"><strong>' + escapeHtml(r.name || r.type || "Report") + "</strong><span>" + escapeHtml(r.type || "") + "</span></span>" +
-                '<span class="ws-output-status ' + (status === "completed" ? "ok" : "fail") + '">' + escapeHtml(r.status || "") + "</span>";
-            insightOutputs.appendChild(el);
-        });
     }
 
     function loadConversationInsights() {
@@ -757,37 +708,6 @@
                 if (insightTokens) insightTokens.textContent = c ? fmtNum(c.total_tokens || 0) : "—";
                 if (insightCost) insightCost.textContent = c ? "$" + Number(c.cost || 0).toFixed(2) : "—";
                 updateSessionMetrics();
-            })
-            .catch(function () {});
-    }
-
-    function loadAssessmentInsights() {
-        var controller = new AbortController();
-        var timer = setTimeout(function () { controller.abort(); }, 20000);
-        fetch("/api/dashboard", { signal: controller.signal })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                clearTimeout(timer);
-                if (data && data.compliance) {
-                    if (insightCompliance) {
-                        insightCompliance.textContent = data.compliance.compliance_score + "%";
-                        insightCompliance.className = "ws-metric-value " + (data.compliance.compliance_score >= 70 ? "is-good" : "is-bad");
-                    }
-                    if (insightFindings && data.findings) insightFindings.textContent = String(data.findings.open || 0);
-                }
-                if (insightRuns && data.assessments_run != null) insightRuns.textContent = String(data.assessments_run);
-                if (insightLastAssessment && data.generated_at) {
-                    insightLastAssessment.textContent = "Last assessment " + relativeTime(Math.floor(data.generated_at));
-                }
-            })
-            .catch(function () { clearTimeout(timer); });
-    }
-
-    function loadRecentOutputs() {
-        fetch("/api/reports")
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                renderRecentOutputs((data && data.reports) || []);
             })
             .catch(function () {});
     }
@@ -1157,6 +1077,4 @@
     loadConversations().then(function () {
         loadConversationInsights();
     });
-    loadAssessmentInsights();
-    loadRecentOutputs();
 })();

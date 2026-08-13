@@ -65,7 +65,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
                 </button>
                 <button class="ws-icon-btn" id="insightsToggle" title="Toggle insights" aria-label="Toggle insights panel">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17"/><path d="M12 3a15 15 0 010 18a15 15 0 010-18z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
                 </button>
             </div>
         </header>
@@ -100,37 +100,6 @@
 
         <div class="ws-insights-scroll">
             <div class="ws-insight-group">
-                <div class="ws-insight-group-label">Agent</div>
-                <div class="ws-agent-info">
-                    <span class="ws-agent-avatar agent-avatar agent-avatar-blue" id="insightAvatar">FA</span>
-                    <div class="ws-agent-info-meta">
-                        <strong id="insightAgentName">Firewall Auditor</strong>
-                        <span id="insightAgentModel">gpt-5.1</span>
-                    </div>
-                    <span class="ws-status-dot" id="insightAgentStatus" title="Status"></span>
-                </div>
-            </div>
-
-            <div class="ws-insight-group">
-                <div class="ws-insight-group-label">Assessment</div>
-                <div class="ws-metric-grid">
-                    <div class="ws-metric">
-                        <span class="ws-metric-value" id="insightCompliance">—</span>
-                        <span class="ws-metric-label">Compliance</span>
-                    </div>
-                    <div class="ws-metric">
-                        <span class="ws-metric-value" id="insightFindings">—</span>
-                        <span class="ws-metric-label">Findings</span>
-                    </div>
-                    <div class="ws-metric">
-                        <span class="ws-metric-value" id="insightRuns">—</span>
-                        <span class="ws-metric-label">Runs</span>
-                    </div>
-                </div>
-                <div class="ws-last-assessment" id="insightLastAssessment"></div>
-            </div>
-
-            <div class="ws-insight-group">
                 <div class="ws-insight-group-label">Session</div>
                 <div class="ws-metric-grid">
                     <div class="ws-metric">
@@ -146,11 +115,6 @@
                         <span class="ws-metric-label">Cost</span>
                     </div>
                 </div>
-            </div>
-
-            <div class="ws-insight-group">
-                <div class="ws-insight-group-label">Recent Outputs</div>
-                <div class="ws-outputs" id="insightOutputs"></div>
             </div>
         </div>
     </aside>
@@ -214,5 +178,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/workspace.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='js/workspace.js') }}?v=5"></script>
 {% endblock %}

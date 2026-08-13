@@ -103,6 +103,7 @@
     align-items: center;
     justify-content: space-between;
     margin-bottom: 14px;
+    flex-shrink: 0;
 }
 
 .ws-new-chat {
@@ -139,6 +140,7 @@
     border: 1px solid var(--border);
     border-radius: 10px;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    flex-shrink: 0;
 }
 
 .ws-search:focus-within {
@@ -172,6 +174,7 @@
     flex-direction: column;
     gap: 6px;
     margin-bottom: 12px;
+    flex-shrink: 0;
 }
 
 .ws-agent-picker label {
@@ -290,6 +293,7 @@
 .ws-sidebar-foot {
     padding-top: 12px;
     border-top: 1px solid var(--glass-line);
+    flex-shrink: 0;
 }
 
 .ws-manage-agents {
