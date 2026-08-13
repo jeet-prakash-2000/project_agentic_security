@@ -8,6 +8,8 @@ from flask import url_for
 from flask import request
 from flask import redirect
 from flask import send_file
+from flask import session
+from flask import g
 
 from config import settings as platform_settings
 from services import assessment_service
@@ -19,9 +21,51 @@ from services import system_status_service
 from services import telemetry_map_service
 from services import firewall_data_service
 from services import timeutil
+from services import users_service
 from gateway.agent_gateway import gateway
+from gateway import session_manager
 
 app = Flask(__name__)
+app.secret_key = platform_settings.SECRET_KEY
+
+
+# --------------------------------------------------
+# AUTHENTICATION
+# --------------------------------------------------
+
+def current_user():
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    user = users_service.get_user(user_id)
+    if not user:
+        session.pop("user_id", None)
+        return None
+    return users_service.public_user(user_id)
+
+
+def current_user_id():
+    return session.get("user_id") or "anonymous"
+
+
+@app.before_request
+def require_authentication():
+    if request.endpoint in ("login", "signup", "logout", "static"):
+        return None
+
+    if not session.get("user_id"):
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "unauthorized"}), 401
+        return redirect(url_for("login", next=request.path))
+
+    g.user = current_user()
+    return None
+
+
+@app.context_processor
+def inject_current_user():
+    return {"current_user": current_user()}
+
 
 # --------------------------------------------------
 # AUTO CSS LOADER
@@ -80,9 +124,59 @@ def format_report_ts(ts):
 app.add_template_filter(format_report_ts, "report_ts")
 
 
+def initials(name):
+    parts = (name or "").strip().split()
+    letters = "".join(p[0] for p in parts if p).upper()
+    return letters[:2] or "U"
+
+
+app.add_template_filter(initials, "initials")
+
+
 def render_reports(**context):
     context["reports"] = report_history_service.list_reports()
     return render_with_css("reports.html", **context)
+
+# --------------------------------------------------
+# AUTH ROUTES (login / signup / logout)
+# --------------------------------------------------
+
+@app.route("/login", methods=["GET", "POST"], endpoint="login")
+def login():
+    error = None
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip()
+        password = request.form.get("password") or ""
+        user = users_service.authenticate(email, password)
+        if user:
+            session["user_id"] = user["id"]
+            return redirect(url_for("workspace"))
+        error = "Invalid email or password."
+
+    return render_template("login.html", mode="login", error=error)
+
+
+@app.route("/signup", methods=["POST"], endpoint="signup")
+def signup():
+    name = (request.form.get("name") or "").strip()
+    email = (request.form.get("email") or "").strip()
+    password = request.form.get("password") or ""
+
+    try:
+        user = users_service.create_user(name, email, password)
+    except ValueError as e:
+        return render_template("login.html", mode="signup", error=str(e), form={"name": name, "email": email}), 400
+
+    session_manager.claim_anonymous_conversations(user["id"])
+    session["user_id"] = user["id"]
+    return redirect(url_for("workspace"))
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
 
 # --------------------------------------------------
 # HOME (AI Workspace is the primary landing page)
@@ -617,17 +711,19 @@ def api_chat():
     messages = payload.get("messages")
     conversation_id = (payload.get("conversation_id") or "").strip() or None
     agent_id = (payload.get("agent_id") or "").strip() or None
+    tool = payload.get("tool")
 
     if not message and not messages:
         return jsonify({"error": "message is required."}), 400
 
     try:
         result = gateway.chat(
-            user_id="anonymous",
+            user_id=current_user_id(),
             message=message,
             messages=messages,
             conversation_id=conversation_id,
             agent_id=agent_id,
+            tool=tool,
         )
         return jsonify(
             {
@@ -657,14 +753,63 @@ def api_tools():
 def api_conversations():
 
     return jsonify(
-        {"conversations": gateway.conversations()}
+        {"conversations": gateway.conversations(user_id=current_user_id())}
     )
+
+
+@app.route("/api/conversations/<conversation_id>/messages", methods=["GET"])
+def api_conversation_messages(conversation_id):
+
+    messages = session_manager.get_messages(
+        conversation_id,
+        user_id=current_user_id(),
+    )
+    return jsonify({"messages": messages})
+
+
+@app.route("/api/conversations/<conversation_id>/messages", methods=["POST"])
+def api_conversation_messages_add(conversation_id):
+
+    payload = request.get_json(silent=True) or {}
+    messages = payload.get("messages") or []
+    session_manager.add_messages(
+        conversation_id,
+        messages,
+        user_id=current_user_id(),
+    )
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/conversations/<conversation_id>/clear", methods=["POST"])
+def api_conversation_clear(conversation_id):
+
+    session_manager.clear_conversation(
+        conversation_id,
+        user_id=current_user_id(),
+    )
+    return jsonify({"status": "ok"})
+
+
+@app.route("/api/me")
+def api_me():
+
+    user = current_user()
+    if not user:
+        return jsonify({"error": "unauthorized"}), 401
+    return jsonify({"user": user})
 
 
 @app.route("/api/insights")
 def api_insights():
 
     return jsonify(insights_service.summarize())
+
+
+@app.route("/api/insights/conversation/<conversation_id>")
+def api_insights_conversation(conversation_id):
+
+    summary = insights_service.summarize_conversation(conversation_id)
+    return jsonify({"conversation": summary})
 
 
 @app.route("/api/dashboard")

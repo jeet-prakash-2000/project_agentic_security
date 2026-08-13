@@ -48,8 +48,6 @@
     // CONSTANTS — actions, prompts, tool metadata
     // ============================================================
 
-    var STORE_KEY = "ltm_conversations";
-
     var ACTIONS = {
         assess: { label: "Run Assessment", tool: "assess", prompt: "Run a full compliance assessment of the firewall estate." },
         summary: { label: "Executive Summary", tool: "summary", prompt: "Generate an executive summary of the security posture." },
@@ -103,8 +101,10 @@
     // ============================================================
 
     var state = {
-        conversations: loadStore(),
+        conversations: [],
+        messages: [],
         activeId: null,
+        autoOpened: false,
         activeAgentId: null,
         activeAgent: null,
         agents: []
@@ -114,39 +114,12 @@
     // STORAGE
     // ============================================================
 
-    function loadStore() {
-        try {
-            var raw = localStorage.getItem(STORE_KEY);
-            var data = raw ? JSON.parse(raw) : [];
-            return Array.isArray(data) ? data : [];
-        } catch (e) {
-            return [];
-        }
-    }
-
-    function saveStore() {
-        try {
-            localStorage.setItem(STORE_KEY, JSON.stringify(state.conversations));
-        } catch (e) { /* storage unavailable */ }
-    }
-
     function now() {
         return Math.floor(Date.now() / 1000);
     }
 
-    function getActiveConv() {
-        if (!state.activeId) return null;
-        for (var i = 0; i < state.conversations.length; i++) {
-            if (state.conversations[i].id === state.activeId) return state.conversations[i];
-        }
-        return null;
-    }
-
-    function getConv(id) {
-        for (var i = 0; i < state.conversations.length; i++) {
-            if (state.conversations[i].id === id) return state.conversations[i];
-        }
-        return null;
+    function newConvId() {
+        return "conv-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
     }
 
     // ============================================================
@@ -154,41 +127,81 @@
     // ============================================================
 
     function createConversation() {
-        var conv = {
-            id: "conv-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
-            title: "New chat",
-            created: now(),
-            updated: now(),
-            agentId: state.activeAgentId || null,
-            messages: []
-        };
-        state.conversations.unshift(conv);
-        state.activeId = conv.id;
-        saveStore();
+        state.activeId = null;
+        state.messages = [];
         renderConversationList();
         renderActiveConversation();
-        return conv;
+        updateSessionMetrics();
+        return null;
     }
 
-    function ensureConversation() {
-        if (!state.activeId || !getConv(state.activeId)) return createConversation();
+    function ensureActiveId() {
+        if (!state.activeId) {
+            state.activeId = newConvId();
+            state.conversations.unshift({ id: state.activeId, title: "New chat", created: now(), updated: now(), message_count: 0 });
+            renderConversationList();
+        }
         return state.activeId;
     }
 
     function setActive(id) {
         state.activeId = id;
-        renderActiveConversation();
+        state.messages = [];
         renderConversationList();
+        renderActiveConversation();
+        updateSessionMetrics();
+        if (id) {
+            loadMessages(id);
+            loadConversationInsights();
+        }
     }
 
-    function maybeSetTitle(text) {
-        var conv = getActiveConv();
-        if (!conv) return;
-        var userCount = conv.messages.filter(function (m) { return m.role === "user"; }).length;
-        if (userCount === 1) {
-            conv.title = text.length > 44 ? text.slice(0, 44) + "\u2026" : text;
-            saveStore();
-        }
+    function loadMessages(id) {
+        fetch("/api/conversations/" + encodeURIComponent(id) + "/messages")
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (state.activeId !== id) return;
+                state.messages = (data && data.messages) || [];
+                renderActiveConversation();
+                updateSessionMetrics();
+            })
+            .catch(function () {});
+    }
+
+    function loadConversations() {
+        return fetch("/api/conversations")
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                state.conversations = (data && data.conversations) || [];
+                renderConversationList();
+                if (!state.activeId && state.conversations.length && !state.autoOpened) {
+                    state.autoOpened = true;
+                    setActive(state.conversations[0].id);
+                }
+                return state.conversations;
+            })
+            .catch(function () { return []; });
+    }
+
+    function persistMessages(messages) {
+        if (!state.activeId) return;
+        var payload = (messages || []).map(function (m) {
+            return {
+                role: m.role,
+                content: m.content || "",
+                ts: m.ts,
+                html: m.html,
+                cardTitle: m.cardTitle,
+                tool: m.tool,
+                usage: m.usage,
+                agentName: m.agentName
+            };
+        });
+        fetch("/api/conversations/" + encodeURIComponent(state.activeId) + "/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: payload })
+        }).catch(function () {});
     }
 
     // ============================================================
@@ -395,22 +408,17 @@
     function renderActiveConversation() {
         if (!chatWindow) return;
         chatWindow.innerHTML = "";
-        var conv = getActiveConv();
-        if (!conv || !conv.messages.length) {
+        if (!state.messages.length) {
             renderEmptyState();
             updateSessionMetrics();
             return;
         }
-        conv.messages.forEach(renderMessage);
+        state.messages.forEach(renderMessage);
         updateSessionMetrics();
     }
 
-    function appendAndStoreMessage(msg) {
-        var conv = getActiveConv();
-        if (!conv) return;
-        conv.messages.push(msg);
-        conv.updated = now();
-        saveStore();
+    function appendMessage(msg) {
+        state.messages.push(msg);
         renderMessage(msg);
         updateSessionMetrics();
     }
@@ -535,13 +543,18 @@
             zone_protection: "Zone Protection Configuration", backup: "Backup Configuration"
         };
 
-        ensureConversation();
-        appendAndStoreMessage({ role: "user", content: prompts[action], ts: now() });
-        maybeSetTitle(prompts[action]);
+        ensureActiveId();
+        var userMsg = { role: "user", content: prompts[action], ts: now() };
+        appendMessage(userMsg);
         renderConversationList();
 
         var typing = appendTyping("Firewall Data");
         sendBtn.disabled = true;
+
+        var finish = function (asstMsg) {
+            persistMessages([userMsg, asstMsg]);
+            loadConversations();
+        };
 
         fetch(endpoints[action])
             .then(function (r) { return r.json(); })
@@ -549,13 +562,17 @@
                 removeTyping(typing);
                 if (data && data.error) throw new Error(data.error);
                 var html = action === "policy" ? renderPolicyCard(data) : renderTableCard(titles[action], data);
-                appendAndStoreMessage({ role: "assistant", content: "", html: html, cardTitle: titles[action], agentName: "Firewall Data", ts: now() });
+                var asstMsg = { role: "assistant", content: "", html: html, cardTitle: titles[action], agentName: "Firewall Data", ts: now() };
+                appendMessage(asstMsg);
                 renderConversationList();
+                finish(asstMsg);
             })
             .catch(function () {
                 removeTyping(typing);
-                appendAndStoreMessage({ role: "assistant", content: "Unable to fetch data from the firewall function. Check connectivity.", agentName: "Firewall Data", ts: now() });
+                var asstMsg = { role: "assistant", content: "Unable to fetch data from the firewall function. Check connectivity.", agentName: "Firewall Data", ts: now() };
+                appendMessage(asstMsg);
                 renderConversationList();
+                finish(asstMsg);
             })
             .finally(function () { sendBtn.disabled = false; promptInput.focus(); });
     }
@@ -569,9 +586,8 @@
         var dataAction = detectDataAction(lower);
         if (dataAction) { runDataAction(dataAction); return; }
 
-        ensureConversation();
-        appendAndStoreMessage({ role: "user", content: text, ts: now() });
-        maybeSetTitle(text);
+        ensureActiveId();
+        appendMessage({ role: "user", content: text, ts: now() });
         renderConversationList();
         promptInput.value = "";
         autoResize();
@@ -579,25 +595,26 @@
         var typing = appendTyping();
         sendBtn.disabled = true;
 
+        var convId = state.activeId;
         fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: text, conversation_id: state.activeId, agent_id: state.activeAgentId })
+            body: JSON.stringify({ message: text, conversation_id: convId, agent_id: state.activeAgentId, tool: opts.tool || null })
         })
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 removeTyping(typing);
                 if (data && data.error) throw new Error(data.error);
+                if (data.conversation_id) state.activeId = data.conversation_id;
                 var reply = (data && data.reply) || buildAssistantReply(text);
-                appendAndStoreMessage({ role: "assistant", content: reply, tool: opts.tool || null, usage: (data && data.usage) || null, agentName: (data && data.agent && data.agent.name) || null, ts: now() });
-                renderConversationList();
-                loadSessionInsights();
+                appendMessage({ role: "assistant", content: reply, tool: opts.tool || null, usage: (data && data.usage) || null, agentName: (data && data.agent && data.agent.name) || null, ts: now() });
+                loadConversations();
+                loadConversationInsights();
             })
             .catch(function (error) {
                 removeTyping(typing);
                 var fallback = buildAssistantReply(text);
-                appendAndStoreMessage({ role: "assistant", content: fallback, tool: opts.tool || null, ts: now() });
-                renderConversationList();
+                appendMessage({ role: "assistant", content: fallback, tool: opts.tool || null, ts: now() });
                 if (error && error.message && error.message.indexOf("No connected agent") === -1) {
                     window.showToast("Agent unavailable \u2014 showing preview response.", "error");
                 }
@@ -697,8 +714,7 @@
 
     function updateSessionMetrics() {
         if (!insightMessages) return;
-        var conv = getActiveConv();
-        insightMessages.textContent = conv ? String(conv.messages.length) : "0";
+        insightMessages.textContent = String(state.messages.length);
     }
 
     function renderRecentOutputs(reports) {
@@ -727,13 +743,20 @@
         });
     }
 
-    function loadSessionInsights() {
-        fetch("/api/insights")
+    function loadConversationInsights() {
+        if (!state.activeId) {
+            if (insightTokens) insightTokens.textContent = "—";
+            if (insightCost) insightCost.textContent = "—";
+            updateSessionMetrics();
+            return;
+        }
+        fetch("/api/insights/conversation/" + encodeURIComponent(state.activeId))
             .then(function (r) { return r.json(); })
             .then(function (data) {
-                var totals = (data && data.totals) || {};
-                if (insightTokens && totals.total_tokens != null) insightTokens.textContent = fmtNum(totals.total_tokens);
-                if (insightCost && totals.cost != null) insightCost.textContent = "$" + Number(totals.cost).toFixed(2);
+                var c = (data && data.conversation) || null;
+                if (insightTokens) insightTokens.textContent = c ? fmtNum(c.total_tokens || 0) : "—";
+                if (insightCost) insightCost.textContent = c ? "$" + Number(c.cost || 0).toFixed(2) : "—";
+                updateSessionMetrics();
             })
             .catch(function () {});
     }
@@ -805,14 +828,19 @@
                     return;
                 }
 
-                ensureConversation();
-                appendAndStoreMessage({ role: "user", content: "Connect the " + name + " agent for " + type + ".", ts: now() });
-                maybeSetTitle("Connect the " + name + " agent");
+                ensureActiveId();
+                var userMsg = { role: "user", content: "Connect the " + name + " agent for " + type + ".", ts: now() };
+                appendMessage(userMsg);
                 renderConversationList();
 
                 var typing = appendTyping();
                 var connectBtn = form.querySelector('button[type="submit"]');
                 if (connectBtn) connectBtn.disabled = true;
+
+                var finish = function (asstMsg) {
+                    persistMessages([userMsg, asstMsg]);
+                    loadConversations();
+                };
 
                 fetch("/api/agents", {
                     method: "POST",
@@ -824,15 +852,19 @@
                         removeTyping(typing);
                         if (data && data.error) throw new Error(data.error);
                         if (data.agent && data.agent.connected) setActiveAgent(data.agent);
-                        appendAndStoreMessage({ role: "assistant", content: "Agent **" + name + "** has been connected successfully. It can now assess, monitor, and report on your " + type.toLowerCase() + " estate.", agentName: name, ts: now() });
+                        var asstMsg = { role: "assistant", content: "Agent **" + name + "** has been connected successfully. It can now assess, monitor, and report on your " + type.toLowerCase() + " estate.", agentName: name, ts: now() };
+                        appendMessage(asstMsg);
                         renderConversationList();
                         loadAgents();
+                        finish(asstMsg);
                         window.showToast(name + " connected successfully.", "success");
                     })
                     .catch(function (error) {
                         removeTyping(typing);
-                        appendAndStoreMessage({ role: "assistant", content: "**Failed to connect " + name + ".** " + (error.message || "Backend unavailable."), agentName: name, ts: now() });
+                        var asstMsg = { role: "assistant", content: "**Failed to connect " + name + ".** " + (error.message || "Backend unavailable."), agentName: name, ts: now() };
+                        appendMessage(asstMsg);
                         renderConversationList();
+                        finish(asstMsg);
                         window.showToast("Connection failed.", "error");
                     })
                     .finally(function () { if (connectBtn) connectBtn.disabled = false; });
@@ -1078,16 +1110,23 @@
 
     if (clearBtn) {
         clearBtn.addEventListener("click", function () {
-            var conv = getActiveConv();
-            if (conv) {
-                conv.messages = [];
-                conv.title = "New chat";
-                conv.updated = now();
-                saveStore();
+            if (!state.activeId) {
+                window.showToast("Nothing to clear.", "success");
+                return;
             }
-            renderActiveConversation();
-            renderConversationList();
-            window.showToast("Conversation cleared.", "success");
+            var id = state.activeId;
+            fetch("/api/conversations/" + encodeURIComponent(id) + "/clear", { method: "POST" })
+                .then(function (r) { return r.json(); })
+                .then(function () {
+                    state.messages = [];
+                    renderActiveConversation();
+                    loadConversations();
+                    loadConversationInsights();
+                    window.showToast("Conversation cleared.", "success");
+                })
+                .catch(function () {
+                    window.showToast("Failed to clear conversation.", "error");
+                });
         });
     }
 
@@ -1111,14 +1150,13 @@
     bindModal();
     renderPromptChips();
 
-    if (state.conversations.length) {
-        state.activeId = state.conversations[0].id;
-    }
     renderConversationList();
     renderActiveConversation();
 
     loadAgents();
-    loadSessionInsights();
+    loadConversations().then(function () {
+        loadConversationInsights();
+    });
     loadAssessmentInsights();
     loadRecentOutputs();
 })();

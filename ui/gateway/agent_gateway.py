@@ -10,7 +10,7 @@ HISTORY_LIMIT = 10
 
 
 class AgentGateway:
-    def chat(self, user_id="anonymous", message=None, messages=None, conversation_id=None, agent_id=None):
+    def chat(self, user_id="anonymous", message=None, messages=None, conversation_id=None, agent_id=None, tool=None):
         agent = self._resolve_agent(agent_id)
         if not agent:
             raise ValueError("No connected agent is configured.")
@@ -25,6 +25,7 @@ class AgentGateway:
             history = session_manager.get_messages(
                 conversation_id,
                 limit=HISTORY_LIMIT,
+                user_id=user_id,
             )
             messages = list(history)
             if message:
@@ -46,12 +47,18 @@ class AgentGateway:
                 "user",
                 message,
                 user_id=user_id,
+                meta={"tool": tool or None},
             )
             session_manager.add_message(
                 conversation_id,
                 "assistant",
                 result.get("reply", ""),
                 user_id=user_id,
+                meta={
+                    "tool": tool or None,
+                    "usage": result.get("usage") or {},
+                    "agentName": agent.get("name", ""),
+                },
             )
 
         self._record(
@@ -61,6 +68,7 @@ class AgentGateway:
             latency_ms=result.get("latency_ms"),
             reply=result.get("reply", ""),
             conversation_id=conversation_id,
+            user_id=user_id,
         )
 
         result["conversation_id"] = conversation_id
@@ -97,7 +105,7 @@ class AgentGateway:
             return agents_service.get_agent(agent_id)
         return agents_service.get_connected_agent()
 
-    def _record(self, agent, messages, usage, latency_ms, reply, conversation_id):
+    def _record(self, agent, messages, usage, latency_ms, reply, conversation_id, user_id=None):
         try:
             insights_service.record_turn(
                 agent=agent,
@@ -106,6 +114,7 @@ class AgentGateway:
                 latency_ms=latency_ms,
                 reply=reply,
                 conversation_id=conversation_id,
+                user_id=user_id,
             )
             app_insights.track_agent_chat(
                 agent=agent,

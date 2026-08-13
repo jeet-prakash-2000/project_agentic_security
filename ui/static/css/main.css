@@ -692,6 +692,28 @@ input, select, textarea {
     color: var(--text-2);
 }
 
+.user-logout {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-left: 2px;
+    border-radius: 999px;
+    color: var(--text-2);
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.user-logout svg {
+    width: 16px;
+    height: 16px;
+}
+
+.user-logout:hover {
+    color: #fff;
+    background: rgba(228, 0, 43, 0.16);
+}
+
 .main {
     flex: 1;
     padding: 24px 26px 48px;

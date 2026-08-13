@@ -35,7 +35,7 @@ def _save(data):
     storage.save_document(INSIGHTS_DOC, data)
 
 
-def record_turn(agent, messages, usage, latency_ms, reply="", conversation_id=None):
+def record_turn(agent, messages, usage, latency_ms, reply="", conversation_id=None, user_id=None):
     now = time.time()
     conversation_id = conversation_id or "conv-" + uuid.uuid4().hex[:12]
 
@@ -72,6 +72,7 @@ def record_turn(agent, messages, usage, latency_ms, reply="", conversation_id=No
                 "agent_name": agent.get("name", ""),
                 "agent_type": agent.get("type", ""),
                 "model": agent.get("model", ""),
+                "user_id": user_id,
                 "created": now,
                 "updated": now,
                 "turns": [],
@@ -202,3 +203,40 @@ def summarize():
         "totals": total,
         "recent": recent[:50],
     }
+
+
+def summarize_conversation(conversation_id):
+    data = _load()
+    conversations = data.get("conversations", [])
+
+    for conversation in conversations:
+        if conversation.get("id") != conversation_id:
+            continue
+
+        turns = conversation.get("turns", [])
+        input_tokens = sum(t.get("input_tokens", 0) for t in turns)
+        output_tokens = sum(t.get("output_tokens", 0) for t in turns)
+        total_tokens = sum(t.get("total_tokens", 0) for t in turns)
+        cached_tokens = sum(t.get("cached_tokens", 0) for t in turns)
+        reasoning_tokens = sum(t.get("reasoning_tokens", 0) for t in turns)
+        total_latency_ms = sum(t.get("latency_ms", 0) for t in turns)
+
+        return {
+            "id": conversation_id,
+            "agent_id": conversation.get("agent_id", ""),
+            "agent_name": conversation.get("agent_name", ""),
+            "agent_type": conversation.get("agent_type", ""),
+            "model": conversation.get("model", ""),
+            "created": conversation.get("created"),
+            "updated": conversation.get("updated"),
+            "turns": len(turns),
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "total_tokens": total_tokens,
+            "cached_tokens": cached_tokens,
+            "reasoning_tokens": reasoning_tokens,
+            "avg_latency_ms": int(total_latency_ms / len(turns)) if turns else 0,
+            "cost": _estimate_cost(input_tokens, output_tokens),
+        }
+
+    return None

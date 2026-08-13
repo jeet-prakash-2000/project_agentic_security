@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in — LTM Security Platform</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}?v=1">
+</head>
+<body>
+    <div class="auth-scene">
+        <div class="auth-orb auth-orb-1"></div>
+        <div class="auth-orb auth-orb-2"></div>
+        <div class="auth-orb auth-orb-3"></div>
+    </div>
+
+    <main class="auth-shell">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <span class="auth-logo"><img src="{{ url_for('static', filename='images/logo.svg') }}" alt="LTM Security Platform"></span>
+                <div class="auth-brand-text">
+                    <span class="auth-title">LTM Security</span>
+                    <span class="auth-sub">Platform</span>
+                </div>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="auth-tab {{ 'active' if mode == 'login' else '' }}" data-mode="login" type="button">Sign in</button>
+                <button class="auth-tab {{ 'active' if mode == 'signup' else '' }}" data-mode="signup" type="button">Create account</button>
+            </div>
+
+            {% if error %}
+            <div class="auth-error">{{ error }}</div>
+            {% endif %}
+
+            <form class="auth-form {{ 'is-hidden' if mode == 'signup' else '' }}" id="loginForm" method="POST" action="{{ url_for('login') }}">
+                <label class="auth-field">
+                    <span>Email</span>
+                    <input type="email" name="email" placeholder="you@company.com" required autocomplete="email">
+                </label>
+                <label class="auth-field">
+                    <span>Password</span>
+                    <input type="password" name="password" placeholder="Your password" required autocomplete="current-password">
+                </label>
+                <button type="submit" class="auth-submit">Sign in</button>
+                <p class="auth-hint">Sign in to access your AI Workspace and chat history.</p>
+            </form>
+
+            <form class="auth-form {{ 'is-hidden' if mode == 'login' else '' }}" id="signupForm" method="POST" action="{{ url_for('signup') }}">
+                <label class="auth-field">
+                    <span>Full name</span>
+                    <input type="text" name="name" placeholder="e.g. Jeet Prakash Parida" required value="{{ form.name if form else '' }}">
+                </label>
+                <label class="auth-field">
+                    <span>Email</span>
+                    <input type="email" name="email" placeholder="you@company.com" required autocomplete="email" value="{{ form.email if form else '' }}">
+                </label>
+                <label class="auth-field">
+                    <span>Password</span>
+                    <input type="password" name="password" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
+                </label>
+                <button type="submit" class="auth-submit">Create account</button>
+                <p class="auth-hint">Your conversations and reports are saved to your account.</p>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        (function () {
+            var tabs = document.querySelectorAll(".auth-tab");
+            var loginForm = document.getElementById("loginForm");
+            var signupForm = document.getElementById("signupForm");
+            var errorEl = document.querySelector(".auth-error");
+
+            function setMode(mode) {
+                tabs.forEach(function (t) {
+                    t.classList.toggle("active", t.getAttribute("data-mode") === mode);
+                });
+                if (loginForm) loginForm.classList.toggle("is-hidden", mode !== "login");
+                if (signupForm) signupForm.classList.toggle("is-hidden", mode !== "signup");
+                if (errorEl) errorEl.style.display = "none";
+            }
+
+            tabs.forEach(function (t) {
+                t.addEventListener("click", function () {
+                    setMode(t.getAttribute("data-mode"));
+                });
+            });
+        })();
+    </script>
+</body>
+</html>

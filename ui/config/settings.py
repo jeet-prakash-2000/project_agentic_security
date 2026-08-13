@@ -1,4 +1,11 @@
+import os
+
 from config import keyvault
+
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "ltm-security-platform-dev-secret-key-change-me",
+)
 
 BASE_URL = keyvault.get_secret(
     "firewall-function-url",

@@ -174,3 +174,10 @@
 *.lz
 *.lzma
 *.iso
+
+# Mutable runtime data (local JSON fallback storage for the UI)
+ui/config/*.json
+
+# Generated reports and workbooks
+ui/static/reports/*.pdf
+ui/static/reports/*.xlsx

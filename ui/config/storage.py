@@ -33,6 +33,7 @@ DOCUMENTS = {
     "telemetry_history": "telemetry_history.json",
     "telemetry_metrics": "telemetry_metrics.json",
     "assessment_stats": "assessment_stats.json",
+    "users": "users.json",
 }
 
 # Azure Table limits: string properties are measured in UTF-16 (2 bytes/char),
