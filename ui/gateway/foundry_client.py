@@ -114,7 +114,7 @@ def _call_tool(tool_registry, function_call):
         return json.dumps({"error": str(error)})
 
 
-def _extract_responses_reply(data):
+def _extract_reply(data):
     content_parts = []
     function_calls = []
     for item in data.get("output") or []:
@@ -150,15 +150,30 @@ def _responses_url(agent_endpoint):
     return endpoint + "/openai/v1/responses"
 
 
-def _run_responses(agent_endpoint, api_key, model, conversation, sys_prompt, tool_registry):
+def chat(agent, messages):
+    from gateway import tools as tool_registry
+
+    agent_endpoint = (agent.get("agent_endpoint") or "").rstrip("/")
+    api_key = _resolve_api_key(agent)
+    model = agent.get("model", "gpt-5.1")
+
+    if not agent_endpoint:
+        raise ValueError("Agent is missing the agent endpoint.")
+    if not api_key:
+        raise ValueError("Agent is missing the API key.")
+
+    conversation = _normalize_messages(messages)
+    sys_prompt = _system_prompt(agent)
     url = _responses_url(agent_endpoint)
+
+    started = time.monotonic()
 
     payload = {"model": model, "input": conversation, "tools": TOOL_SCHEMAS}
     if sys_prompt:
         payload["instructions"] = sys_prompt
 
     data = _post(url, api_key, payload)
-    content, function_calls = _extract_responses_reply(data)
+    content, function_calls = _extract_reply(data)
     total_usage = dict(data.get("usage") or {})
 
     max_rounds = 3
@@ -180,110 +195,8 @@ def _run_responses(agent_endpoint, api_key, model, conversation, sys_prompt, too
             payload["instructions"] = sys_prompt
 
         data = _post(url, api_key, payload)
-        content, function_calls = _extract_responses_reply(data)
+        content, function_calls = _extract_reply(data)
         _merge_usage(total_usage, data.get("usage") or {})
-
-    return content, total_usage, data.get("model") or model
-
-
-def _chat_completion_tools():
-    return [
-        {
-            "type": "function",
-            "function": {
-                "name": tool["name"],
-                "description": tool["description"],
-                "parameters": tool.get("parameters", {"type": "object", "properties": {}}),
-            },
-        }
-        for tool in TOOL_SCHEMAS
-    ]
-
-
-def _extract_chat_reply(data):
-    choices = data.get("choices") or []
-    if not choices:
-        return None, None
-    message = choices[0].get("message") or {}
-    content = (message.get("content") or "").strip() or None
-    tool_calls = message.get("tool_calls") or None
-    return content, tool_calls
-
-
-def _run_chat_completions(llm_endpoint, api_key, model, conversation, sys_prompt, tool_registry):
-    url = llm_endpoint + "/chat/completions"
-
-    messages = list(conversation)
-    if sys_prompt:
-        messages.insert(0, {"role": "system", "content": sys_prompt})
-
-    data = _post(url, api_key, {
-        "model": model,
-        "messages": messages,
-        "tools": _chat_completion_tools(),
-    })
-
-    content, tool_calls = _extract_chat_reply(data)
-    total_usage = dict(data.get("usage") or {})
-
-    max_rounds = 3
-    while tool_calls and max_rounds > 0:
-        max_rounds -= 1
-
-        assistant_message = {"role": "assistant", "tool_calls": tool_calls}
-        if content:
-            assistant_message["content"] = content
-        messages.append(assistant_message)
-
-        for tool_call in tool_calls:
-            function = tool_call.get("function") or {}
-            result_text = _call_tool(tool_registry, {
-                "name": function.get("name", ""),
-                "arguments": function.get("arguments") or "{}",
-            })
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.get("id", ""),
-                "content": result_text,
-            })
-
-        data = _post(url, api_key, {
-            "model": model,
-            "messages": messages,
-            "tools": _chat_completion_tools(),
-        })
-        content, tool_calls = _extract_chat_reply(data)
-        _merge_usage(total_usage, data.get("usage") or {})
-
-    return content, total_usage, data.get("model") or model
-
-
-def chat(agent, messages):
-    from gateway import tools as tool_registry
-
-    agent_endpoint = (agent.get("agent_endpoint") or "").rstrip("/")
-    llm_endpoint = (agent.get("llm_endpoint") or "").rstrip("/")
-    api_key = _resolve_api_key(agent)
-    model = agent.get("model", "gpt-5.1")
-
-    if not api_key:
-        raise ValueError("Agent is missing the API key.")
-    if not agent_endpoint and not llm_endpoint:
-        raise ValueError("Agent is missing the agent endpoint or Azure OpenAI endpoint.")
-
-    conversation = _normalize_messages(messages)
-    sys_prompt = _system_prompt(agent)
-
-    started = time.monotonic()
-
-    if agent_endpoint:
-        content, total_usage, resolved_model = _run_responses(
-            agent_endpoint, api_key, model, conversation, sys_prompt, tool_registry
-        )
-    else:
-        content, total_usage, resolved_model = _run_chat_completions(
-            llm_endpoint, api_key, model, conversation, sys_prompt, tool_registry
-        )
 
     if content is None:
         content = "Assessment completed. Check the outputs above for detailed results."
@@ -294,5 +207,5 @@ def chat(agent, messages):
         "reply": content,
         "usage": total_usage,
         "latency_ms": latency_ms,
-        "model": resolved_model or model,
+        "model": data.get("model") or model,
     }

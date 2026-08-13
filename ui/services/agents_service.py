@@ -62,7 +62,7 @@ def slugify(name):
     return slug.strip("-") or "agent"
 
 
-def add_agent(name, type_name, endpoint, api_key, model="gpt-5.1", llm_endpoint=None, connected=True):
+def add_agent(name, type_name, endpoint, api_key, model="gpt-5.1", connected=True):
     agents = _load()
     agent_id = slugify(name)
 
@@ -75,7 +75,6 @@ def add_agent(name, type_name, endpoint, api_key, model="gpt-5.1", llm_endpoint=
                         "type": type_name,
                         "model": model,
                         "agent_endpoint": endpoint,
-                        "llm_endpoint": llm_endpoint,
                         "api_key": api_key,
                         "connected": connected,
                     }
@@ -89,7 +88,6 @@ def add_agent(name, type_name, endpoint, api_key, model="gpt-5.1", llm_endpoint=
         "type": type_name,
         "model": model,
         "agent_endpoint": endpoint,
-        "llm_endpoint": llm_endpoint,
         "api_key": api_key,
         "connected": connected,
         "created_at": _now(),

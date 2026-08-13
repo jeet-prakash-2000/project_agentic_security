@@ -797,7 +797,6 @@
                 var name = document.getElementById("agentName").value.trim();
                 var type = document.getElementById("agentType").value;
                 var endpoint = document.getElementById("agentEndpoint").value.trim();
-                var llmEndpoint = document.getElementById("agentLlmEndpoint").value.trim();
                 var model = document.getElementById("agentModel").value.trim() || "gpt-5.1";
                 var key = document.getElementById("agentKey").value.trim();
 
@@ -818,7 +817,7 @@
                 fetch("/api/agents", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name: name, type: type, endpoint: endpoint, llm_endpoint: llmEndpoint, model: model, api_key: key })
+                    body: JSON.stringify({ name: name, type: type, endpoint: endpoint, model: model, api_key: key })
                 })
                     .then(function (r) { return r.json(); })
                     .then(function (data) {

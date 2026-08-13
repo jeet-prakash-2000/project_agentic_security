@@ -546,7 +546,6 @@ def api_agents_add():
         endpoint=endpoint,
         api_key=api_key,
         model=(payload.get("model") or "gpt-5.1").strip(),
-        llm_endpoint=(payload.get("llm_endpoint") or "").strip() or None,
     )
 
     return jsonify({"status": "connected", "agent": agent}), 201
