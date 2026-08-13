@@ -111,6 +111,6 @@ def remove_agent(agent_id):
 
 
 def _now():
-    from datetime import datetime, timezone
+    from services import timeutil
 
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return timeutil.ist_now().isoformat()

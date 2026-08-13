@@ -16,8 +16,11 @@ DEFAULT_RESOURCE_GROUP = os.getenv(
 DEFAULT_LOCATION = os.getenv("AZURE_LOCATION", "centralindia")
 
 
-def utc_now_iso():
-    return datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+def ist_now_iso():
+    from datetime import timezone, timedelta
+
+    IST = timezone(timedelta(hours=5, minutes=30))
+    return datetime.datetime.now(IST).replace(microsecond=0).isoformat()
 
 
 def mock_azure_response(endpoint, params, success_data):

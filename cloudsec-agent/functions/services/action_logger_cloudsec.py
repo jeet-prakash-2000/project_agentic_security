@@ -1,5 +1,5 @@
 import json
-from ..connectors.azure_config_cloudsec import utc_now_iso
+from ..connectors.azure_config_cloudsec import ist_now_iso
 
 
 class ActionLogger:
@@ -14,7 +14,7 @@ class ActionLogger:
             "action": action,
             "detail": detail,
             "status": status,
-            "timestamp": utc_now_iso(),
+            "timestamp": ist_now_iso(),
         }
         self.actions.append(entry)
         return entry

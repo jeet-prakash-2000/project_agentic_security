@@ -1,5 +1,5 @@
 import json
-from ..connectors.azure_config_cloudsec import utc_now_iso
+from ..connectors.azure_config_cloudsec import ist_now_iso
 
 
 class ReportGenerator:
@@ -18,7 +18,7 @@ class ReportGenerator:
                 "current_status": status,
                 "recommendation": "Conduct root cause analysis and apply security patches before restoring connectivity",
             },
-            "generated_at": utc_now_iso(),
+            "generated_at": ist_now_iso(),
         }
 
     def generate_technical_report(self, incident_id, incident_data, evidence, timeline, risk, actions):
@@ -38,7 +38,7 @@ class ReportGenerator:
             "containment_actions": actions.get("containment", []),
             "recovery_actions": actions.get("recovery", []),
             "eradication_actions": actions.get("eradication", []),
-            "generated_at": utc_now_iso(),
+            "generated_at": ist_now_iso(),
         }
 
     def generate_executive_report(self, incident_id, incident_data, risk, status, cost_impact):
@@ -64,5 +64,5 @@ class ReportGenerator:
                 "recovery_time_estimate": "2-4 hours",
             },
             "current_status": status,
-            "generated_at": utc_now_iso(),
+            "generated_at": ist_now_iso(),
         }

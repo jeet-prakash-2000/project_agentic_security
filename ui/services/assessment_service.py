@@ -2,12 +2,12 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
 
 import requests
 
 from config import settings
 from config import storage
+from services import timeutil
 
 UI_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -170,7 +170,7 @@ def _stamp(data, source):
 
     data["_source"] = source
     data["_collected_at"] = (
-        datetime.utcnow().isoformat()
+        timeutil.ist_now().isoformat()
     )
 
     return data
@@ -293,7 +293,7 @@ def get_executive_summary_pdf(force=False):
 
     summary = get_executive_summary(force)
 
-    month = time.strftime("%b_%Y")
+    month = timeutil.ist_now().strftime("%b_%Y")
     filename = "Executive_Summary_{0}.pdf".format(month)
 
     os.makedirs(

@@ -1,9 +1,9 @@
 import time
-from datetime import datetime
 
 import requests
 
 from config import settings
+from services import timeutil
 
 TIMEOUT = 60
 
@@ -22,7 +22,7 @@ def _refresh_cache(data):
     """Update assessment_service cache so Security Ops page shows latest results."""
     import services.assessment_service as a
     data["_source"] = "live"
-    data["_collected_at"] = datetime.utcnow().isoformat()
+    data["_collected_at"] = timeutil.ist_now().isoformat()
     a._cache["assessment"] = data
     a._cache["ts"] = time.time()
     a._record_assessment()

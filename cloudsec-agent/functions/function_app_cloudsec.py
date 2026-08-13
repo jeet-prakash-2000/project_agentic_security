@@ -10,7 +10,7 @@ from connectors.network_connector_cloudsec import NetworkConnector
 from services.incident_analysis_cloudsec import TimelineBuilder, RiskAnalyzer
 from services.report_generator_cloudsec import ReportGenerator
 from services.action_logger_cloudsec import ActionLogger
-from connectors.azure_config_cloudsec import utc_now_iso
+from connectors.azure_config_cloudsec import ist_now_iso
 
 app = func.FunctionApp()
 
@@ -419,5 +419,5 @@ def RunFullIncidentResponse(req: func.HttpRequest):
         risk_score=risk["risk_score"], risk_level=risk["risk_level"],
         recommended_action=risk["recommended_action"],
         stages=response_stages, action_log=logger.to_dict(),
-        errors=errors, completed_at=utc_now_iso()
+        errors=errors, completed_at=ist_now_iso()
     )), status_code=200, mimetype="application/json")

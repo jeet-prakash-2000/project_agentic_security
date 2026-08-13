@@ -11,8 +11,6 @@ full assessment configuration into a set of styled sheets:
   Backup, HA)
 """
 
-from datetime import datetime, timezone
-
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
@@ -368,4 +366,6 @@ class ExcelReport:
 
     @staticmethod
     def _now():
-        return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        from reports.timeutil import ist_now
+
+        return ist_now().strftime("%Y-%m-%d %H:%M IST")

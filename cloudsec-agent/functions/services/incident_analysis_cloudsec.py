@@ -1,6 +1,6 @@
 import json
 import datetime
-from ..connectors.azure_config_cloudsec import utc_now_iso
+from ..connectors.azure_config_cloudsec import ist_now_iso
 
 
 class TimelineBuilder:
@@ -29,14 +29,14 @@ class TimelineBuilder:
             for indicator in evidence_data.get("suspicious_indicators", []):
                 if indicator["severity"] in ("Critical", "High"):
                     events.append({
-                        "time": evidence_data.get("collected_at", utc_now_iso()),
+                        "time": evidence_data.get("collected_at", ist_now_iso()),
                         "phase": "Investigation",
                         "event": indicator["type"].replace("_", " ").title(),
                         "detail": indicator["detail"],
                     })
 
         events.append({
-            "time": utc_now_iso(),
+            "time": ist_now_iso(),
             "phase": "Containment",
             "event": "Containment initiated",
             "detail": "VM isolation and IP blocking executed based on investigation findings",
@@ -48,7 +48,7 @@ class TimelineBuilder:
             "incident_id": incident_id,
             "timeline": events,
             "total_events": len(events),
-            "generated_at": utc_now_iso(),
+            "generated_at": ist_now_iso(),
         }
 
 
@@ -104,7 +104,7 @@ class RiskAnalyzer:
                 "alert_severity": alert_data.get("severity", "N/A") if alert_data else "N/A",
                 "suspicious_indicators": len(evidence_data.get("suspicious_indicators", [])) if evidence_data else 0,
             },
-            "analyzed_at": utc_now_iso(),
+            "analyzed_at": ist_now_iso(),
         }
 
     def _risk_level(self, score):

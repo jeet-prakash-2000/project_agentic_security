@@ -8,6 +8,7 @@ from config import storage
 from services import agents_service
 from services import insights_service
 from services import system_status_service
+from services import timeutil
 
 SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
@@ -77,9 +78,7 @@ def _load_history():
 
 
 def _format_ts(ts):
-    from datetime import datetime
-
-    return datetime.fromtimestamp(ts).strftime("%b %d, %H:%M")
+    return timeutil.format_ist(ts, "%b %d, %H:%M")
 
 
 def append_snapshot(agent, nodes):

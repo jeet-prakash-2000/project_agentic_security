@@ -1,7 +1,6 @@
 """Professional PDF rendering for the executive summary."""
 
 import os
-from datetime import datetime, timezone
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -118,8 +117,14 @@ def _meta_table(summary, styles):
     collected = summary.get("_collected_at") or ""
     if collected:
         try:
-            collected = datetime.fromisoformat(collected).strftime(
-                "%Y-%m-%d %H:%M UTC"
+            from reports.timeutil import IST
+            from datetime import datetime, timezone
+
+            parsed = datetime.fromisoformat(collected)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            collected = parsed.astimezone(IST).strftime(
+                "%Y-%m-%d %H:%M IST"
             )
         except Exception:
             pass

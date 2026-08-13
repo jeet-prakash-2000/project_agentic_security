@@ -18,6 +18,7 @@ from services import report_history_service
 from services import system_status_service
 from services import telemetry_map_service
 from services import firewall_data_service
+from services import timeutil
 from gateway.agent_gateway import gateway
 
 app = Flask(__name__)
@@ -70,10 +71,8 @@ def file_size_label(path):
 
 
 def format_report_ts(ts):
-    from datetime import datetime
-
     try:
-        return datetime.fromtimestamp(float(ts)).strftime("%Y-%m-%d %H:%M")
+        return timeutil.format_ist(ts)
     except (TypeError, ValueError, OverflowError):
         return "—"
 
@@ -265,7 +264,7 @@ def generate_excel():
         report_history_service.append_report(
             {
                 "name": "Assessment_Workbook_{0}".format(
-                    time.strftime("%b_%Y")
+                    timeutil.ist_now().strftime("%b_%Y")
                 ),
                 "type": "Workbook",
                 "generated_by": (agent or {}).get("name", "Firewall Auditor"),
@@ -520,7 +519,7 @@ def api_excel():
 
         agent = agents_service.get_connected_agent()
         report_history_service.append_report({
-            "name": "Assessment_Workbook_{0}".format(time.strftime("%b_%Y")),
+            "name": "Assessment_Workbook_{0}".format(timeutil.ist_now().strftime("%b_%Y")),
             "type": "Workbook",
             "generated_by": (agent or {}).get("name", "Firewall Auditor"),
             "ts": time.time(),
@@ -555,7 +554,7 @@ def download_workbook():
 
         agent = agents_service.get_connected_agent()
         report_history_service.append_report({
-            "name": "Assessment_Workbook_{0}".format(time.strftime("%b_%Y")),
+            "name": "Assessment_Workbook_{0}".format(timeutil.ist_now().strftime("%b_%Y")),
             "type": "Workbook",
             "generated_by": (agent or {}).get("name", "Firewall Auditor"),
             "ts": time.time(),
