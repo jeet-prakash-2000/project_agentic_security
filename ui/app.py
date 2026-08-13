@@ -7,6 +7,7 @@ from flask import jsonify
 from flask import url_for
 from flask import request
 from flask import redirect
+from flask import send_file
 
 from config import settings as platform_settings
 from services import assessment_service
@@ -535,6 +536,46 @@ def api_excel():
         return jsonify(
             {"error": str(e)}
         ), 500
+
+
+@app.route("/download-workbook")
+def download_workbook():
+
+    try:
+
+        result = (
+            assessment_service
+            .get_excel_report(
+                force=True
+            )
+        )
+
+        local_file = result.get("local_file")
+        filename = "PaloAlto_Assessment.xlsx"
+
+        agent = agents_service.get_connected_agent()
+        report_history_service.append_report({
+            "name": "Assessment_Workbook_{0}".format(time.strftime("%b_%Y")),
+            "type": "Workbook",
+            "generated_by": (agent or {}).get("name", "Firewall Auditor"),
+            "ts": time.time(),
+            "status": "Completed",
+            "size": file_size_label(local_file),
+            "download_url": "reports/{0}".format(filename),
+        })
+
+        return send_file(
+            local_file,
+            as_attachment=True,
+            download_name=filename
+        )
+
+    except Exception as e:
+
+        return jsonify(
+            {"error": str(e)}
+        ), 500
+
 
 @app.route("/api/agents")
 def api_agents():

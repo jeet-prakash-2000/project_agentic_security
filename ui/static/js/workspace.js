@@ -83,7 +83,7 @@
         },
         excel: {
             name: "Report Generation",
-            link: { label: "Download workbook", href: "/api/excel" },
+            link: { label: "Download workbook", href: "/download-workbook" },
             icon: '<path d="M6 2.5h8l4 4V21.5H6V2.5z"/><path d="M14 2.5v4h4"/>'
         },
         findings: {
