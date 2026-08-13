@@ -127,6 +127,10 @@ def _live_assessment():
     if not settings.LIVE_ENABLED:
         return None
 
+    key = (settings.FUNCTION_KEY or "").strip()
+    if not key or key.startswith("PLACEHOLDER"):
+        return None
+
     try:
 
         response = requests.get(

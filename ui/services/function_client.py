@@ -8,12 +8,35 @@ from services import timeutil
 TIMEOUT = 60
 
 
+class LiveFunctionUnavailable(Exception):
+    """Raised when the live firewall function cannot be called (missing key or 401/403)."""
+
+
+def _key_usable(key):
+    key = (key or "").strip()
+    return bool(key) and not key.startswith("PLACEHOLDER")
+
+
 def _get(endpoint, key=None):
+    key = key or settings.FUNCTION_KEY
+    if not _key_usable(key):
+        raise LiveFunctionUnavailable(
+            "Live firewall function key is not configured."
+        )
+
     response = requests.get(
         f"{settings.BASE_URL}/{endpoint}",
-        params={"code": key or settings.FUNCTION_KEY},
+        params={"code": key},
         timeout=TIMEOUT,
     )
+
+    if response.status_code in (401, 403):
+        raise LiveFunctionUnavailable(
+            "Live firewall function rejected the access key (HTTP {0}).".format(
+                response.status_code
+            )
+        )
+
     response.raise_for_status()
     return response.json()
 
@@ -28,20 +51,47 @@ def _refresh_cache(data):
     a._record_assessment()
 
 
+def _local_assessment():
+    import services.assessment_service as a
+    return a.get_full_assessment(force=True)
+
+
+def _local_executive_summary():
+    import services.assessment_service as a
+    return a.get_executive_summary(force=True)
+
+
+def _local_excel_report():
+    import services.assessment_service as a
+    return a.get_excel_report(force=True)
+
+
 def run_compliance_assessment():
-    data = _get("run_compliance_assessment")
+    try:
+        data = _get("run_compliance_assessment")
+    except LiveFunctionUnavailable:
+        return _local_assessment()
     if isinstance(data, dict) and "findings" in data:
         _refresh_cache(data)
     return data
 
 
-def executive_summary():
-    return _get("executive_summary", key=settings.EXECUTIVE_SUMMARY_KEY)
-
-
 def run_full_assessment():
-    return _get("run_full_assessment", key=settings.FULL_ASSESSMENT_KEY)
+    try:
+        return _get("run_full_assessment", key=settings.FULL_ASSESSMENT_KEY)
+    except LiveFunctionUnavailable:
+        return _local_assessment()
+
+
+def executive_summary():
+    try:
+        return _get("executive_summary", key=settings.EXECUTIVE_SUMMARY_KEY)
+    except LiveFunctionUnavailable:
+        return _local_executive_summary()
 
 
 def generate_excel_report():
-    return _get("generate_excel_report", key=settings.EXCEL_KEY)
+    try:
+        return _get("generate_excel_report", key=settings.EXCEL_KEY)
+    except LiveFunctionUnavailable:
+        return _local_excel_report()
