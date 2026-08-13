@@ -4,3 +4,4 @@ gunicorn
 azure-identity
 azure-keyvault-secrets
 azure-data-tables
+openpyxl
