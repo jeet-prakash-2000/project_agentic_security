@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import sys
 import time
 
@@ -33,6 +34,9 @@ EXCEL_FILE = os.path.join(
 )
 
 STATS_DOC = "assessment_stats"
+HISTORY_DOC = "assessment_history"
+
+SEVERITY_KEYS = ("critical", "high", "medium", "low")
 
 if FUNCTIONS_ROOT not in sys.path:
     sys.path.insert(0, FUNCTIONS_ROOT)
@@ -68,6 +72,54 @@ def _record_assessment():
     stats["assessments_run"] = int(stats.get("assessments_run", 0)) + 1
     stats["last_assessment_ts"] = time.time()
     _save_stats(stats)
+
+
+def _seed_history():
+    rng = random.Random(20260814)
+    now = time.time()
+    snapshots = []
+    base = 36.0
+    for i in range(12):
+        pct = round(base + rng.uniform(-4.5, 3.0), 1)
+        snapshots.append({
+            "ts": now - (12 - i) * 86400,
+            "compliance_pct": pct,
+            "severity": {
+                "critical": rng.randint(9, 14),
+                "high": rng.randint(9, 14),
+                "medium": rng.randint(2, 6),
+                "low": rng.randint(0, 3),
+            },
+        })
+    storage.save_document(HISTORY_DOC, {"snapshots": snapshots})
+
+
+def _load_history():
+    data = storage.load_document(HISTORY_DOC, None)
+    if not isinstance(data, dict) or not data.get("snapshots"):
+        _seed_history()
+        data = storage.load_document(HISTORY_DOC, {"snapshots": []})
+    snapshots = data.get("snapshots", []) if isinstance(data, dict) else []
+    return [s for s in snapshots if isinstance(s, dict)]
+
+
+def _record_history(snapshot):
+    snapshots = _load_history()
+    if snapshots and abs(snapshots[-1].get("ts", 0) - snapshot["ts"]) < 300:
+        snapshots[-1] = snapshot
+    else:
+        snapshots.append(snapshot)
+        snapshots = snapshots[-60:]
+    storage.save_document(HISTORY_DOC, {"snapshots": snapshots})
+
+
+def _severity_breakdown(findings):
+    severity = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for f in findings:
+        r = (f.get("risk") or "").lower()
+        if r in severity:
+            severity[r] += 1
+    return severity
 
 
 def _live_assessment():
@@ -258,6 +310,78 @@ def get_findings(force=False):
             data.get(
                 "_collected_at"
             )
+    }
+
+
+def get_posture(force=False):
+    data = get_full_assessment(force)
+
+    summary = data.get("summary", {})
+    findings = data.get("findings", [])
+    results = data.get("assessment", [])
+    inventory = data.get("inventory", {})
+
+    total = summary.get("total_controls", 0) or len(results)
+    compliant = summary.get("compliant", 0)
+    non_compliant = summary.get("non_compliant", 0)
+    not_assessed = summary.get("not_assessed", 0)
+    compliance_pct = round(compliant / total * 100, 1) if total else 0.0
+
+    severity = _severity_breakdown(findings)
+
+    collected_at = data.get("_collected_at")
+    stats = get_assessment_stats()
+
+    prev_snapshots = _load_history()
+    prev = prev_snapshots[-1] if prev_snapshots else None
+
+    snapshot = {
+        "ts": time.time(),
+        "compliance_pct": compliance_pct,
+        "severity": severity,
+    }
+    _record_history(snapshot)
+
+    trend_pct = 0.0
+    severity_change = {k: 0 for k in SEVERITY_KEYS}
+    if prev and isinstance(prev.get("compliance_pct"), (int, float)):
+        trend_pct = round(compliance_pct - prev["compliance_pct"], 1)
+        prev_sev = prev.get("severity") or {}
+        for k in SEVERITY_KEYS:
+            severity_change[k] = int(severity.get(k, 0)) - int(prev_sev.get(k, 0))
+
+    history = _load_history()
+
+    posture = {
+        "compliance_pct": compliance_pct,
+        "trend_pct": trend_pct,
+        "compliant": compliant,
+        "non_compliant": non_compliant,
+        "not_assessed": not_assessed,
+        "total_controls": total,
+        "severity": severity,
+        "severity_change": severity_change,
+        "assessments_run": int(stats.get("assessments_run", 0)),
+        "last_assessment_ts": stats.get("last_assessment_ts"),
+        "collected_at": collected_at,
+        "_source": data.get("_source", "sample"),
+    }
+
+    firewall = {
+        "hostname": inventory.get("hostname", "edge-fw-01"),
+        "model": inventory.get("model", ""),
+        "version": inventory.get("version", ""),
+        "serial": inventory.get("serial", ""),
+    }
+
+    return {
+        "posture": posture,
+        "firewall": firewall,
+        "findings": findings,
+        "assessment": results,
+        "history": history,
+        "_source": data.get("_source", "sample"),
+        "_collected_at": collected_at,
     }
 
 

@@ -737,3 +737,19 @@ var FINDING_ENRICHMENT = {
         remediation: "Retain minimum 10 versioned config snapshots. Test rollback procedure quarterly."
     }
 };
+
+var FINDING_ENRICHMENT_CATEGORIES = {
+    "Software & Platform Currency": "Software & Platform",
+    "Hardware & Capacity": "Capacity & Performance",
+    "High Availability": "Capacity & Performance",
+    "Threat Prevention": "Security Services",
+    "SSL/TLS Decryption": "Security Services",
+    "Zone Protection & DoS": "Security Services",
+    "Security Policy & Rule Base": "Security Services",
+    "NAT & Routing": "Network Configuration",
+    "Network Segmentation & Zones": "Network Configuration",
+    "VPN": "Network Configuration",
+    "Admin Access & Hardening": "Administration & Management",
+    "Backup & Change Management": "Administration & Management",
+    "Logging & Monitoring": "Administration & Management"
+};

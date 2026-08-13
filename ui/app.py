@@ -452,6 +452,33 @@ def api_compliance():
         ), 500
 
 
+@app.route("/api/findings")
+def api_findings():
+
+    force = (
+        request.args.get(
+            "refresh",
+            "0"
+        )
+        == "1"
+    )
+
+    try:
+
+        return jsonify(
+            assessment_service
+            .get_posture(
+                force=force
+            )
+        )
+
+    except Exception as e:
+
+        return jsonify(
+            {"error": str(e)}
+        ), 500
+
+
 # --- Firewall Data Functions (individual connector calls) ---
 
 @app.route("/api/firewall/inventory")

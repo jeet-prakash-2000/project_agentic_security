@@ -33,6 +33,7 @@ DOCUMENTS = {
     "telemetry_history": "telemetry_history.json",
     "telemetry_metrics": "telemetry_metrics.json",
     "assessment_stats": "assessment_stats.json",
+    "assessment_history": "assessment_history.json",
     "users": "users.json",
 }
 

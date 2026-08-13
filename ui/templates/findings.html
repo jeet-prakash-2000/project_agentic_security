@@ -8,24 +8,78 @@
 
 <div class="findings-header">
     <div>
-        <span class="hero-eyebrow">Unified Security Operations</span>
+        <span class="hero-eyebrow">Firewall Posture Investigation</span>
         <h1>Security Operations Center</h1>
-        <p>Firewall compliance findings and assessment results in a single view.</p>
+        <p>Investigate findings, prioritize remediation, and track posture over time.</p>
     </div>
-    <a href="{{ url_for('run_assessment') }}" class="btn btn-primary" id="btnRunAssessment">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/></svg>
-        Run Assessment
-    </a>
+    <div class="findings-header-actions">
+        <button class="btn btn-ghost" id="btnExportReport" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+            Export Report
+        </button>
+        <a href="{{ url_for('run_assessment') }}" class="btn btn-primary" id="btnRunAssessment">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/></svg>
+            Run Assessment
+        </a>
+    </div>
 </div>
 
 {% if error %}
 <div class="alert alert-error"><strong>Error</strong><span>{{ error }}</span></div>
 {% endif %}
 
+<section class="posture-grid" id="postureGrid">
+    <div class="posture-card posture-card-score">
+        <div class="posture-card-head"><span class="posture-card-label">Compliance Score</span><span class="posture-card-source" id="postureSource">—</span></div>
+        <div class="posture-score-row">
+            <div class="score-gauge" id="scoreGauge"><svg viewBox="0 0 120 120"><circle class="gauge-track" cx="60" cy="60" r="52"/><circle class="gauge-fill" id="gaugeFill" cx="60" cy="60" r="52"/></svg><div class="score-gauge-value"><span id="scoreValue">—</span><span class="score-gauge-pct">%</span></div></div>
+            <div class="score-trend" id="scoreTrend"></div>
+        </div>
+    </div>
+    <div class="posture-card">
+        <div class="posture-card-head"><span class="posture-card-label">Controls Evaluated</span></div>
+        <div class="posture-big"><span id="kpiCompliant">—</span><span class="posture-big-sub">/ <span id="kpiTotal">—</span> passed</span></div>
+        <div class="posture-bar"><div class="posture-bar-fill posture-bar-ok" id="barCompliant"></div></div>
+        <div class="posture-subline"><span class="dot dot-ok"></span><span id="kpiCompliantLabel">—</span> compliant &nbsp;<span class="dot dot-bad"></span><span id="kpiNonCompliant">—</span> non-compliant</div>
+    </div>
+    <div class="posture-card">
+        <div class="posture-card-head"><span class="posture-card-label">Severity Breakdown</span></div>
+        <div class="sev-stack" id="sevStack"></div>
+    </div>
+    <div class="posture-card">
+        <div class="posture-card-head"><span class="posture-card-label">Last Assessment</span></div>
+        <div class="posture-big posture-big-sm" id="kpiLastAssessed">—</div>
+        <div class="posture-subline muted" id="kpiFirewall">—</div>
+        <div class="posture-subline muted" id="kpiAssessmentsRun">—</div>
+    </div>
+</section>
+
 <section class="findings-toolbar card" id="toolbarFilters">
-    <div class="toolbar-search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input type="text" id="findingsSearch" placeholder="Search by control ID, finding, or domain..." aria-label="Search findings">
+    <div class="toolbar-row">
+        <div class="toolbar-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="findingsSearch" placeholder="Search control ID, finding, domain, evidence..." aria-label="Search findings">
+        </div>
+        <div class="toolbar-select">
+            <label for="sortSelect">Sort</label>
+            <select id="sortSelect">
+                <option value="severity">Severity</option>
+                <option value="risk">Risk Score</option>
+                <option value="recent">Most Recent</option>
+                <option value="oldest">Oldest</option>
+                <option value="domain">Domain</option>
+                <option value="firewall">Firewall</option>
+            </select>
+        </div>
+        <div class="toolbar-select">
+            <label for="viewSelect">View</label>
+            <select id="viewSelect"></select>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="btnSaveView" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+            Save View
+        </button>
+        <button class="btn btn-ghost btn-sm" id="btnResetFilters" type="button">Reset</button>
     </div>
     <div class="toolbar-filters">
         <div class="filter-group">
@@ -46,31 +100,66 @@
                 <button class="chip" data-value="compliant">Compliant</button>
             </div>
         </div>
-    </div>
-</section>
-
-<section class="findings-summary" id="summaryChips">
-    <div class="summary-bar">
-        <div class="summary-total">
-            <span class="summary-number" id="summaryOpenCount">—</span>
-            <span class="summary-label">Open Findings</span>
-        </div>
-        <div class="summary-break">
-            <div class="summary-item summary-item-crit"><span class="summary-number" id="summaryCritCount">—</span><span>Critical</span></div>
-            <div class="summary-item summary-item-high"><span class="summary-number" id="summaryHiCount">—</span><span>High</span></div>
-            <div class="summary-item summary-item-med"><span class="summary-number" id="summaryMedCount">—</span><span>Medium</span></div>
-            <div class="summary-item summary-item-low"><span class="summary-number" id="summaryLoCount">—</span><span>Low</span></div>
+        <div class="filter-group">
+            <span class="filter-label">Domain</span>
+            <div class="filter-chips" id="domainChips"></div>
         </div>
     </div>
 </section>
 
-<div class="findings-grid" id="findingsRoot">
-    <div class="empty-state card"><h3>Loading findings...</h3></div>
+<div class="findings-layout">
+    <div class="findings-main">
+        <div class="findings-list-head">
+            <div class="findings-count" id="findingsCount">— findings</div>
+            <div class="findings-expand-actions">
+                <button class="btn btn-ghost btn-sm" id="btnExpandAll" type="button">Expand all</button>
+                <button class="btn btn-ghost btn-sm" id="btnCollapseAll" type="button">Collapse all</button>
+            </div>
+        </div>
+        <div class="findings-groups" id="findingsRoot">
+            <div class="empty-state card"><h3>Loading findings...</h3></div>
+        </div>
+    </div>
+
+    <aside class="findings-side">
+        <div class="card side-panel">
+            <div class="side-panel-head"><h4>Compliance Trend</h4></div>
+            <div class="trend-chart" id="trendChart"></div>
+        </div>
+        <div class="card side-panel">
+            <div class="side-panel-head"><h4>Assessment Timeline</h4></div>
+            <div class="timeline" id="assessmentTimeline"></div>
+        </div>
+        <div class="card side-panel">
+            <div class="side-panel-head"><h4>Top Risk Domains</h4></div>
+            <div class="domain-list" id="domainList"></div>
+        </div>
+    </aside>
+</div>
+
+<div class="copilot-backdrop" id="copilotBackdrop"></div>
+<div class="copilot-panel" id="copilotPanel" role="dialog" aria-label="AI Copilot">
+    <div class="copilot-head">
+        <div class="copilot-title">
+            <span class="copilot-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><path d="M18.5 15.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z"/></svg></span>
+            <div><h4 id="copilotTitle">AI Copilot</h4><span class="copilot-sub" id="copilotFindingRef">—</span></div>
+        </div>
+        <button class="copilot-close" id="copilotClose" type="button" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+    </div>
+    <div class="copilot-actions" id="copilotActions">
+        <button class="copilot-chip" data-action="explain" type="button">Explain Finding</button>
+        <button class="copilot-chip" data-action="fixplan" type="button">Generate Fix Plan</button>
+        <button class="copilot-chip" data-action="risk" type="button">Show Risk Analysis</button>
+        <button class="copilot-chip" data-action="summarize" type="button">Summarize Finding</button>
+    </div>
+    <div class="copilot-body" id="copilotBody"><p class="copilot-placeholder">Select an action to get AI assistance for this finding.</p></div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=4"></script>
-<script src="{{ url_for('static', filename='js/findings.js') }}?v=5"></script>
+<script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=5"></script>
+<script src="{{ url_for('static', filename='js/findings.js') }}?v=6"></script>
 {% endblock %}
