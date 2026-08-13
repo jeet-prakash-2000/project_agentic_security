@@ -1,18 +1,18 @@
-import json
 import os
 import threading
 import time
 
 from config import settings as platform_settings
 from config import keyvault
+from config import storage
 from services import agents_service
 from services import insights_service
 from services import system_status_service
 
 SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
-METRICS_FILE = os.path.join(CONFIG_DIR, "telemetry_metrics.json")
-HISTORY_FILE = os.path.join(CONFIG_DIR, "telemetry_history.json")
+METRICS_DOC = "telemetry_metrics"
+HISTORY_DOC = "telemetry_history"
 
 _lock = threading.Lock()
 
@@ -28,22 +28,15 @@ STATUS_REMOVED = "removed"
 STATUS_STOPPED = "stopped"
 
 
-def _load_json(path, default):
-    if not os.path.exists(path):
+def _load_doc(document_name, default):
+    data = storage.load_document(document_name, default)
+    if not isinstance(data, dict):
         return default
-    try:
-        with open(path, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        if not isinstance(data, dict):
-            return default
-        return data
-    except Exception:
-        return default
+    return data
 
 
-def _save_json(path, data):
-    with open(path, "w", encoding="utf-8") as handle:
-        json.dump(data, handle, indent=2)
+def _save_doc(document_name, data):
+    storage.save_document(document_name, data)
 
 
 # ------------------------------------------------------------
@@ -51,7 +44,7 @@ def _save_json(path, data):
 # ------------------------------------------------------------
 
 def _load_metrics():
-    return _load_json(METRICS_FILE, {"agents": {}})
+    return _load_doc(METRICS_DOC, {"agents": {}})
 
 
 def record_request(agent_id, error=False):
@@ -67,7 +60,7 @@ def record_request(agent_id, error=False):
         if error:
             entry["errors"] = int(entry.get("errors", 0)) + 1
         entry["last_ts"] = now
-        _save_json(METRICS_FILE, data)
+        _save_doc(METRICS_DOC, data)
 
 
 def get_metrics(agent_id):
@@ -80,7 +73,7 @@ def get_metrics(agent_id):
 # ------------------------------------------------------------
 
 def _load_history():
-    return _load_json(HISTORY_FILE, {"snapshots": []})
+    return _load_doc(HISTORY_DOC, {"snapshots": []})
 
 
 def _format_ts(ts):
@@ -116,7 +109,7 @@ def append_snapshot(agent, nodes):
             snapshots = snapshots[-MAX_SNAPSHOTS:]
             data["snapshots"] = snapshots
 
-        _save_json(HISTORY_FILE, data)
+        _save_doc(HISTORY_DOC, data)
 
 
 # ------------------------------------------------------------
@@ -534,7 +527,7 @@ def _seed_baseline(agent):
         if len(snapshots) > MAX_SNAPSHOTS:
             snapshots = snapshots[-MAX_SNAPSHOTS:]
             data["snapshots"] = snapshots
-        _save_json(HISTORY_FILE, data)
+        _save_doc(HISTORY_DOC, data)
 
 
 def _enrich_nodes(nodes):

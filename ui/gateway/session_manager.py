@@ -1,12 +1,13 @@
-import json
 import os
 import threading
 import time
 import uuid
 
+from config import storage
+
 SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
-SESSIONS_FILE = os.path.join(CONFIG_DIR, "sessions.json")
+SESSIONS_DOC = "sessions"
 
 _lock = threading.Lock()
 
@@ -15,21 +16,14 @@ MAX_MESSAGES = 50
 
 
 def _load():
-    if not os.path.exists(SESSIONS_FILE):
+    data = storage.load_document(SESSIONS_DOC, {"conversations": []})
+    if not isinstance(data, dict):
         return {"conversations": []}
-    try:
-        with open(SESSIONS_FILE, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        if not isinstance(data, dict):
-            return {"conversations": []}
-        return data
-    except Exception:
-        return {"conversations": []}
+    return data
 
 
 def _save(data):
-    with open(SESSIONS_FILE, "w", encoding="utf-8") as handle:
-        json.dump(data, handle, indent=2)
+    storage.save_document(SESSIONS_DOC, data)
 
 
 def get_or_create(conversation_id, user_id="anonymous"):

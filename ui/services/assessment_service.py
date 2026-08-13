@@ -7,6 +7,7 @@ from datetime import datetime
 import requests
 
 from config import settings
+from config import storage
 
 UI_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -31,11 +32,7 @@ EXCEL_FILE = os.path.join(
     "PaloAlto_Assessment.xlsx"
 )
 
-STATS_FILE = os.path.join(
-    UI_ROOT,
-    "config",
-    "assessment_stats.json"
-)
+STATS_DOC = "assessment_stats"
 
 if FUNCTIONS_ROOT not in sys.path:
     sys.path.insert(0, FUNCTIONS_ROOT)
@@ -51,19 +48,15 @@ _cache = {
 
 
 def _load_stats():
-    if not os.path.exists(STATS_FILE):
-        return {"assessments_run": 0, "last_assessment_ts": None}
-    try:
-        with open(STATS_FILE, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        return data if isinstance(data, dict) else {"assessments_run": 0, "last_assessment_ts": None}
-    except Exception:
-        return {"assessments_run": 0, "last_assessment_ts": None}
+    data = storage.load_document(
+        STATS_DOC,
+        {"assessments_run": 0, "last_assessment_ts": None},
+    )
+    return data if isinstance(data, dict) else {"assessments_run": 0, "last_assessment_ts": None}
 
 
 def _save_stats(stats):
-    with open(STATS_FILE, "w", encoding="utf-8") as handle:
-        json.dump(stats, handle, indent=2)
+    storage.save_document(STATS_DOC, stats)
 
 
 def get_assessment_stats():

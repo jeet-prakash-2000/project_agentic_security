@@ -3,9 +3,11 @@ import threading
 import time
 import uuid
 
+from config import storage
+
 SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
-INSIGHTS_FILE = os.path.join(CONFIG_DIR, "insights.json")
+INSIGHTS_DOC = "insights"
 
 _lock = threading.Lock()
 
@@ -23,29 +25,14 @@ def _estimate_cost(input_tokens, output_tokens):
 
 
 def _load():
-    if not os.path.exists(INSIGHTS_FILE):
+    data = storage.load_document(INSIGHTS_DOC, {"conversations": []})
+    if not isinstance(data, dict):
         return {"conversations": []}
-    try:
-        with open(INSIGHTS_FILE, "r", encoding="utf-8") as handle:
-            data = json_load(handle)
-        if not isinstance(data, dict):
-            return {"conversations": []}
-        return data
-    except Exception:
-        return {"conversations": []}
-
-
-def json_load(handle):
-    import json
-
-    return json.load(handle)
+    return data
 
 
 def _save(data):
-    import json
-
-    with open(INSIGHTS_FILE, "w", encoding="utf-8") as handle:
-        json.dump(data, handle, indent=2)
+    storage.save_document(INSIGHTS_DOC, data)
 
 
 def record_turn(agent, messages, usage, latency_ms, reply="", conversation_id=None):

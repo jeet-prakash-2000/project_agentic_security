@@ -1,11 +1,12 @@
-import json
 import os
 import threading
 import time
 
+from config import storage
+
 SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
-REPORTS_FILE = os.path.join(CONFIG_DIR, "reports_history.json")
+REPORTS_DOC = "reports_history"
 
 _lock = threading.Lock()
 
@@ -13,21 +14,14 @@ MAX_REPORTS = 50
 
 
 def _load():
-    if not os.path.exists(REPORTS_FILE):
+    data = storage.load_document(REPORTS_DOC, {"reports": []})
+    if not isinstance(data, dict):
         return {"reports": []}
-    try:
-        with open(REPORTS_FILE, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        if not isinstance(data, dict):
-            return {"reports": []}
-        return data
-    except Exception:
-        return {"reports": []}
+    return data
 
 
 def _save(data):
-    with open(REPORTS_FILE, "w", encoding="utf-8") as handle:
-        json.dump(data, handle, indent=2)
+    storage.save_document(REPORTS_DOC, data)
 
 
 def append_report(report):

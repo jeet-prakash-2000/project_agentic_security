@@ -1,27 +1,21 @@
-import json
 import os
 import re
 import uuid
 
+from config import storage
+
 SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
-AGENTS_FILE = os.path.join(CONFIG_DIR, "agents.json")
+AGENTS_DOC = "agents"
 
 
 def _load():
-    if not os.path.exists(AGENTS_FILE):
-        return []
-    try:
-        with open(AGENTS_FILE, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        return data.get("agents", []) or []
-    except Exception:
-        return []
+    data = storage.load_document(AGENTS_DOC, {"agents": []})
+    return (data or {}).get("agents", []) or []
 
 
 def _save(agents):
-    with open(AGENTS_FILE, "w", encoding="utf-8") as handle:
-        json.dump({"agents": agents}, handle, indent=2)
+    storage.save_document(AGENTS_DOC, {"agents": agents})
 
 
 def list_agents(include_key=False):
