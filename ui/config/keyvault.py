@@ -1,8 +1,12 @@
 import os
 import threading
 
-# Vault URL comes from environment so the code itself carries no secrets.
-VAULT_URL = os.environ.get("AZURE_KEY_VAULT_URL", "").strip().rstrip("/")
+# Vault URL default is baked in (it is not a secret); it can still be
+# overridden via the AZURE_KEY_VAULT_URL environment variable.
+VAULT_URL = os.environ.get(
+    "AZURE_KEY_VAULT_URL",
+    "https://netsec-agent-project-key.vault.azure.net/",
+).strip().rstrip("/")
 
 _client = None
 _client_error = None
