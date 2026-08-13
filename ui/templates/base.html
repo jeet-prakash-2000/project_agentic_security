@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/' ~ page_css) }}?v=3">
     {% endif %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 
     <div class="bg-scene">
         <div class="bg-layer bg-gradient"></div>

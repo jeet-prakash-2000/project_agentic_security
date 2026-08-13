@@ -1,97 +1,165 @@
 {% extends "base.html" %}
 
+{% block body_class %}workspace-page{% endblock %}
+
 {% block title %}AI Workspace — LTM Security Platform{% endblock %}
 
 {% block page_title %}AI Workspace{% endblock %}
 
 {% block content %}
 
-<div class="workspace-header rise">
-    <div>
-        <span class="hero-eyebrow">Security Copilot</span>
-        <h1>AI Workspace</h1>
-        <p>Interact with your AI Security Agents to investigate, assess, and remediate.</p>
-    </div>
-    <button class="btn btn-primary btn-lg" id="openAddAgentBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        Add Agent
-    </button>
-</div>
+<div class="ws-shell" id="wsShell">
 
-<section class="agents-section rise">
-    <div class="section-head">
-        <h3>Connected Agents</h3>
-        <span class="section-sub">Multi-agent ready — add more security copilots anytime</span>
-    </div>
-    <div class="agent-grid" id="agentGrid">
-        <div class="agent-card agent-add-card" id="addAgentTile">
-            <span class="agent-avatar agent-avatar-dashed">
+    <!-- ============================================================
+         LEFT SIDEBAR — conversation history
+         ============================================================ -->
+    <aside class="ws-panel ws-sidebar" id="wsSidebar" aria-label="Conversation history">
+        <div class="ws-sidebar-head">
+            <span class="ws-panel-label">Conversations</span>
+            <button class="ws-new-chat" id="newChatBtn" title="Start a new chat">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-            </span>
-            <h4>Add New Agent</h4>
-            <p>Connect a new security copilot to your workspace.</p>
-        </div>
-    </div>
-</section>
-
-<section class="chat-section card rise">
-    <div class="chat-header">
-        <div class="chat-title">
-            <span class="agent-avatar agent-avatar-blue">FA</span>
-            <div>
-                <strong id="chatAgentTitle">Firewall Auditor</strong>
-                <span class="chat-sub" id="chatAgentSub">Copilot session</span>
-            </div>
-        </div>
-        <div class="chat-actions">
-            <button class="icon-btn" id="clearChatBtn" title="Clear conversation">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                <span>New Chat</span>
             </button>
         </div>
-    </div>
 
-    <div class="chat-window" id="chatWindow">
-        <div class="message message-assistant">
-            <span class="msg-avatar agent-avatar agent-avatar-blue">FA</span>
-            <div class="msg-bubble">
-                <span class="msg-agent">Firewall Auditor</span>
-                <p>Hello Jeet. I'm your security copilot. I can run compliance assessments against your Palo Alto firewall estate, generate executive summaries, and produce detailed assessment workbooks.</p>
-                <div class="msg-actions">
-                    <button class="quick-pill" data-action="assess">Run Assessment</button>
-                    <button class="quick-pill" data-action="summary">Executive Summary</button>
-                    <button class="quick-pill" data-action="excel">Generate Report</button>
+        <div class="ws-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input type="text" id="convSearch" placeholder="Search conversations" autocomplete="off">
+        </div>
+
+        <div class="ws-agent-picker">
+            <label for="wsAgentSelect">Active copilot</label>
+            <select id="wsAgentSelect"></select>
+        </div>
+
+        <div class="ws-conv-list" id="convList"></div>
+
+        <div class="ws-sidebar-foot">
+            <button class="ws-manage-agents" id="openAddAgentBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Connect Agent
+            </button>
+        </div>
+    </aside>
+
+    <!-- ============================================================
+         CENTER — chat
+         ============================================================ -->
+    <section class="ws-panel ws-chat" id="wsChat">
+
+        <header class="ws-chat-header">
+            <button class="ws-icon-btn" id="sidebarToggle" title="Toggle conversation history" aria-label="Toggle conversation history">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+            </button>
+
+            <div class="ws-chat-title">
+                <span class="ws-agent-avatar agent-avatar agent-avatar-blue" id="chatAgentAvatar">FA</span>
+                <div class="ws-chat-title-meta">
+                    <strong id="chatAgentTitle">Firewall Auditor</strong>
+                    <span id="chatAgentSub">Copilot session</span>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="quick-actions-row">
-        <span class="quick-row-label">Quick actions</span>
-        <button class="quick-pill" data-action="assess">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/></svg>
-            Run Assessment
-        </button>
-        <button class="quick-pill" data-action="summary">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-            Executive Summary
-        </button>
-        <button class="quick-pill" data-action="excel">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8l4 4V21.5H6V2.5z"/><path d="M14 2.5v4h4"/></svg>
-            Generate Report
-        </button>
-    </div>
+            <div class="ws-chat-header-actions">
+                <button class="ws-icon-btn" id="clearChatBtn" title="Clear conversation" aria-label="Clear conversation">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                </button>
+                <button class="ws-icon-btn" id="insightsToggle" title="Toggle insights" aria-label="Toggle insights panel">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3.5 12h17"/><path d="M12 3a15 15 0 010 18a15 15 0 010-18z"/></svg>
+                </button>
+            </div>
+        </header>
 
-    <div class="chat-input-wrap">
-        <div class="chat-input-box">
-            <textarea id="promptInput" rows="1" placeholder="Ask the Firewall Auditor about your security posture..." aria-label="Prompt"></textarea>
-            <button class="send-btn" id="sendBtn" aria-label="Send message">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        <div class="ws-messages" id="chatWindow"></div>
+
+        <footer class="ws-composer-wrap">
+            <div class="ws-prompt-chips" id="promptChips"></div>
+            <div class="ws-composer">
+                <textarea id="promptInput" rows="1" placeholder="Talk to your security copilot..." aria-label="Message"></textarea>
+                <button class="ws-send-btn" id="sendBtn" aria-label="Send message">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                </button>
+            </div>
+            <div class="ws-composer-meta">
+                <span class="ws-composer-agent" id="composerAgentBadge"></span>
+                <span class="ws-composer-disclaimer">AI-generated insights may require verification.</span>
+            </div>
+        </footer>
+    </section>
+
+    <!-- ============================================================
+         RIGHT SIDEBAR — insights
+         ============================================================ -->
+    <aside class="ws-panel ws-insights" id="wsInsights" aria-label="Insights panel">
+        <div class="ws-insights-head">
+            <span class="ws-panel-label">Insights</span>
+            <button class="ws-icon-btn" id="insightsClose" title="Close insights" aria-label="Close insights panel">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
         </div>
-        <span class="chat-disclaimer">AI-generated insights may require verification. LTM Platform may make mistakes.</span>
-    </div>
-</section>
 
+        <div class="ws-insights-scroll">
+            <div class="ws-insight-group">
+                <div class="ws-insight-group-label">Agent</div>
+                <div class="ws-agent-info">
+                    <span class="ws-agent-avatar agent-avatar agent-avatar-blue" id="insightAvatar">FA</span>
+                    <div class="ws-agent-info-meta">
+                        <strong id="insightAgentName">Firewall Auditor</strong>
+                        <span id="insightAgentModel">gpt-5.1</span>
+                    </div>
+                    <span class="ws-status-dot" id="insightAgentStatus" title="Status"></span>
+                </div>
+            </div>
+
+            <div class="ws-insight-group">
+                <div class="ws-insight-group-label">Assessment</div>
+                <div class="ws-metric-grid">
+                    <div class="ws-metric">
+                        <span class="ws-metric-value" id="insightCompliance">—</span>
+                        <span class="ws-metric-label">Compliance</span>
+                    </div>
+                    <div class="ws-metric">
+                        <span class="ws-metric-value" id="insightFindings">—</span>
+                        <span class="ws-metric-label">Findings</span>
+                    </div>
+                    <div class="ws-metric">
+                        <span class="ws-metric-value" id="insightRuns">—</span>
+                        <span class="ws-metric-label">Runs</span>
+                    </div>
+                </div>
+                <div class="ws-last-assessment" id="insightLastAssessment"></div>
+            </div>
+
+            <div class="ws-insight-group">
+                <div class="ws-insight-group-label">Session</div>
+                <div class="ws-metric-grid">
+                    <div class="ws-metric">
+                        <span class="ws-metric-value" id="insightMessages">0</span>
+                        <span class="ws-metric-label">Messages</span>
+                    </div>
+                    <div class="ws-metric">
+                        <span class="ws-metric-value" id="insightTokens">—</span>
+                        <span class="ws-metric-label">Tokens</span>
+                    </div>
+                    <div class="ws-metric">
+                        <span class="ws-metric-value" id="insightCost">—</span>
+                        <span class="ws-metric-label">Cost</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ws-insight-group">
+                <div class="ws-insight-group-label">Recent Outputs</div>
+                <div class="ws-outputs" id="insightOutputs"></div>
+            </div>
+        </div>
+    </aside>
+
+</div>
+
+<!-- ============================================================
+     ADD AGENT MODAL (functionality preserved)
+     ============================================================ -->
 <div class="modal-backdrop" id="addAgentModal" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addAgentTitle">
         <div class="modal-head">
@@ -150,5 +218,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/workspace.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='js/workspace.js') }}?v=4"></script>
 {% endblock %}
