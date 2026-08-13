@@ -206,6 +206,19 @@
     background: linear-gradient(135deg, #B91C1C, #EF4444);
 }
 
+.icon-btn.muted {
+    opacity: 0.35;
+    cursor: default;
+    pointer-events: none;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 28px 12px;
+    color: var(--text-2);
+    font-size: 13px;
+}
+
 .result-card {
     margin-bottom: 24px;
 }

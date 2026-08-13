@@ -10,8 +10,6 @@ REPORTS_DOC = "reports_history"
 
 _lock = threading.Lock()
 
-MAX_REPORTS = 50
-
 
 def _load():
     data = storage.load_document(REPORTS_DOC, {"reports": []})
@@ -29,8 +27,6 @@ def append_report(report):
         data = _load()
         reports = data.setdefault("reports", [])
         reports.insert(0, report)
-        if len(reports) > MAX_REPORTS:
-            data["reports"] = reports[:MAX_REPORTS]
         _save(data)
 
 

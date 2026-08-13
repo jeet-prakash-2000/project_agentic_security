@@ -67,6 +67,23 @@ def file_size_label(path):
         return "{0:.2f} MB".format(size_bytes / (1024 * 1024))
     return "{0:.0f} KB".format(size_bytes / 1024)
 
+
+def format_report_ts(ts):
+    from datetime import datetime
+
+    try:
+        return datetime.fromtimestamp(float(ts)).strftime("%Y-%m-%d %H:%M")
+    except (TypeError, ValueError, OverflowError):
+        return "—"
+
+
+app.add_template_filter(format_report_ts, "report_ts")
+
+
+def render_reports(**context):
+    context["reports"] = report_history_service.list_reports()
+    return render_with_css("reports.html", **context)
+
 # --------------------------------------------------
 # HOME (AI Workspace is the primary landing page)
 # --------------------------------------------------
@@ -158,9 +175,8 @@ def run_assessment():
 @app.route("/reports")
 def reports():
 
-    return render_with_css(
-        "reports.html"
-    )
+    return render_reports()
+
 
 # --------------------------------------------------
 # EXECUTIVE SUMMARY
@@ -171,34 +187,34 @@ def executive_report():
 
     try:
 
-        summary = (
+        result = (
             assessment_service
-            .get_executive_summary(
+            .get_executive_summary_pdf(
                 force=True
             )
         )
+
+        summary = result["summary"]
 
         agent = agents_service.get_connected_agent()
 
         report_history_service.append_report(
             {
-                "name": "Executive_Summary_{0}".format(
-                    time.strftime("%b_%Y")
-                ),
+                "name": result["filename"].replace(".pdf", ""),
                 "type": "Executive Summary",
                 "generated_by": (agent or {}).get("name", "Firewall Auditor"),
                 "ts": time.time(),
                 "status": "Completed",
-                "size": "—",
-                "download_url": None,
+                "size": file_size_label(result["local_file"]),
+                "download_url": result["download_url"],
             }
         )
 
-        return render_with_css(
-            "reports.html",
-
+        return render_reports(
             summary=summary,
-
+            summary_download_url=(
+                url_for("static", filename=result["download_url"])
+            ),
             assessment_source=(
                 summary.get("_source", "live")
             )
@@ -206,11 +222,8 @@ def executive_report():
 
     except Exception as e:
 
-        return render_with_css(
-            "reports.html",
-
+        return render_reports(
             summary=None,
-
             error=str(e)
         )
 
@@ -262,13 +275,9 @@ def generate_excel():
             }
         )
 
-        return render_with_css(
-            "reports.html",
-
+        return render_reports(
             excel_result=result,
-
             excel_download_url=download_url,
-
             assessment_source=(
                 result.get("_source", "live")
             )
@@ -276,11 +285,8 @@ def generate_excel():
 
     except Exception as e:
 
-        return render_with_css(
-            "reports.html",
-
+        return render_reports(
             excel_result=None,
-
             error=str(e)
         )
 
@@ -455,25 +461,33 @@ def api_summary():
 
     try:
 
-        summary = (
+        result = (
             assessment_service
-            .get_executive_summary(
+            .get_executive_summary_pdf(
                 force=True
             )
         )
 
+        summary = result["summary"]
+
+        payload = dict(summary)
+        payload["download_url"] = url_for(
+            "static",
+            filename=result["download_url"]
+        )
+
         agent = agents_service.get_connected_agent()
         report_history_service.append_report({
-            "name": "Executive_Summary_{0}".format(time.strftime("%b_%Y")),
+            "name": result["filename"].replace(".pdf", ""),
             "type": "Executive Summary",
             "generated_by": (agent or {}).get("name", "Firewall Auditor"),
             "ts": time.time(),
             "status": "Completed",
-            "size": "—",
-            "download_url": None,
+            "size": file_size_label(result["local_file"]),
+            "download_url": result["download_url"],
         })
 
-        return jsonify(summary)
+        return jsonify(payload)
 
     except Exception as e:
 

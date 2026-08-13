@@ -10,7 +10,7 @@
     <div>
         <span class="hero-eyebrow">Reporting Hub</span>
         <h1>Reports Center</h1>
-        <p>Generate executive summaries, assessment workbooks, and review recently produced reports.</p>
+        <p>Generate executive summaries, assessment workbooks, and review your report history.</p>
     </div>
     {% if assessment_source %}
     <span class="hero-chip">
@@ -59,8 +59,8 @@
 
 <section class="recent-reports card">
     <div class="section-head">
-        <h3>Recent Reports</h3>
-        <span class="section-sub">Latest generated artifacts and their delivery status</span>
+        <h3>Report History</h3>
+        <span class="section-sub">All generated executive summaries and assessment workbooks</span>
     </div>
     <div class="table-wrap">
         <table class="data-table">
@@ -75,80 +75,39 @@
                 </tr>
             </thead>
             <tbody>
+                {% for report in reports %}
+                {% set is_summary = report.type == 'Executive Summary' %}
+                {% set status_class = 'status-fail' if report.status == 'Failed' else ('status-on' if report.status == 'Completed' else 'status-warn') %}
                 <tr>
                     <td>
                         <span class="report-name">
-                            <span class="file-icon file-icon-purple">PDF</span>
-                            Executive_Summary_Jul_2026
+                            <span class="file-icon {{ 'file-icon-purple' if is_summary else 'file-icon-green' }}">
+                                {{ 'PDF' if is_summary else 'XLS' }}
+                            </span>
+                            {{ report.name }}
                         </span>
                     </td>
-                    <td><span class="tag">Executive Summary</span></td>
-                    <td>2026-07-29 14:22</td>
-                    <td><span class="status-chip status-on">Completed</span></td>
-                    <td>184 KB</td>
+                    <td><span class="tag">{{ report.type }}</span></td>
+                    <td>{{ report.ts|report_ts }}</td>
+                    <td><span class="status-chip {{ status_class }}">{{ report.status }}</span></td>
+                    <td>{{ report.size or '—' }}</td>
                     <td class="text-right">
-                        <button class="icon-btn" data-toast="Downloading Executive_Summary_Jul_2026...">
+                        {% if report.download_url %}
+                        <a class="icon-btn" href="{{ url_for('static', filename=report.download_url) }}" download title="Download">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
-                        </button>
-                        <button class="icon-btn" data-toast="Opening Executive_Summary_Jul_2026...">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <span class="report-name">
-                            <span class="file-icon file-icon-green">XLS</span>
-                            Assessment_Workbook_Jul_2026
-                        </span>
-                    </td>
-                    <td><span class="tag">Workbook</span></td>
-                    <td>2026-07-29 12:05</td>
-                    <td><span class="status-chip status-on">Completed</span></td>
-                    <td>2.4 MB</td>
-                    <td class="text-right">
-                        <button class="icon-btn" data-toast="Downloading Assessment_Workbook_Jul_2026...">
+                        </a>
+                        {% else %}
+                        <span class="icon-btn muted" title="No file available">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
-                        </button>
-                        <button class="icon-btn" data-toast="Opening Assessment_Workbook_Jul_2026...">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>
-                        <span class="report-name">
-                            <span class="file-icon file-icon-blue">SUM</span>
-                            Executive_Summary_Jun_2026
                         </span>
-                    </td>
-                    <td><span class="tag">Executive Summary</span></td>
-                    <td>2026-06-30 09:41</td>
-                    <td><span class="status-chip status-warn">Regenerating</span></td>
-                    <td>—</td>
-                    <td class="text-right">
-                        <button class="icon-btn" data-toast="Report is currently regenerating...">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                        </button>
+                        {% endif %}
                     </td>
                 </tr>
+                {% else %}
                 <tr>
-                    <td>
-                        <span class="report-name">
-                            <span class="file-icon file-icon-red">XLS</span>
-                            Assessment_Workbook_Jun_2026
-                        </span>
-                    </td>
-                    <td><span class="tag">Workbook</span></td>
-                    <td>2026-06-28 16:12</td>
-                    <td><span class="status-chip status-fail">Failed</span></td>
-                    <td>—</td>
-                    <td class="text-right">
-                        <button class="icon-btn retry-btn" data-toast="Retrying report generation...">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 102.6-8L1 10"/></svg>
-                        </button>
-                    </td>
+                    <td colspan="6" class="empty-state">No reports generated yet.</td>
                 </tr>
+                {% endfor %}
             </tbody>
         </table>
     </div>
@@ -193,6 +152,12 @@
         <li>{{ priority }}</li>
         {% endfor %}
     </ul>
+    {% endif %}
+    {% if summary_download_url %}
+    <a href="{{ summary_download_url }}" class="btn btn-primary" download>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+        Download Executive Summary (.pdf)
+    </a>
     {% endif %}
 </section>
 {% endif %}

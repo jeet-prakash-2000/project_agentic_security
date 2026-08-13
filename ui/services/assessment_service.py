@@ -285,6 +285,40 @@ def get_executive_summary(force=False):
     return summary
 
 
+def get_executive_summary_pdf(force=False):
+
+    from reports.executive_summary_pdf import (
+        generate as generate_pdf
+    )
+
+    summary = get_executive_summary(force)
+
+    month = time.strftime("%b_%Y")
+    filename = "Executive_Summary_{0}.pdf".format(month)
+
+    os.makedirs(
+        EXCEL_DIR,
+        exist_ok=True
+    )
+
+    output_file = os.path.join(
+        EXCEL_DIR,
+        filename
+    )
+
+    generate_pdf(
+        summary,
+        output_file
+    )
+
+    return {
+        "summary": summary,
+        "filename": filename,
+        "local_file": output_file,
+        "download_url": "reports/{0}".format(filename),
+    }
+
+
 def get_excel_report(force=False):
 
     from reports.excel_report import (
