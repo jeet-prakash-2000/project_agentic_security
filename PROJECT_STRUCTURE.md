@@ -266,9 +266,64 @@ analysis, action logger, report generator.
 
 ## 6. Deployment
 
-- **UI**: GitHub Actions workflow (`.github/workflows/master_ltm-security-platform-ui.yml`)
-  builds `ui/` with Python 3.11 and deploys to Azure Web App `ltm-security-platform-ui`
-  on every push to `master`.
-- **Function apps**: `netsec-agent/` and `cloudsec-agent/` deploy as Azure Functions
-  (zip-deploy), configured via `local.settings.json` / app settings.
-```
+### 6.1 UI — Azure Web App (`ui/`)
+
+Deployed via GitHub Actions workflow `.github/workflows/master_ltm-security-platform-ui.yml`.
+
+**Trigger**: `push` to `master` or manual `workflow_dispatch`.
+
+**Build job** (`build`, `runs-on: ubuntu-latest`):
+
+1. `actions/checkout@v4` — clone repo.
+2. `actions/setup-python@v5` — Python `3.11`.
+3. Create virtualenv `antenv`, upgrade pip, `pip install -r ui/requirements.txt`.
+4. `actions/upload-artifact@v4` — upload `ui/` as artifact `python-app`.
+
+**Deploy job** (`deploy`, `needs: build`):
+
+1. `actions/download-artifact@v4` — fetch `python-app`.
+2. `azure/webapps-deploy@v3`:
+   - `app-name`: `ltm-security-platform-ui`
+   - `slot-name`: `Production`
+   - `publish-profile`: `secrets.AZUREAPPSERVICE_PUBLISHPROFILE_2FBCD47D129B42698B7CAF114C422529`
+
+**Live URL**:
+`https://ltm-security-platform-ui-c8fff7f9ghb0e6hg.southindia-01.azurewebsites.net`
+
+**Local run**: `cd ui && python3 app.py` (port `8003`).
+
+### 6.2 Azure Functions — `netsec-agent/` & `cloudsec-agent/`
+
+Deployed as Azure Function Apps (zip-deploy). Runtime configuration comes from
+`local.settings.json` locally and Application Settings on Azure. Function-key
+authentication is required by the UI (`services/function_client.py`) for live
+firewall calls; when keys are absent, the UI degrades to sample data.
+
+### 6.3 Configuration & Secret Resolution
+
+`ui/config/settings.py` loads values through `ui/config/keyvault.py`, which resolves
+a secret by name in this order:
+
+1. Environment variable (name upper-cased, `-` → `_`).
+2. In-memory cache.
+3. Azure Key Vault via `DefaultAzureCredential` against `AZURE_KEY_VAULT_URL`
+   (default `https://netsec-agent-project-key.vault.azure.net/`).
+4. Fallback default baked into `settings.py`.
+
+| Setting | Secret / env | Default |
+|---------|--------------|---------|
+| `SECRET_KEY` | `SECRET_KEY` | dev-only placeholder |
+| `BASE_URL` | `firewall-function-url` | netsec-agent function URL |
+| `FUNCTION_KEY` | `firewall-function-key` | placeholder |
+| `FULL_ASSESSMENT_KEY` | `firewall-full-assessment-key` | placeholder |
+| `EXCEL_KEY` | `firewall-excel-key` | placeholder |
+| `EXECUTIVE_SUMMARY_KEY` | `firewall-executive-summary-key` | placeholder |
+| `APP_INSIGHTS_CONNECTION_STRING` | `app-insights-connection-string` | baked-in instrumentation key |
+| `AZURE_STORAGE_*` | env / Key Vault | JSON-file fallback in `config/storage.py` |
+
+### 6.4 Credentials & Secrets (never committed to git)
+
+- GitHub Actions secret `AZUREAPPSERVICE_PUBLISHPROFILE_*` — Web App publish profile.
+- Azure Key Vault `netsec-agent-project-key` — function keys, AI Foundry keys,
+  storage keys, App Insights connection string.
+- `ui/config/agents.json` — live agent API key (left out of git).
