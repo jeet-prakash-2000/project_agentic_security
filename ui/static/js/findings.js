@@ -618,8 +618,7 @@
         var max = 100;
         var html = '<div class="trend-bars">';
         snapshots.forEach(function (s, i) {
-            var pct = (typeof s.compliance_pct === "number") ? s.compliance_pct : 0;
-            var h = Math.max(4, (pct / max) * 100);
+            var h = Math.max(4, (s.compliance_pct / max) * 100);
             html += '<div class="trend-bar' + (i === snapshots.length - 1 ? ' last' : '') + '" style="height:' + h + '%" title="' + s.compliance_pct + '%"></div>';
         });
         html += '</div><div class="trend-labels">';
@@ -640,14 +639,11 @@
     function renderTimeline(posture, firewall, data) {
         var el = document.getElementById("assessmentTimeline");
         if (!el) return;
-        var fw = firewall || {};
-        var fwName = fw.hostname || "Unknown Firewall";
-        var fwVersion = fw.version || "";
         var collected = posture.collected_at || posture.last_assessment_ts;
         var sev = posture.severity || {};
         var items = [
             { label: "Assessment Started", detail: "Compliance assessment initiated", ts: posture.last_assessment_ts, dot: "warn" },
-            { label: "Data Collected", detail: fwName + " \u00b7 PAN-OS " + fwVersion, ts: collected, dot: "" },
+            { label: "Data Collected", detail: firewall.hostname + " \u00b7 PAN-OS " + firewall.version, ts: collected, dot: "" },
             { label: "Controls Evaluated", detail: posture.compliant + " of " + posture.total_controls + " compliant \u00b7 " + posture.non_compliant + " findings", ts: collected, dot: "" },
             { label: "Findings Generated", detail: sev.critical + " critical \u00b7 " + sev.high + " high \u00b7 " + sev.medium + " medium \u00b7 " + sev.low + " low", ts: collected, dot: "ok" },
             { label: "Report Ready", detail: "Run " + (posture.run_id || "\u2014") + " \u00b7 " + (data._source === "live" ? "Live data" : "Sample data"), ts: collected, dot: "ok" }
@@ -688,19 +684,10 @@
     // ============================================================
 
     function renderAll() {
-        debugLog("render started");
-        var visible = [];
-        try {
-            visible = getVisible();
-        } catch (e) {
-            debugLog("filter failed:", e && e.message);
-            visible = state.records.slice();
-        }
-        debugLog("filtered findings count:", visible.length);
-        safeRender("groups", function () { renderGroups(visible); });
-        safeRender("domainList", function () { renderDomainList(state.records); });
-        safeRender("activeFilters", renderActiveFilters);
-        debugLog("render completed");
+        var visible = getVisible();
+        renderGroups(visible);
+        renderDomainList(state.records);
+        renderActiveFilters();
     }
 
     // ============================================================
@@ -1313,61 +1300,17 @@
     }
 
     // ============================================================
-    // DEBUG LOGGING & WIDGET ISOLATION
-    // ============================================================
-
-    function debugLog() {
-        if (window.LTM_DEBUG === false) return;
-        var args = ["[findings]"].concat(Array.prototype.slice.call(arguments));
-        if (window.console && console.debug) console.debug.apply(console, args);
-    }
-
-    function safeRender(name, fn) {
-        try {
-            fn();
-            debugLog("render ok:", name);
-        } catch (e) {
-            debugLog("render FAILED at:", name, "-", e && e.message);
-            if (window.console && console.error) console.error("[findings] widget render error [" + name + "]:", e);
-        }
-    }
-
-    function showFindingsError(message) {
-        if (!root) return;
-        var detail = message ? '<p>' + escapeHtml(message) + '</p>' : '';
-        root.innerHTML = '<div class="empty-state card"><h4>Unable to load findings</h4>' + detail + '</div>';
-    }
-
-    // ============================================================
     // LOAD
     // ============================================================
 
     function load() {
-        debugLog("requesting GET /api/findings");
-
         fetch("/api/findings")
-            .then(function (r) {
-                debugLog("API status:", r.status);
-                if (!r.ok) {
-                    return r.json().then(function (body) {
-                        var message = (body && body.error) ? body.error : ("HTTP " + r.status);
-                        throw new Error(message);
-                    }).catch(function (err) {
-                        if (err instanceof SyntaxError) {
-                            throw new Error("HTTP " + r.status);
-                        }
-                        throw err;
-                    });
-                }
-                return r.json();
-            })
+            .then(function (r) { return r.json(); })
             .then(function (data) {
                 if (!data || data.error) {
-                    debugLog("API error payload:", data && data.error);
                     if (root) root.innerHTML = '<div class="empty-state card"><h4>No findings available</h4><p>Run an assessment from the AI Workspace to populate findings.</p></div>';
                     return;
                 }
-                debugLog("API response received");
                 state.data = data;
                 var posture = data.posture || {};
                 var ctx = {
@@ -1381,27 +1324,23 @@
                 state.records = (data.assessment || []).map(function (r) {
                     return enrich(r, findingMap[(r.control || "").toUpperCase()], null, ctx);
                 });
-                debugLog("findings count:", state.records.length);
 
+                renderHeaderBadges(data);
+                renderPosture(posture, data);
+                renderTrend(data.history, posture);
+                renderTimeline(posture, data.firewall, data);
+                renderDomainChips();
+                populateFirewallSelect(data.firewalls);
+                populateDateSelect(data.history);
+                populateViewSelect();
                 if (sortSelect) sortSelect.value = state.filters.sort;
                 if (searchInput) searchInput.value = state.filters.search || "";
-
-                safeRender("headerBadges", function () { renderHeaderBadges(data); });
-                safeRender("posture", function () { renderPosture(posture, data); });
-                safeRender("trend", function () { renderTrend(data.history, posture); });
-                safeRender("timeline", function () { renderTimeline(posture, data.firewall, data); });
-                safeRender("domainChips", renderDomainChips);
-                safeRender("firewallSelect", function () { populateFirewallSelect(data.firewalls); });
-                safeRender("dateSelect", function () { populateDateSelect(data.history); });
-                safeRender("viewSelect", populateViewSelect);
-                safeRender("filterChips", syncFilterChips);
-                safeRender("findingsList", function () { renderAll(); });
-                safeRender("agentBadge", renderAgentBadge);
-                debugLog("rendering completed");
+                syncFilterChips();
+                renderAll();
+                renderAgentBadge();
             })
-            .catch(function (err) {
-                debugLog("load failed:", err && err.message);
-                showFindingsError(err && err.message);
+            .catch(function () {
+                if (root) root.innerHTML = '<div class="empty-state card"><h4>Unable to load findings</h4></div>';
             });
     }
 
