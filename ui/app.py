@@ -780,7 +780,7 @@ def api_tools():
 def api_conversations():
 
     return jsonify(
-        {"conversations": gateway.conversations(user_id=current_user_id())}
+        {"conversations": gateway.conversations()}
     )
 
 
@@ -789,7 +789,6 @@ def api_conversation_messages(conversation_id):
 
     messages = session_manager.get_messages(
         conversation_id,
-        user_id=current_user_id(),
     )
     return jsonify({"messages": messages})
 
