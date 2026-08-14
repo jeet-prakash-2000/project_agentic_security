@@ -50,14 +50,6 @@ def current_user_id():
 
 @app.before_request
 def require_authentication():
-    if request.endpoint in ("login", "signup", "logout", "static"):
-        return None
-
-    if not session.get("user_id"):
-        if request.path.startswith("/api/"):
-            return jsonify({"error": "unauthorized"}), 401
-        return redirect(url_for("login", next=request.path))
-
     g.user = current_user()
     return None
 
