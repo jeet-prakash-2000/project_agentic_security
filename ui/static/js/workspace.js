@@ -95,7 +95,6 @@
         conversations: [],
         messages: [],
         activeId: null,
-        autoOpened: false,
         activeAgentId: null,
         activeAgent: null,
         agents: []
@@ -165,10 +164,6 @@
             .then(function (data) {
                 state.conversations = (data && data.conversations) || [];
                 renderConversationList();
-                if (!state.activeId && state.conversations.length && !state.autoOpened) {
-                    state.autoOpened = true;
-                    setActive(state.conversations[0].id);
-                }
                 return state.conversations;
             })
             .catch(function () { return []; });
