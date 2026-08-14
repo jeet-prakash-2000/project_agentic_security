@@ -16,6 +16,12 @@ FUNCTIONS_ROOT = os.path.abspath(
     os.path.join(UI_ROOT, "..", "netsec-agent", "functions")
 )
 
+# On the Azure Web App only `ui/` is shipped, so the `netsec-agent` source tree
+# is not present. Fall back to a bundled copy of the report/compliance modules
+# that the CI workflow copies into the UI package before deployment.
+if not os.path.isdir(FUNCTIONS_ROOT):
+    FUNCTIONS_ROOT = os.path.join(UI_ROOT, "netsec_functions")
+
 BASELINE_PATH = os.path.join(
     FUNCTIONS_ROOT,
     "baseline",

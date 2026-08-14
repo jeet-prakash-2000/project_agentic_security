@@ -181,3 +181,6 @@ ui/config/*.json
 # Generated reports and workbooks
 ui/static/reports/*.pdf
 ui/static/reports/*.xlsx
+
+# Bundled firewall auditor modules (copied by CI for Azure deployment)
+ui/netsec_functions/

@@ -29,6 +29,13 @@ jobs:
           pip install --upgrade pip
           pip install -r ui/requirements.txt
 
+      - name: Bundle firewall auditor modules
+        run: |
+          mkdir -p ui/netsec_functions
+          cp -r netsec-agent/functions/compliance ui/netsec_functions/
+          cp -r netsec-agent/functions/reports ui/netsec_functions/
+          cp -r netsec-agent/functions/baseline ui/netsec_functions/
+
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
