@@ -10,29 +10,39 @@
         "Software & Platform",
         "Capacity & Performance",
         "Security Services",
-        "Network Configuration",
-        "Administration & Management"
+        "Networking",
+        "VPN & Remote Access",
+        "Administration",
+        "Logging & Monitoring"
     ];
 
+    var SEVERITY_KEYS = ["critical", "high", "medium", "low"];
+
     var PRESET_VIEWS = [
-        { id: "all", name: "All Findings", filters: { severity: "all", status: "all", domain: "all", search: "", sort: "severity" } },
-        { id: "critical", name: "Critical Only", filters: { severity: "critical", status: "all", domain: "all", search: "", sort: "severity" } },
-        { id: "high", name: "High Risk", filters: { severity: "high", status: "all", domain: "all", search: "", sort: "severity" } },
-        { id: "operational", name: "Operational Risks", filters: { severity: "all", status: "non-compliant", domain: "all", search: "", sort: "risk" } },
-        { id: "gaps", name: "Compliance Gaps", filters: { severity: "all", status: "non-compliant", domain: "all", search: "", sort: "domain" } },
-        { id: "patching", name: "Patch Related", filters: { severity: "all", status: "non-compliant", domain: "Software & Platform", search: "", sort: "severity" } }
+        { id: "all", name: "All Findings", filters: { severity: "all", status: "all", domain: "all", firewall: "all", riskRange: "all", date: "all", search: "", sort: "severity" } },
+        { id: "critical", name: "Critical Only", filters: { severity: "critical", status: "all", domain: "all", firewall: "all", riskRange: "all", date: "all", search: "", sort: "severity" } },
+        { id: "high", name: "High Risk", filters: { severity: "high", status: "all", domain: "all", firewall: "all", riskRange: "all", date: "all", search: "", sort: "risk" } },
+        { id: "operational", name: "Operational Risks", filters: { severity: "all", status: "non-compliant", domain: "all", firewall: "all", riskRange: "all", date: "all", search: "", sort: "risk" } },
+        { id: "gaps", name: "Compliance Gaps", filters: { severity: "all", status: "non-compliant", domain: "all", firewall: "all", riskRange: "all", date: "all", search: "", sort: "domain" } },
+        { id: "patching", name: "Patch Related", filters: { severity: "all", status: "non-compliant", domain: "Software & Platform", firewall: "all", riskRange: "all", date: "all", search: "", sort: "severity" } }
     ];
 
     var STORAGE_FILTERS = "findings.filters.v1";
     var STORAGE_VIEWS = "findings.views.v1";
     var STORAGE_REVIEWED = "findings.reviewed.v1";
+    var STORAGE_ASSIGNEES = "findings.assignees.v1";
+
+    function defaultFilters() {
+        return { severity: "all", status: "all", domain: "all", firewall: "all", riskRange: "all", date: "all", search: "", sort: "severity" };
+    }
 
     var state = {
         data: null,
         records: [],
-        filters: { severity: "all", status: "all", domain: "all", search: "", sort: "severity" },
+        filters: defaultFilters(),
         customViews: [],
         reviewed: {},
+        assignees: {},
         collapsed: {}
     };
 
@@ -46,7 +56,7 @@
         if (typeof FINDING_ENRICHMENT_CATEGORIES !== "undefined" && FINDING_ENRICHMENT_CATEGORIES[domain]) {
             return FINDING_ENRICHMENT_CATEGORIES[domain];
         }
-        return "Administration & Management";
+        return "Administration";
     }
 
     function enrich(result, finding, meta, ctx) {
@@ -57,7 +67,7 @@
         var status = (result.status || "NON_COMPLIANT").toUpperCase();
         var compliant = status === "COMPLIANT";
 
-        var rec = {
+        return {
             control: cid,
             metric: result.metric || "",
             observed: result.observed,
@@ -77,11 +87,12 @@
             _finding: (finding && finding.finding) || "",
             _remediation: (finding && finding.remediation) || (e && e.remediation) || "",
             _detected: ctx.detected,
+            _collected_at: ctx.collected_at,
+            _run_id: ctx.run_id,
             _firewall: ctx.firewall.hostname,
             _model: ctx.firewall.model,
             _version: ctx.firewall.version
         };
-        return rec;
     }
 
     function defaultRiskScore(risk) {
@@ -89,6 +100,51 @@
     }
 
     var SEV_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, COMPLIANT: 4 };
+
+    // ============================================================
+    // FORMATTING HELPERS
+    // ============================================================
+
+    function formatVal(v) {
+        if (typeof v === "boolean") return v ? "Enabled" : "Disabled";
+        if (Array.isArray(v)) return v.join(", ");
+        if (v === null || v === undefined) return "\u2014";
+        return String(v);
+    }
+
+    function formatExpected(v, op) {
+        if (op === "not_empty") return "Not Empty";
+        if (op === "supported_version") return Array.isArray(v) ? "in (" + v.join(", ") + ")" : "in (" + String(v) + ")";
+        return formatVal(v);
+    }
+
+    function isNumeric(v) {
+        return typeof v === "number" || (v != null && v !== "" && !isNaN(parseFloat(v)) && isFinite(v));
+    }
+
+    function toNumber(v) {
+        if (typeof v === "number") return v;
+        if (isNumeric(v)) return parseFloat(v);
+        return null;
+    }
+
+    var OPERATOR_SYMBOLS = {
+        "==": "=", "!=": "\u2260", "<": "<", "<=": "\u2264", ">": ">", ">=": "\u2265",
+        "supported_version": "\u2208", "not_empty": "\u2260"
+    };
+
+    var ICONS = {
+        rem: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+        impact: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>',
+        evidence: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg>',
+        verify: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>',
+        chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
+        spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>'
+    };
+
+    // ============================================================
+    // SORTING & FILTERING
+    // ============================================================
 
     function sortRecords(records) {
         var sort = state.filters.sort;
@@ -98,8 +154,9 @@
                 return (SEV_ORDER[a.risk] != null ? SEV_ORDER[a.risk] : 9) - (SEV_ORDER[b.risk] != null ? SEV_ORDER[b.risk] : 9)
                     || (a.control || "").localeCompare(b.control || "");
             }
-            if (sort === "risk") {
-                return (b._risk_score - a._risk_score) || (a.control || "").localeCompare(b.control || "");
+            if (sort === "risk" || sort === "riskAsc") {
+                var d = a._risk_score - b._risk_score || (a.control || "").localeCompare(b.control || "");
+                return sort === "riskAsc" ? d : -d;
             }
             if (sort === "recent" || sort === "oldest") {
                 var at = a._detected || "", bt = b._detected || "";
@@ -126,6 +183,15 @@
             if (f.status === "compliant" && !rec._compliant) return false;
         }
         if (f.domain !== "all" && rec._category !== f.domain) return false;
+        if (f.firewall !== "all" && rec._firewall !== f.firewall) return false;
+        if (f.date !== "all" && rec._detected !== f.date) return false;
+        if (f.riskRange !== "all") {
+            var s = rec._risk_score || 0;
+            if (f.riskRange === "critical" && s < 90) return false;
+            if (f.riskRange === "high" && (s < 70 || s >= 90)) return false;
+            if (f.riskRange === "medium" && (s < 40 || s >= 70)) return false;
+            if (f.riskRange === "low" && s >= 40) return false;
+        }
         if (f.search) {
             var q = f.search.toLowerCase();
             var hay = [rec.control, rec._check, rec._finding, rec._gap, rec._impact, rec._domain, rec._category, rec._firewall, rec.metric, rec._remediation, (rec._evidence || []).join(" ")].join(" ").toLowerCase();
@@ -142,48 +208,141 @@
     }
 
     // ============================================================
-    // POSTURE KPIs
+    // HEADER BADGES
     // ============================================================
 
-    function renderPosture(posture, firewall) {
-        var pct = posture.compliance_pct || 0;
-        var scoreValue = document.getElementById("scoreValue");
-        var gaugeFill = document.getElementById("gaugeFill");
-        var scoreTrend = document.getElementById("scoreTrend");
-        var postureSource = document.getElementById("postureSource");
+    function renderHeaderBadges(data) {
+        var posture = data.posture || {};
+        var score = posture.security_score;
+        var sev = posture.severity || {};
 
-        if (scoreValue) scoreValue.textContent = pct;
+        var postureText = document.getElementById("postureBadgeText");
+        var postureDot = document.getElementById("postureBadgeDot");
+        var badge = document.getElementById("postureBadge");
+        if (typeof score === "number") {
+            var label, cls;
+            if (score >= 80) { label = "Healthy Posture"; cls = "ok"; }
+            else if (score >= 60) { label = "At Risk"; cls = "warn"; }
+            else { label = "Critical Posture"; cls = "bad"; }
+            postureText.textContent = label + " \u00b7 " + score + "%";
+            postureDot.className = "status-dot " + cls;
+            badge.setAttribute("data-posture", cls);
+        }
+
+        var src = document.getElementById("sourceBadgeText");
+        if (src) src.textContent = data._source === "live" ? "Live" : "Sample";
+
+        var refresh = document.getElementById("refreshBadgeText");
+        if (refresh) refresh.textContent = formatTs(data._collected_at || posture.collected_at);
+
+        var envText = document.getElementById("envBadgeText");
+        var envDot = document.getElementById("envBadgeDot");
+        if (envText) {
+            var isProd = data._source === "live";
+            envText.textContent = "Environment: " + (isProd ? "Production" : "Lab");
+            envDot.className = "status-dot status-dot-env" + (isProd ? " ok" : "");
+        }
+    }
+
+    function renderAgentBadge() {
+        fetch("/api/agents")
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var agents = (data && data.agents) || [];
+                var connected = agents.find(function (a) { return a.connected; }) || agents[0];
+                var el = document.getElementById("agentBadgeText");
+                if (el && connected) el.textContent = "Agent: " + (connected.name || "Firewall Auditor");
+            })
+            .catch(function () { /* badge stays at placeholder */ });
+    }
+
+    // ============================================================
+    // POSTURE OVERVIEW
+    // ============================================================
+
+    function computeSecurityScore(severity, total) {
+        var points = (severity.critical || 0) * 4 + (severity.high || 0) * 2 + (severity.medium || 0) * 1 + (severity.low || 0) * 0.5;
+        var max = total * 4;
+        return max ? 100 * (1 - points / max) : 100;
+    }
+
+    function renderPosture(posture, data) {
+        var score = posture.security_score;
+        var pct = posture.compliance_pct || 0;
+
+        setText("securityScore", score);
+        setText("complianceScore", pct);
+        setText("compliantCount", posture.compliant);
+        setText("totalControls", posture.total_controls);
+
+        var gaugeFill = document.getElementById("securityGaugeFill");
         if (gaugeFill) {
             var CIRC = 326.7;
-            gaugeFill.style.strokeDashoffset = (CIRC - (CIRC * pct / 100)).toFixed(1);
-            gaugeFill.className = "gauge-fill" + (pct >= 75 ? " is-good" : pct >= 50 ? "" : " is-warn");
-        }
-        if (postureSource) postureSource.textContent = posture._source === "live" ? "Live" : "Sample";
-
-        if (scoreTrend) {
-            var trend = posture.trend_pct || 0;
-            var cls = trend > 0 ? "up" : trend < 0 ? "down" : "flat";
-            var arrow = trend > 0 ? "\u25B2" : trend < 0 ? "\u25BC" : "\u25AC";
-            var sign = trend > 0 ? "+" : "";
-            scoreTrend.innerHTML = '<span class="score-trend-value ' + cls + '">' + arrow + ' ' + sign + trend + '%</span>' +
-                '<span class="score-trend-label">vs previous assessment</span>';
+            gaugeFill.style.strokeDashoffset = (CIRC - (CIRC * score / 100)).toFixed(1);
+            gaugeFill.className = "gauge-fill" + (score >= 80 ? " is-good" : score >= 60 ? "" : " is-warn");
         }
 
-        setText("kpiCompliant", posture.compliant);
-        setText("kpiTotal", posture.total_controls);
-        setText("kpiCompliantLabel", posture.compliant);
-        setText("kpiNonCompliant", posture.non_compliant);
-
-        var bar = document.getElementById("barCompliant");
+        var bar = document.getElementById("complianceBar");
         if (bar) bar.style.width = pct + "%";
 
-        renderSeverityStack(posture);
-
-        if (document.getElementById("kpiLastAssessed")) {
-            document.getElementById("kpiLastAssessed").textContent = formatTs(posture.collected_at || posture.last_assessment_ts);
+        // Security score trend (recomputed from history)
+        var history = data.history || [];
+        var prevScore = null;
+        for (var i = history.length - 2; i >= 0; i--) {
+            var h = history[i];
+            if (h && h.severity) { prevScore = computeSecurityScore(h.severity, posture.total_controls); break; }
         }
-        setText("kpiFirewall", firewall.hostname + (firewall.model ? " \u00b7 " + firewall.model : "") + (firewall.version ? " \u00b7 " + firewall.version : ""));
-        setText("kpiAssessmentsRun", posture.assessments_run + " assessments run");
+        var delta = (prevScore != null) ? Math.round((score - prevScore) * 10) / 10 : null;
+        renderTrendChip("securityScoreTrend", delta, "%", "vs previous assessment");
+
+        // Severity counts + deltas
+        var change = posture.severity_change || {};
+        setText("criticalCount", (posture.severity || {}).critical);
+        setText("highCount", (posture.severity || {}).high);
+        renderTrendChip("criticalTrend", change.critical, "", "vs previous assessment", true);
+        renderTrendChip("highTrend", change.high, "", "vs previous assessment", true);
+
+        var last = document.getElementById("lastAssessed");
+        if (last) last.textContent = formatShortTs(posture.last_assessment_ts || posture.collected_at);
+        setText("runId", posture.run_id ? "Run " + posture.run_id : "\u2014");
+
+        renderSeverityTrendStrip(posture);
+    }
+
+    function renderTrendChip(id, value, suffix, label, invert) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (value == null || isNaN(value)) { el.innerHTML = ""; return; }
+        var up = value > 0;
+        var down = value < 0;
+        var cls = up ? "up" : down ? "down" : "flat";
+        var arrow = up ? "\u25B2" : down ? "\u25BC" : "\u25AC";
+        var sign = up ? "+" : "";
+        var good = invert ? down : up;
+        var tone = good ? "good" : (down ? "bad" : "flat");
+        el.innerHTML = '<span class="trend-chip-value ' + cls + ' ' + tone + '">' + arrow + ' ' + sign + value + (suffix || "") + '</span><span class="trend-chip-label">' + escapeHtml(label) + '</span>';
+    }
+
+    function renderSeverityTrendStrip(posture) {
+        var el = document.getElementById("severityTrendStrip");
+        if (!el) return;
+        var sev = posture.severity || {};
+        var change = posture.severity_change || {};
+        var colors = { critical: "#ef4444", high: "#f97316", medium: "#f59e0b", low: "#22c55e" };
+        var html = "";
+        SEVERITY_KEYS.forEach(function (k) {
+            var count = sev[k] || 0;
+            var delta = change[k] || 0;
+            var dcls = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+            var dtext = delta > 0 ? "+" + delta : delta < 0 ? String(delta) : "\u00b70";
+            html += '<button class="sev-strip-item" type="button" data-sev="' + k + '" style="--sev:' + colors[k] + '">' +
+                '<span class="sev-strip-dot"></span>' +
+                '<span class="sev-strip-name">' + k.charAt(0).toUpperCase() + k.slice(1) + '</span>' +
+                '<span class="sev-strip-count">' + count + '</span>' +
+                '<span class="sev-strip-delta ' + dcls + '">' + dtext + '</span>' +
+                '</button>';
+        });
+        el.innerHTML = html;
     }
 
     function setText(id, value) {
@@ -191,35 +350,258 @@
         if (el) el.textContent = value == null ? "\u2014" : String(value);
     }
 
-    function renderSeverityStack(posture) {
-        var el = document.getElementById("sevStack");
-        if (!el) return;
-        var sev = posture.severity || {};
-        var change = posture.severity_change || {};
-        var max = Math.max(1, sev.critical || 0, sev.high || 0, sev.medium || 0, sev.low || 0);
-        var keys = [
-            { key: "critical", name: "Critical", color: "#ef4444" },
-            { key: "high", name: "High", color: "#f97316" },
-            { key: "medium", name: "Medium", color: "#f59e0b" },
-            { key: "low", name: "Low", color: "#22c55e" }
-        ];
-        var html = "";
-        keys.forEach(function (k) {
-            var count = sev[k.key] || 0;
-            var delta = change[k.key] || 0;
-            var dcls = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
-            var dtext = delta > 0 ? "+" + delta : delta < 0 ? String(delta) : "\u00b70";
-            html += '<div class="sev-row">' +
-                '<span class="sev-name">' + k.name + '</span>' +
-                '<span class="sev-track"><span class="sev-track-fill" style="width:' + (count / max * 100) + '%;background:' + k.color + '"></span></span>' +
-                '<span class="sev-num">' + count + ' <span class="sev-delta ' + dcls + '">' + dtext + '</span></span>' +
-                '</div>';
-        });
-        el.innerHTML = html;
+    // ============================================================
+    // RISK CONTEXT
+    // ============================================================
+
+    function riskContext(rec) {
+        var score = rec._risk_score || 0;
+        var sev = (rec.risk || "LOW").toUpperCase();
+        var impact = sev === "CRITICAL" ? "Severe \u2014 potential full network compromise"
+            : sev === "HIGH" ? "Major \u2014 significant exposure or outage"
+            : sev === "MEDIUM" ? "Moderate \u2014 limited exposure"
+            : sev === "COMPLIANT" ? "None \u2014 control is compliant" : "Minor \u2014 low exposure";
+        var likelihood = score >= 80 ? "High" : score >= 55 ? "Moderate" : score >= 40 ? "Low" : "Minimal";
+        var exploit = score >= 85 ? "High \u2014 active exploitation likely" : score >= 60 ? "Moderate \u2014 requires specific conditions" : score >= 40 ? "Low" : "Minimal";
+        var trend = score >= 85 ? "Worsening" : score >= 60 ? "Elevated" : score >= 40 ? "Stable" : "Contained";
+        return { impact: impact, likelihood: likelihood, exploit: exploit, trend: trend };
+    }
+
+    function riskContextHtml(rec) {
+        var rc = riskContext(rec);
+        return '<div class="finding-section"><div class="finding-section-title">' + ICONS.impact + ' Risk Context</div>' +
+            '<div class="risk-context-grid">' +
+            '<div class="rc-item"><span class="rc-label">Business Impact</span><span class="rc-value">' + escapeHtml(rc.impact) + '</span></div>' +
+            '<div class="rc-item"><span class="rc-label">Likelihood</span><span class="rc-value">' + escapeHtml(rc.likelihood) + '</span></div>' +
+            '<div class="rc-item"><span class="rc-label">Exploitability</span><span class="rc-value">' + escapeHtml(rc.exploit) + '</span></div>' +
+            '<div class="rc-item"><span class="rc-label">Risk Trend</span><span class="rc-value">' + escapeHtml(rc.trend) + '</span></div>' +
+            '</div></div>';
     }
 
     // ============================================================
-    // SIDE RAIL — trend / timeline / domains
+    // METRIC VISUALIZATION
+    // ============================================================
+
+    function isComparisonOp(op) { return op === "<" || op === "<=" || op === ">" || op === ">="; }
+
+    function compareBlockHtml(rec, compliant) {
+        var opSym = OPERATOR_SYMBOLS[rec.operator] || "?";
+        return '<div class="cmp-values">' +
+            '<div class="cmp-block cmp-observed"><span class="cmp-block-label">Observed</span><span class="cmp-block-val">' + escapeHtml(formatVal(rec.observed)) + '</span></div>' +
+            '<div class="cmp-op"><span class="cmp-op-sym">' + escapeHtml(opSym) + '</span><span class="cmp-op-label">' + escapeHtml(rec.operator || "") + '</span></div>' +
+            '<div class="cmp-block cmp-expected"><span class="cmp-block-label">Expected</span><span class="cmp-block-val">' + escapeHtml(formatExpected(rec.expected, rec.operator)) + '</span></div>' +
+            '</div>';
+    }
+
+    function metricHtml(rec) {
+        if (rec._compliant || !isComparisonOp(rec.operator)) return "";
+        var obsN = toNumber(rec.observed);
+        var expN = toNumber(rec.expected);
+        if (obsN === null || expN === null || expN === 0) return "";
+
+        var lowerBetter = rec.operator === "<" || rec.operator === "<=";
+        var compliant = lowerBetter ? obsN <= expN : obsN >= expN;
+        var max = Math.max(obsN, expN) * 1.15 || 1;
+        var obsPct = Math.min(100, (obsN / max) * 100);
+        var expPct = Math.min(100, (expN / max) * 100);
+        var variance = ((obsN - expN) / expN) * 100;
+        var varianceText = (variance >= 0 ? "+" : "") + Math.round(variance * 10) / 10 + "%";
+        var statusLabel = compliant ? "Within threshold" : (lowerBetter ? "Over threshold" : "Below threshold");
+        var statusCls = compliant ? "ok" : "bad";
+        var sevCls = (rec.risk || "low").toLowerCase();
+
+        return '<div class="finding-section"><div class="finding-section-title">' + ICONS.evidence + ' Observed vs Threshold</div>' +
+            '<div class="metric-gauge">' +
+            '<div class="metric-gauge-head">' +
+            '<span class="metric-gauge-metric">' + escapeHtml(rec.metric || "Metric") + '</span>' +
+            '<span class="metric-gauge-status ' + statusCls + '">' + statusLabel + '</span>' +
+            '</div>' +
+            '<div class="metric-gauge-track">' +
+            '<div class="metric-gauge-fill ' + sevCls + '" style="width:' + obsPct + '%"></div>' +
+            '<div class="metric-gauge-threshold" style="left:' + expPct + '%"></div>' +
+            '</div>' +
+            '<div class="metric-gauge-labels">' +
+            '<span>Observed <strong>' + escapeHtml(formatVal(rec.observed)) + '</strong></span>' +
+            '<span>Threshold <strong>' + escapeHtml(OPERATOR_SYMBOLS[rec.operator] || "") + ' ' + escapeHtml(formatVal(rec.expected)) + '</strong></span>' +
+            '<span class="metric-gauge-variance ' + (compliant ? "ok" : "bad") + '">' + varianceText + '</span>' +
+            '</div>' +
+            '</div></div>';
+    }
+
+    // ============================================================
+    // EVIDENCE
+    // ============================================================
+
+    function evidenceHtml(rec) {
+        var srcs = rec._evidence || [];
+        var srcChips = srcs.map(function (s) {
+            return '<span class="evidence-src">' + escapeHtml(s) + '</span>';
+        }).join("");
+
+        return '<div class="finding-section"><div class="finding-section-title">' + ICONS.evidence + ' Technical Evidence</div>' +
+            '<div class="evidence-item">' +
+            '<div class="evidence-row">' +
+            '<span class="evidence-obs">' + escapeHtml(formatVal(rec.observed)) + '</span>' +
+            '<span class="evidence-arrow">\u2192 expected</span>' +
+            '<span class="evidence-exp">' + escapeHtml(formatExpected(rec.expected, rec.operator)) + '</span>' +
+            '</div>' +
+            '<div class="evidence-meta">' +
+            '<span><span class="em-label">Metric</span> ' + escapeHtml(rec.metric || "\u2014") + '</span>' +
+            '<span><span class="em-label">Source</span> ' + escapeHtml(srcs.length ? srcs[0] : "Assessment scan") + '</span>' +
+            '<span><span class="em-label">Device</span> ' + escapeHtml(rec._firewall) + (rec._model ? " \u00b7 " + escapeHtml(rec._model) : "") + '</span>' +
+            '<span><span class="em-label">Collected</span> ' + escapeHtml(formatTs(rec._collected_at || rec._detected)) + '</span>' +
+            '<span><span class="em-label">Run</span> ' + escapeHtml(rec._run_id || "\u2014") + '</span>' +
+            '</div>' +
+            (srcChips ? '<div class="evidence-sources">' + srcChips + '</div>' : '') +
+            '</div></div>';
+    }
+
+    // ============================================================
+    // FINDING CARD
+    // ============================================================
+
+    function findingBodyHtml(rec) {
+        var html = "";
+
+        if (!rec._compliant) {
+            html += '<div class="finding-section">' +
+                '<div class="finding-section-title">' + ICONS.impact + ' Issue Summary</div>' +
+                '<p>' + escapeHtml(rec._gap || rec._finding || "Finding requires attention.") + '</p>' +
+                compareBlockHtml(rec, false) +
+                '</div>';
+
+            if (rec._impact) {
+                html += '<div class="finding-section"><div class="finding-section-title">' + ICONS.impact + ' Why It Matters</div><p>' + escapeHtml(rec._impact) + '</p></div>';
+            }
+            if (rec._remediation) {
+                html += '<div class="finding-section"><div class="remediation-callout"><div class="finding-section-title">' + ICONS.rem + ' Recommended Fix</div><p>' + escapeHtml(rec._remediation) + '</p></div></div>';
+            }
+        } else {
+            html += '<div class="finding-section">' +
+                '<div class="finding-section-title">' + ICONS.verify + ' Compliance Check</div>' +
+                '<p>Observed value meets the expected baseline.</p>' +
+                compareBlockHtml(rec, true) +
+                '</div>';
+        }
+
+        html += metricHtml(rec);
+        html += evidenceHtml(rec);
+        html += riskContextHtml(rec);
+
+        if (rec._method) {
+            html += '<div class="finding-section"><div class="verification-box"><div class="finding-section-title">' + ICONS.verify + ' Verification Method</div><p>' + escapeHtml(rec._method) + '</p></div></div>';
+        }
+        return html;
+    }
+
+    function actionsHtml(rec, isReviewed, isAssigned) {
+        var assignee = state.assignees[rec.control];
+        return '<div class="finding-actions">' +
+            '<button class="action-btn ai" data-act="copilot" type="button">' + ICONS.spark + ' Copilot</button>' +
+            '<button class="action-btn" data-act="device" type="button">View Firewall</button>' +
+            '<button class="action-btn" data-act="assign" type="button">' + (assignee ? 'Reassign' : 'Assign Owner') + '</button>' +
+            '<button class="action-btn" data-act="export" type="button">Export</button>' +
+            '<button class="action-btn" data-act="share" type="button">Share</button>' +
+            '<button class="action-btn" data-act="report" type="button">Create Report</button>' +
+            '<button class="action-btn ' + (isReviewed ? 'is-reviewed' : '') + '" data-act="review" type="button">' + (isReviewed ? 'Reviewed' : 'Mark Reviewed') + '</button>' +
+            '</div>';
+    }
+
+    function findingCardHtml(rec) {
+        var sev = (rec.risk || "low").toLowerCase();
+        var cid = escapeHtml(rec.control);
+        var title = escapeHtml(rec._check || "Untitled");
+        var domain = escapeHtml(rec._domain);
+        var score = rec._risk_score || 0;
+        var detected = escapeHtml(rec._detected || "\u2014");
+        var fw = escapeHtml(rec._firewall);
+        var statusKey = rec.status;
+        var statusClass = rec._compliant ? "compliant" : "non-compliant";
+        var isReviewed = !!state.reviewed[rec.control];
+        var assignee = state.assignees[rec.control];
+
+        var summary = rec._compliant
+            ? "Observed value '" + formatVal(rec.observed) + "' meets the expected baseline."
+            : (rec._gap || rec._finding || "Finding requires attention.");
+
+        return '<div class="finding-card" data-control="' + cid + '" role="button" tabindex="0" aria-expanded="false">' +
+            '<span class="finding-card-accent ' + sev + '"></span>' +
+            '<div class="finding-card-inner">' +
+            '<div class="finding-card-head">' +
+            '<div class="finding-card-top">' +
+            '<span class="finding-card-id">' + cid + '</span>' +
+            '<span class="sev-badge sev-' + sev + '">' + escapeHtml(rec.risk) + '</span>' +
+            '<span class="risk-score" title="Risk score"><span class="risk-score-meter"><span class="risk-score-fill ' + sev + '" style="width:' + score + '%"></span></span><span class="risk-score-num">' + score + '</span></span>' +
+            '<span class="status-badge ' + statusClass + '">' + statusKey + '</span>' +
+            '</div>' +
+            '<div class="finding-card-title">' + title + '</div>' +
+            '<div class="finding-summary">' + escapeHtml(summary) + '</div>' +
+            '<div class="finding-card-meta">' +
+            '<div class="meta-item"><span class="meta-label">Domain</span><span class="meta-value">' + domain + '</span></div>' +
+            '<div class="meta-item"><span class="meta-label">Firewall</span><span class="meta-value mono">' + fw + '</span></div>' +
+            '<div class="meta-item"><span class="meta-label">Detected</span><span class="meta-value mono">' + detected + '</span></div>' +
+            (isReviewed ? '<div class="meta-item"><span class="meta-label">Review</span><span class="meta-value ok">Reviewed</span></div>' : '') +
+            (assignee ? '<div class="meta-item"><span class="meta-label">Owner</span><span class="meta-value owner">' + escapeHtml(assignee) + '</span></div>' : '') +
+            '</div>' +
+            '</div>' +
+            '<span class="finding-chevron">' + ICONS.chevron + '</span>' +
+            '<div class="finding-body">' +
+            findingBodyHtml(rec) +
+            actionsHtml(rec, isReviewed, !!assignee) +
+            '</div>' +
+            '</div>' +
+            '</div>';
+    }
+
+    function renderGroups(records) {
+        if (!root) return;
+        var countEl = document.getElementById("findingsCount");
+        if (countEl) countEl.textContent = records.length + " finding" + (records.length === 1 ? "" : "s");
+
+        if (!records.length) {
+            root.innerHTML = '<div class="empty-state card"><h3>No findings match filters</h3><p>Adjust filters or run a fresh assessment.</p></div>';
+            return;
+        }
+
+        var groups = {};
+        CATEGORY_ORDER.forEach(function (c) { groups[c] = []; });
+        records.forEach(function (r) {
+            var c = r._category || "Administration";
+            if (!groups[c]) groups[c] = [];
+            groups[c].push(r);
+        });
+
+        var html = "";
+        CATEGORY_ORDER.forEach(function (category) {
+            var list = groups[category] || [];
+            if (!list.length) return;
+            var isCollapsed = !!state.collapsed[category];
+            var badges = { critical: 0, high: 0, medium: 0, low: 0, compliant: 0 };
+            list.forEach(function (r) {
+                var k = r.risk.toLowerCase();
+                if (badges[k] != null) badges[k]++;
+            });
+            var badgeHtml = "";
+            ["critical", "high", "medium", "low"].forEach(function (k) {
+                if (badges[k]) badgeHtml += '<span class="group-badge ' + k + '">' + badges[k] + '</span>';
+            });
+            html += '<section class="group-section' + (isCollapsed ? ' is-collapsed' : '') + '" data-category="' + escapeHtml(category) + '">' +
+                '<div class="group-head" role="button" tabindex="0" aria-expanded="' + String(!isCollapsed) + '">' +
+                '<span class="group-toggle">' + ICONS.chevron + '</span>' +
+                '<span class="group-name">' + escapeHtml(category) + '</span>' +
+                '<span class="group-count">' + list.length + '</span>' +
+                '<span class="group-badges">' + badgeHtml + '</span>' +
+                '</div>' +
+                '<div class="group-body">' +
+                list.map(findingCardHtml).join("") +
+                '</div>' +
+                '</section>';
+        });
+        root.innerHTML = html;
+    }
+
+    // ============================================================
+    // SIDE RAIL
     // ============================================================
 
     function renderTrend(history, posture) {
@@ -252,11 +634,13 @@
         var el = document.getElementById("assessmentTimeline");
         if (!el) return;
         var collected = posture.collected_at || posture.last_assessment_ts;
+        var sev = posture.severity || {};
         var items = [
             { label: "Assessment Started", detail: "Compliance assessment initiated", ts: posture.last_assessment_ts, dot: "warn" },
             { label: "Data Collected", detail: firewall.hostname + " \u00b7 PAN-OS " + firewall.version, ts: collected, dot: "" },
-            { label: "Findings Generated", detail: posture.non_compliant + " findings across " + CATEGORY_ORDER.length + " domains", ts: collected, dot: "" },
-            { label: "Controls Evaluated", detail: posture.compliant + " of " + posture.total_controls + " compliant", ts: collected, dot: "ok" }
+            { label: "Controls Evaluated", detail: posture.compliant + " of " + posture.total_controls + " compliant \u00b7 " + posture.non_compliant + " findings", ts: collected, dot: "" },
+            { label: "Findings Generated", detail: sev.critical + " critical \u00b7 " + sev.high + " high \u00b7 " + sev.medium + " medium \u00b7 " + sev.low + " low", ts: collected, dot: "ok" },
+            { label: "Report Ready", detail: "Run " + (posture.run_id || "\u2014") + " \u00b7 " + (data._source === "live" ? "Live data" : "Sample data"), ts: collected, dot: "ok" }
         ];
         var html = "";
         items.forEach(function (it) {
@@ -290,212 +674,6 @@
     }
 
     // ============================================================
-    // FINDING CARDS
-    // ============================================================
-
-    function formatVal(v) {
-        if (typeof v === "boolean") return v ? "Enabled" : "Disabled";
-        if (Array.isArray(v)) return v.join(", ");
-        if (v === null || v === undefined) return "\u2014";
-        return String(v);
-    }
-
-    function formatExpected(v, op) {
-        if (op === "not_empty") return "Not Empty";
-        if (op === "supported_version") return Array.isArray(v) ? "in (" + v.join(", ") + ")" : "in (" + String(v) + ")";
-        return formatVal(v);
-    }
-
-    var OPERATOR_SYMBOLS = {
-        "==": "=", "!=": "\u2260", "<": "<", "<=": "\u2264", ">": ">", ">=": "\u2265",
-        "supported_version": "\u2208", "not_empty": "\u2260"
-    };
-
-    var ICONS = {
-        rem: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-        impact: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>',
-        evidence: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/></svg>',
-        verify: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>',
-        chevron: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'
-    };
-
-    function findingCardHtml(rec) {
-        var sev = (rec.risk || "low").toLowerCase();
-        var cid = escapeHtml(rec.control);
-        var title = escapeHtml(rec._check || "Untitled");
-        var domain = escapeHtml(rec._domain);
-        var category = escapeHtml(rec._category);
-        var score = rec._risk_score || 0;
-        var detected = escapeHtml(rec._detected || "\u2014");
-        var fw = escapeHtml(rec._firewall);
-        var statusKey = rec.status;
-        var statusClass = rec._compliant ? "compliant" : "non-compliant";
-        var isReviewed = !!state.reviewed[rec.control];
-
-        var metricName = escapeHtml(rec.metric || "\u2014");
-        var observedVal = escapeHtml(formatVal(rec.observed));
-        var expectedVal = escapeHtml(formatExpected(rec.expected, rec.operator));
-        var opSym = OPERATOR_SYMBOLS[rec.operator] || "?";
-        var opLabel = escapeHtml(rec.operator || "");
-
-        var summary = rec._compliant
-            ? "Observed value '" + formatVal(rec.observed) + "' meets the expected baseline."
-            : (rec._gap || rec._finding || "Finding requires attention.");
-
-        var html = '<div class="finding-card" data-control="' + cid + '" role="button" tabindex="0" aria-expanded="false">' +
-            '<span class="finding-card-accent ' + sev + '"></span>' +
-            '<div class="finding-card-inner">' +
-            '<div class="finding-card-head">' +
-            '<div class="finding-card-top">' +
-            '<span class="finding-card-id">' + cid + '</span>' +
-            '<span class="sev-badge sev-' + sev + '">' + escapeHtml(rec.risk) + '</span>' +
-            '<span class="status-badge ' + statusClass + '">' + statusKey + '</span>' +
-            '</div>' +
-            '<div class="finding-card-title">' + title + '</div>' +
-            '<div class="finding-summary">' + escapeHtml(summary) + '</div>' +
-            '<div class="finding-card-meta">' +
-            '<div class="meta-item"><span class="meta-label">Domain</span><span class="meta-value">' + domain + '</span></div>' +
-            '<div class="meta-item"><span class="meta-label">Category</span><span class="meta-value">' + category + '</span></div>' +
-            '<div class="meta-item"><span class="meta-label">Risk Score</span><span class="meta-value mono"><span class="risk-chip"><span class="risk-meter"><span class="risk-meter-fill ' + sev + '" style="width:' + score + '%"></span></span>' + score + '/100</span></span></div>' +
-            '<div class="meta-item"><span class="meta-label">Detected</span><span class="meta-value mono">' + detected + '</span></div>' +
-            '<div class="meta-item"><span class="meta-label">Firewall</span><span class="meta-value mono">' + fw + '</span></div>' +
-            (isReviewed ? '<div class="meta-item"><span class="meta-label">Review</span><span class="meta-value compliant">Reviewed</span></div>' : '') +
-            '</div>' +
-            '</div>' +
-            '<span class="finding-chevron">' + ICONS.chevron + '</span>' +
-            '<div class="finding-body">' +
-            findingBodyHtml(rec) +
-            actionsHtml(rec, isReviewed) +
-            '</div>' +
-            '</div>' +
-            '</div>';
-        return html;
-    }
-
-    function findingBodyHtml(rec) {
-        var html = "";
-        if (!rec._compliant) {
-            html += '<div class="finding-section">' +
-                '<div class="finding-section-title">' + ICONS.impact + ' What failed</div>' +
-                '<div class="cmp-values">' +
-                '<div class="cmp-block cmp-observed"><span class="cmp-block-label">Observed</span><span class="cmp-block-val">' + escapeHtml(formatVal(rec.observed)) + '</span></div>' +
-                '<div class="cmp-op"><span class="cmp-op-sym">' + escapeHtml(OPERATOR_SYMBOLS[rec.operator] || "?") + '</span><span class="cmp-op-label">' + escapeHtml(rec.operator || "") + '</span></div>' +
-                '<div class="cmp-block cmp-expected"><span class="cmp-block-label">Expected</span><span class="cmp-block-val">' + escapeHtml(formatExpected(rec.expected, rec.operator)) + '</span></div>' +
-                '</div></div>';
-
-            if (rec._gap) {
-                html += '<div class="finding-section"><div class="finding-section-title">' + ICONS.impact + ' Potential Impact</div><p>' + escapeHtml(rec._gap) + '</p></div>';
-            }
-            if (rec._impact) {
-                html += '<div class="finding-section"><div class="finding-section-title">' + ICONS.impact + ' Business Impact</div><p>' + escapeHtml(rec._impact) + '</p></div>';
-            }
-            if (rec._remediation) {
-                html += '<div class="finding-section"><div class="remediation-callout"><div class="finding-section-title">' + ICONS.rem + ' Remediation</div><p>' + escapeHtml(rec._remediation) + '</p></div></div>';
-            }
-        } else {
-            html += '<div class="finding-section">' +
-                '<div class="finding-section-title">' + ICONS.verify + ' Compliance Check</div>' +
-                '<div class="cmp-values">' +
-                '<div class="cmp-block cmp-observed"><span class="cmp-block-label">Observed</span><span class="cmp-block-val">' + escapeHtml(formatVal(rec.observed)) + '</span></div>' +
-                '<div class="cmp-op"><span class="cmp-op-sym">' + escapeHtml(OPERATOR_SYMBOLS[rec.operator] || "?") + '</span><span class="cmp-op-label">' + escapeHtml(rec.operator || "") + '</span></div>' +
-                '<div class="cmp-block cmp-expected"><span class="cmp-block-label">Expected</span><span class="cmp-block-val">' + escapeHtml(formatExpected(rec.expected, rec.operator)) + '</span></div>' +
-                '</div></div>';
-        }
-
-        html += evidenceHtml(rec);
-
-        if (rec._method) {
-            html += '<div class="finding-section"><div class="verification-box"><div class="finding-section-title">' + ICONS.verify + ' Verification Method</div><p>' + escapeHtml(rec._method) + '</p></div></div>';
-        }
-        return html;
-    }
-
-    function evidenceHtml(rec) {
-        var srcs = rec._evidence || [];
-        var expected = formatExpected(rec.expected, rec.operator);
-        var items = '<div class="evidence-item">' +
-            '<div class="evidence-row">' +
-            '<span class="evidence-obs">' + escapeHtml(formatVal(rec.observed)) + '</span>' +
-            '<span class="evidence-arrow">\u2192 expected</span>' +
-            '<span class="evidence-exp">' + escapeHtml(expected) + '</span>' +
-            '</div>' +
-            '<div class="evidence-meta">' +
-            '<span><span class="em-label">Metric</span> ' + escapeHtml(rec.metric || "\u2014") + '</span>' +
-            '<span><span class="em-label">Detected</span> ' + escapeHtml(rec._detected || "\u2014") + '</span>' +
-            '<span><span class="em-label">Device</span> ' + escapeHtml(rec._firewall) + '</span>' +
-            '</div></div>';
-        var html = '<div class="finding-section"><div class="finding-section-title">' + ICONS.evidence + ' Technical Evidence</div>' +
-            '<div class="evidence-list">' + items;
-        srcs.forEach(function (s) {
-            html += '<span class="evidence-src">' + escapeHtml(s) + '</span>';
-        });
-        html += '</div></div>';
-        return html;
-    }
-
-    function actionsHtml(rec, isReviewed) {
-        var html = '<div class="finding-actions">' +
-            '<button class="action-btn ai" data-act="explain" type="button">Explain</button>' +
-            '<button class="action-btn ai" data-act="fixplan" type="button">Fix Plan</button>' +
-            '<button class="action-btn ai" data-act="risk" type="button">Risk</button>' +
-            '<button class="action-btn ai" data-act="summarize" type="button">Summarize</button>' +
-            '<button class="action-btn" data-act="device" type="button">View Device</button>' +
-            '<button class="action-btn" data-act="export" type="button">Export</button>' +
-            '<button class="action-btn" data-act="report" type="button">Report</button>' +
-            '<button class="action-btn" data-act="share" type="button">Share</button>' +
-            '<button class="action-btn ' + (isReviewed ? 'is-reviewed' : '') + '" data-act="review" type="button">' + (isReviewed ? 'Reviewed' : 'Mark Reviewed') + '</button>' +
-            '</div>';
-        return html;
-    }
-
-    function renderGroups(records) {
-        if (!root) return;
-        var countEl = document.getElementById("findingsCount");
-        if (countEl) countEl.textContent = records.length + " finding" + (records.length === 1 ? "" : "s");
-
-        if (!records.length) {
-            root.innerHTML = '<div class="empty-state card"><h3>No findings match filters</h3><p>Adjust filters or run a fresh assessment.</p></div>';
-            return;
-        }
-
-        var groups = {};
-        CATEGORY_ORDER.forEach(function (c) { groups[c] = []; });
-        records.forEach(function (r) {
-            var c = r._category || "Administration & Management";
-            if (!groups[c]) groups[c] = [];
-            groups[c].push(r);
-        });
-
-        var html = "";
-        Object.keys(groups).forEach(function (category) {
-            var list = groups[category];
-            if (!list.length) return;
-            var isCollapsed = !!state.collapsed[category];
-            var badges = { critical: 0, high: 0, medium: 0, low: 0 };
-            list.forEach(function (r) {
-                var k = r.risk.toLowerCase();
-                if (badges[k] != null) badges[k]++;
-            });
-            var badgeHtml = "";
-            ["critical", "high", "medium", "low"].forEach(function (k) {
-                if (badges[k]) badgeHtml += '<span class="group-badge ' + k + '">' + badges[k] + ' ' + k + '</span>';
-            });
-            html += '<section class="group-section' + (isCollapsed ? ' is-collapsed' : '') + '" data-category="' + escapeHtml(category) + '">' +
-                '<div class="group-head" role="button" tabindex="0">' +
-                '<span class="group-toggle">' + ICONS.chevron + '</span>' +
-                '<span class="group-name">' + escapeHtml(category) + '</span>' +
-                '<span class="group-count">' + list.length + '</span>' +
-                '<span class="group-badges">' + badgeHtml + '</span>' +
-                '</div>' +
-                '<div class="group-body">' +
-                list.map(findingCardHtml).join("") +
-                '</div>' +
-                '</section>';
-        });
-        root.innerHTML = html;
-    }
-
-    // ============================================================
     // RENDER ALL
     // ============================================================
 
@@ -503,16 +681,11 @@
         var visible = getVisible();
         renderGroups(visible);
         renderDomainList(state.records);
-    }
-
-    function applyFilters() {
-        saveFilters();
-        syncFilterChips();
-        renderAll();
+        renderActiveFilters();
     }
 
     // ============================================================
-    // FILTER CHIPS & DOMAIN CHIPS
+    // FILTERS UI
     // ============================================================
 
     function renderDomainChips() {
@@ -525,10 +698,47 @@
         el.innerHTML = chips;
     }
 
+    function populateFirewallSelect(firewalls) {
+        var el = document.getElementById("firewallSelect");
+        if (!el) return;
+        var html = '<option value="all">All</option>';
+        (firewalls || []).forEach(function (f) {
+            html += '<option value="' + escapeHtml(f.hostname) + '">' + escapeHtml(f.hostname + (f.model ? " \u00b7 " + f.model : "")) + '</option>';
+        });
+        el.innerHTML = html;
+        if (el.getAttribute("data-value")) el.value = el.getAttribute("data-value");
+    }
+
+    function populateDateSelect(history) {
+        var el = document.getElementById("dateSelect");
+        if (!el) return;
+        var html = '<option value="all">All dates</option>';
+        var seen = {};
+        (history || []).forEach(function (s) {
+            var key = dateKey(s.ts);
+            if (!key || seen[key]) return;
+            seen[key] = true;
+            html += '<option value="' + key + '">' + formatShortTs(s.ts) + '</option>';
+        });
+        el.innerHTML = html;
+    }
+
+    function dateKey(ts) {
+        var d = parseDate(ts);
+        if (!d) return null;
+        return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    }
+
     function syncFilterChips() {
         syncChipGroup("severityChips", state.filters.severity);
         syncChipGroup("statusChips", state.filters.status);
         syncChipGroup("domainChips", state.filters.domain);
+        var fw = document.getElementById("firewallSelect");
+        if (fw) fw.value = state.filters.firewall;
+        var rr = document.getElementById("riskRangeSelect");
+        if (rr) rr.value = state.filters.riskRange;
+        var dt = document.getElementById("dateSelect");
+        if (dt) dt.value = state.filters.date;
     }
 
     function syncChipGroup(id, value) {
@@ -537,6 +747,31 @@
         el.querySelectorAll(".chip").forEach(function (c) {
             c.classList.toggle("is-active", c.getAttribute("data-value") === value);
         });
+    }
+
+    function renderActiveFilters() {
+        var el = document.getElementById("activeFilters");
+        if (!el) return;
+        var f = state.filters;
+        var pills = [];
+        var defs = [
+            { key: "severity", label: "Severity" },
+            { key: "status", label: "Status" },
+            { key: "domain", label: "Domain" },
+            { key: "firewall", label: "Firewall" },
+            { key: "riskRange", label: "Risk", labels: { critical: "90\u2013100", high: "70\u201389", medium: "40\u201369", low: "0\u201339" } },
+            { key: "date", label: "Assessment" }
+        ];
+        defs.forEach(function (d) {
+            var v = f[d.key];
+            if (!v || v === "all") return;
+            var label = d.labels && d.labels[v] ? d.labels[v] : v;
+            pills.push('<span class="active-pill" data-key="' + d.key + '"><span class="active-pill-label">' + d.label + ':</span> ' + escapeHtml(label) + '<button class="active-pill-x" type="button" aria-label="Remove filter">&times;</button></span>');
+        });
+        if (f.search) {
+            pills.push('<span class="active-pill" data-key="search"><span class="active-pill-label">Search:</span> ' + escapeHtml(f.search) + '<button class="active-pill-x" type="button" aria-label="Remove filter">&times;</button></span>');
+        }
+        el.innerHTML = pills.join("");
     }
 
     function bindChips(id, key) {
@@ -548,6 +783,20 @@
             state.filters[key] = chip.getAttribute("data-value") || "all";
             applyFilters();
         });
+    }
+
+    function applyFilters() {
+        saveFilters();
+        syncFilterChips();
+        renderAll();
+    }
+
+    function resetFilters() {
+        state.filters = defaultFilters();
+        if (sortSelect) sortSelect.value = "severity";
+        if (searchInput) searchInput.value = "";
+        if (viewSelect) viewSelect.value = "all";
+        applyFilters();
     }
 
     // ============================================================
@@ -569,33 +818,10 @@
     }
 
     function applyView(view) {
-        state.filters = Object.assign({}, view.filters);
+        state.filters = Object.assign(defaultFilters(), view.filters);
         if (sortSelect) sortSelect.value = state.filters.sort;
         if (searchInput) searchInput.value = state.filters.search || "";
         applyFilters();
-    }
-
-    function findPresetView() {
-        return PRESET_VIEWS.find(function (v) {
-            return v.filters.severity === state.filters.severity &&
-                v.filters.status === state.filters.status &&
-                v.filters.domain === state.filters.domain &&
-                v.filters.search === state.filters.search;
-        });
-    }
-
-    function syncViewSelect() {
-        if (!viewSelect) return;
-        var preset = findPresetView();
-        if (preset) { viewSelect.value = preset.id; return; }
-        var custom = state.customViews.find(function (v) {
-            return v.filters.severity === state.filters.severity &&
-                v.filters.status === state.filters.status &&
-                v.filters.domain === state.filters.domain &&
-                v.filters.search === state.filters.search;
-        });
-        if (custom) { viewSelect.value = "custom:" + custom.name; return; }
-        viewSelect.value = "all";
     }
 
     function saveView() {
@@ -617,19 +843,24 @@
     function loadFilters() {
         try {
             var saved = JSON.parse(localStorage.getItem(STORAGE_FILTERS) || "null");
-            if (saved && typeof saved === "object") state.filters = Object.assign({}, state.filters, saved);
+            if (saved && typeof saved === "object") state.filters = Object.assign(defaultFilters(), saved);
         } catch (e) { /* ignore */ }
         try {
             state.reviewed = JSON.parse(localStorage.getItem(STORAGE_REVIEWED) || "{}") || {};
         } catch (e) { state.reviewed = {}; }
+        try {
+            state.assignees = JSON.parse(localStorage.getItem(STORAGE_ASSIGNEES) || "{}") || {};
+        } catch (e) { state.assignees = {}; }
     }
 
     function saveFilters() {
         try { localStorage.setItem(STORAGE_FILTERS, JSON.stringify(state.filters)); } catch (e) { /* ignore */ }
     }
-
     function saveReviewed() {
         try { localStorage.setItem(STORAGE_REVIEWED, JSON.stringify(state.reviewed)); } catch (e) { /* ignore */ }
+    }
+    function saveAssignees() {
+        try { localStorage.setItem(STORAGE_ASSIGNEES, JSON.stringify(state.assignees)); } catch (e) { /* ignore */ }
     }
 
     // ============================================================
@@ -637,6 +868,14 @@
     // ============================================================
 
     var copilot = { panel: document.getElementById("copilotPanel"), backdrop: document.getElementById("copilotBackdrop"), body: document.getElementById("copilotBody"), current: null };
+
+    var ACTION_LABELS = {
+        explain: "Explain Finding",
+        fixplan: "Generate Fix Plan",
+        importance: "Why Is This Important?",
+        impact: "Security Impact Analysis",
+        summarize: "Summarize for Management"
+    };
 
     function openCopilot(rec) {
         copilot.current = rec;
@@ -653,16 +892,14 @@
     }
 
     function resetCopilotChips() {
-        var chips = document.querySelectorAll("#copilotActions .copilot-chip");
-        chips.forEach(function (c) { c.classList.remove("is-active"); });
+        document.querySelectorAll("#copilotActions .copilot-chip").forEach(function (c) { c.classList.remove("is-active"); });
     }
-
-    var ACTION_LABELS = { explain: "Explain Finding", fixplan: "Generate Fix Plan", risk: "Show Risk Analysis", summarize: "Summarize Finding" };
 
     function runCopilot(action) {
         if (!copilot.current) return;
-        var chips = document.querySelectorAll("#copilotActions .copilot-chip");
-        chips.forEach(function (c) { c.classList.toggle("is-active", c.getAttribute("data-action") === action); });
+        document.querySelectorAll("#copilotActions .copilot-chip").forEach(function (c) {
+            c.classList.toggle("is-active", c.getAttribute("data-action") === action);
+        });
 
         copilot.body.innerHTML = '<div class="copilot-loading"><span class="spin"></span> Thinking\u2026</div>';
         var rec = copilot.current;
@@ -702,7 +939,8 @@
         var instruction = {
             explain: "Explain this firewall security finding in plain, concise language for a network engineer. Include what is wrong, why it matters, and the single most important first step.",
             fixplan: "Produce a concrete, ordered fix plan (numbered steps) to remediate this finding. Include verification steps and rollback considerations.",
-            risk: "Provide a focused risk analysis of this finding: likelihood, business impact, and a recommended risk response (accept/mitigate/transfer/avoid).",
+            importance: "Explain in 2-3 short paragraphs why this specific finding matters to the business and what could go wrong if left unaddressed.",
+            impact: "Provide a focused security impact analysis of this finding: likelihood, business impact, and a recommended risk response (accept/mitigate/transfer/avoid).",
             summarize: "Summarize this finding in 2-3 crisp bullet points suitable for an executive dashboard."
         }[action] || "";
 
@@ -710,16 +948,16 @@
     }
 
     function renderCopilotAnswer(text) {
-        var body = copilot.body;
         var html = '<div class="copilot-answer">';
         html += text.split(/\n{2,}/).map(function (para) {
             return '<p>' + escapeHtml(para).replace(/\n/g, "<br>") + '</p>';
         }).join("");
         html += '</div>';
-        body.innerHTML = html;
+        copilot.body.innerHTML = html;
     }
 
     function buildLocalAnswer(action, rec) {
+        var rc = riskContext(rec);
         if (action === "explain") {
             return "Finding " + rec.control + " \u2014 " + rec._check + "\n\n" +
                 "What is wrong: " + (rec._gap || "The control does not meet its baseline.") + "\n\n" +
@@ -736,12 +974,19 @@
             ];
             return "Fix plan for " + rec.control + "\n\n" + steps.join("\n");
         }
-        if (action === "risk") {
-            return "Risk analysis \u2014 " + rec.control + "\n\n" +
+        if (action === "importance") {
+            return "Why " + rec.control + " matters\n\n" +
+                (rec._impact || "This control has a material impact on the security posture.") + "\n\n" +
+                "If left unaddressed, this finding is assessed as " + rc.likelihood.toLowerCase() + " likelihood with " + rc.trend.toLowerCase() + " risk trend. " +
+                "Addressing it removes a meaningful source of exposure on " + rec._firewall + ".";
+        }
+        if (action === "impact") {
+            return "Security impact analysis \u2014 " + rec.control + "\n\n" +
                 "Severity: " + rec.risk + " (risk score " + rec._risk_score + "/100)\n" +
-                "Likelihood: " + (rec._risk_score >= 80 ? "High" : rec._risk_score >= 55 ? "Moderate" : "Low") + "\n" +
-                "Business impact: " + (rec._impact || "See finding impact.") + "\n" +
-                "Recommended response: " + (rec._risk_score >= 80 ? "Mitigate immediately" : "Mitigate on a planned cycle") + ".";
+                "Likelihood: " + rc.likelihood + "\n" +
+                "Business impact: " + rc.impact + "\n" +
+                "Exploitability: " + rc.exploit + "\n" +
+                "Recommended response: " + (rec._risk_score >= 80 ? "Mitigate immediately" : rec._risk_score >= 40 ? "Mitigate on a planned cycle" : "Accept with monitoring") + ".";
         }
         return "Summary \u2014 " + rec.control + "\n\n" +
             "\u2022 " + rec._check + "\n" +
@@ -756,6 +1001,8 @@
     function handleOperationalAction(act, rec) {
         if (act === "device") {
             if (window.showToast) window.showToast("Firewall: " + rec._firewall + " \u00b7 " + rec._model + " \u00b7 PAN-OS " + rec._version, "info");
+        } else if (act === "assign") {
+            assignOwner(rec);
         } else if (act === "export") {
             downloadJson(rec.control + "_finding.json", buildExportPayload(rec));
             if (window.showToast) window.showToast("Exported " + rec.control + ".", "success");
@@ -766,6 +1013,21 @@
         } else if (act === "review") {
             toggleReview(rec);
         }
+    }
+
+    function assignOwner(rec) {
+        var current = state.assignees[rec.control] || "";
+        var name = window.prompt(current ? "Reassign owner for " + rec.control + ":" : "Assign owner for " + rec.control + ":", current);
+        if (name === null) return;
+        name = (name || "").trim();
+        if (name) {
+            state.assignees[rec.control] = name;
+        } else {
+            delete state.assignees[rec.control];
+        }
+        saveAssignees();
+        renderAll();
+        if (window.showToast) window.showToast(name ? "Assigned " + rec.control + " to " + name + "." : "Owner cleared.", "success");
     }
 
     function buildExportPayload(rec) {
@@ -786,8 +1048,12 @@
             remediation: rec._remediation,
             verification_method: rec._method,
             evidence: rec._evidence,
+            risk_context: riskContext(rec),
             firewall: { hostname: rec._firewall, model: rec._model, version: rec._version },
-            detected_at: rec._detected
+            detected_at: rec._detected,
+            run_id: rec._run_id,
+            assignee: state.assignees[rec.control] || null,
+            reviewed: !!state.reviewed[rec.control]
         };
     }
 
@@ -852,8 +1118,10 @@
             if (groupHead) {
                 var section = groupHead.closest(".group-section");
                 var category = section.getAttribute("data-category");
-                state.collapsed[category] = !section.classList.contains("is-collapsed");
+                var willCollapse = !section.classList.contains("is-collapsed");
+                state.collapsed[category] = willCollapse;
                 section.classList.toggle("is-collapsed");
+                groupHead.setAttribute("aria-expanded", String(!willCollapse));
                 return;
             }
 
@@ -865,9 +1133,8 @@
                 var rec = findRecord(cid);
                 if (!rec) return;
                 var act = actionBtn.getAttribute("data-act");
-                if (actionBtn.classList.contains("ai")) {
+                if (act === "copilot") {
                     openCopilot(rec);
-                    runCopilot(act);
                 } else {
                     handleOperationalAction(act, rec);
                 }
@@ -886,6 +1153,7 @@
             if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("finding-card")) {
                 e.preventDefault();
                 e.target.classList.toggle("is-active");
+                e.target.setAttribute("aria-expanded", String(e.target.classList.contains("is-active")));
             }
             if ((e.key === "Enter" || e.key === " ") && e.target.classList.contains("group-head")) {
                 e.preventDefault();
@@ -914,7 +1182,7 @@
         if (viewSelect) {
             viewSelect.addEventListener("change", function () {
                 var val = viewSelect.value;
-                if (val.startsWith("custom:")) {
+                if (val.indexOf("custom:") === 0) {
                     var name = val.slice(7);
                     var v = state.customViews.find(function (x) { return x.name === name; });
                     if (v) applyView(v);
@@ -925,14 +1193,56 @@
             });
         }
 
+        var fwSelect = document.getElementById("firewallSelect");
+        if (fwSelect) {
+            fwSelect.addEventListener("change", function () {
+                state.filters.firewall = fwSelect.value;
+                applyFilters();
+            });
+        }
+
+        var rrSelect = document.getElementById("riskRangeSelect");
+        if (rrSelect) {
+            rrSelect.addEventListener("change", function () {
+                state.filters.riskRange = rrSelect.value;
+                applyFilters();
+            });
+        }
+
+        var dateSelect = document.getElementById("dateSelect");
+        if (dateSelect) {
+            dateSelect.addEventListener("change", function () {
+                state.filters.date = dateSelect.value;
+                applyFilters();
+            });
+        }
+
+        var strip = document.getElementById("severityTrendStrip");
+        if (strip) {
+            strip.addEventListener("click", function (e) {
+                var item = e.target.closest(".sev-strip-item");
+                if (!item) return;
+                var sev = item.getAttribute("data-sev");
+                state.filters.severity = state.filters.severity === sev ? "all" : sev;
+                applyFilters();
+            });
+        }
+
+        var activeFilters = document.getElementById("activeFilters");
+        if (activeFilters) {
+            activeFilters.addEventListener("click", function (e) {
+                var pill = e.target.closest(".active-pill");
+                if (!pill) return;
+                var key = pill.getAttribute("data-key");
+                if (key === "search") state.filters.search = "";
+                else state.filters[key] = "all";
+                if (searchInput && key === "search") searchInput.value = "";
+                applyFilters();
+            });
+        }
+
         document.getElementById("btnSaveView").addEventListener("click", saveView);
-        document.getElementById("btnResetFilters").addEventListener("click", function () {
-            state.filters = { severity: "all", status: "all", domain: "all", search: "", sort: "severity" };
-            if (sortSelect) sortSelect.value = "severity";
-            if (searchInput) searchInput.value = "";
-            if (viewSelect) viewSelect.value = "all";
-            applyFilters();
-        });
+        document.getElementById("btnResetFilters").addEventListener("click", resetFilters);
         document.getElementById("btnExpandAll").addEventListener("click", function () {
             state.collapsed = {};
             document.querySelectorAll(".group-section").forEach(function (s) { s.classList.remove("is-collapsed"); });
@@ -949,6 +1259,10 @@
             var chip = e.target.closest(".copilot-chip");
             if (!chip) return;
             runCopilot(chip.getAttribute("data-action"));
+        });
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") closeCopilot();
         });
     }
 
@@ -992,8 +1306,11 @@
                     return;
                 }
                 state.data = data;
+                var posture = data.posture || {};
                 var ctx = {
                     detected: data._collected_at ? String(data._collected_at).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                    collected_at: data._collected_at || posture.collected_at,
+                    run_id: posture.run_id || "\u2014",
                     firewall: data.firewall || { hostname: "edge-fw-01", model: "", version: "" }
                 };
                 var findingMap = {};
@@ -1002,15 +1319,19 @@
                     return enrich(r, findingMap[(r.control || "").toUpperCase()], null, ctx);
                 });
 
-                renderPosture(data.posture, data.firewall);
-                renderTrend(data.history, data.posture);
-                renderTimeline(data.posture, data.firewall, data);
+                renderHeaderBadges(data);
+                renderPosture(posture, data);
+                renderTrend(data.history, posture);
+                renderTimeline(posture, data.firewall, data);
                 renderDomainChips();
+                populateFirewallSelect(data.firewalls);
+                populateDateSelect(data.history);
                 populateViewSelect();
                 if (sortSelect) sortSelect.value = state.filters.sort;
                 if (searchInput) searchInput.value = state.filters.search || "";
-                syncViewSelect();
+                syncFilterChips();
                 renderAll();
+                renderAgentBadge();
             })
             .catch(function () {
                 if (root) root.innerHTML = '<div class="empty-state card"><h4>Unable to load findings</h4></div>';

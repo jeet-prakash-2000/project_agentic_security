@@ -28,44 +28,73 @@
 <div class="alert alert-error"><strong>Error</strong><span>{{ error }}</span></div>
 {% endif %}
 
-<section class="posture-grid" id="postureGrid">
+<div class="header-status-strip" aria-label="Assessment status">
+    <div class="status-chip" id="postureBadge" title="Overall security posture">
+        <span class="status-dot" id="postureBadgeDot"></span>
+        <span id="postureBadgeText">—</span>
+    </div>
+    <div class="status-chip" id="agentBadge" title="Active AI agent">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>
+        <span id="agentBadgeText">Agent: —</span>
+    </div>
+    <div class="status-chip" id="sourceBadge" title="Assessment data source">
+        <span>Source: <strong id="sourceBadgeText">—</strong></span>
+    </div>
+    <div class="status-chip" id="refreshBadge" title="Last data refresh">
+        <span>Refreshed: <strong id="refreshBadgeText">—</strong></span>
+    </div>
+    <div class="status-chip" id="envBadge" title="Environment">
+        <span class="status-dot status-dot-env" id="envBadgeDot"></span>
+        <span id="envBadgeText">Environment: —</span>
+    </div>
+</div>
+
+<section class="posture-overview" aria-label="Security posture overview">
     <div class="posture-card posture-card-score">
-        <div class="posture-card-head"><span class="posture-card-label">Compliance Score</span><span class="posture-card-source" id="postureSource">—</span></div>
+        <div class="posture-card-label">Security Score</div>
         <div class="posture-score-row">
-            <div class="score-gauge" id="scoreGauge"><svg viewBox="0 0 120 120"><circle class="gauge-track" cx="60" cy="60" r="52"/><circle class="gauge-fill" id="gaugeFill" cx="60" cy="60" r="52"/></svg><div class="score-gauge-value"><span id="scoreValue">—</span><span class="score-gauge-pct">%</span></div></div>
-            <div class="score-trend" id="scoreTrend"></div>
+            <div class="score-gauge"><svg viewBox="0 0 120 120"><circle class="gauge-track" cx="60" cy="60" r="52"/><circle class="gauge-fill" id="securityGaugeFill" cx="60" cy="60" r="52"/></svg><div class="score-gauge-value"><span id="securityScore">—</span><span class="score-gauge-pct">%</span></div></div>
+            <div class="score-trend" id="securityScoreTrend"></div>
         </div>
     </div>
     <div class="posture-card">
-        <div class="posture-card-head"><span class="posture-card-label">Controls Evaluated</span></div>
-        <div class="posture-big"><span id="kpiCompliant">—</span><span class="posture-big-sub">/ <span id="kpiTotal">—</span> passed</span></div>
-        <div class="posture-bar"><div class="posture-bar-fill posture-bar-ok" id="barCompliant"></div></div>
-        <div class="posture-subline"><span class="dot dot-ok"></span><span id="kpiCompliantLabel">—</span> compliant &nbsp;<span class="dot dot-bad"></span><span id="kpiNonCompliant">—</span> non-compliant</div>
+        <div class="posture-card-label">Compliance Score</div>
+        <div class="posture-big"><span id="complianceScore">—</span><span class="posture-big-sub">%</span></div>
+        <div class="posture-bar"><div class="posture-bar-fill" id="complianceBar"></div></div>
+        <div class="posture-subline"><span id="compliantCount">—</span> of <span id="totalControls">—</span> controls passed</div>
+    </div>
+    <div class="posture-card posture-card-sev critical">
+        <div class="posture-card-label">Critical Findings</div>
+        <div class="posture-big" id="criticalCount">—</div>
+        <div class="posture-trend" id="criticalTrend"></div>
+    </div>
+    <div class="posture-card posture-card-sev high">
+        <div class="posture-card-label">High Findings</div>
+        <div class="posture-big" id="highCount">—</div>
+        <div class="posture-trend" id="highTrend"></div>
     </div>
     <div class="posture-card">
-        <div class="posture-card-head"><span class="posture-card-label">Severity Breakdown</span></div>
-        <div class="sev-stack" id="sevStack"></div>
-    </div>
-    <div class="posture-card">
-        <div class="posture-card-head"><span class="posture-card-label">Last Assessment</span></div>
-        <div class="posture-big posture-big-sm" id="kpiLastAssessed">—</div>
-        <div class="posture-subline muted" id="kpiFirewall">—</div>
-        <div class="posture-subline muted" id="kpiAssessmentsRun">—</div>
+        <div class="posture-card-label">Last Assessment</div>
+        <div class="posture-big posture-big-sm" id="lastAssessed">—</div>
+        <div class="posture-subline muted" id="runId">—</div>
     </div>
 </section>
+
+<section class="severity-trend-strip" id="severityTrendStrip" aria-label="Severity change indicators"></section>
 
 <section class="findings-toolbar card" id="toolbarFilters">
     <div class="toolbar-row">
         <div class="toolbar-search">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-            <input type="text" id="findingsSearch" placeholder="Search control ID, finding, domain, evidence..." aria-label="Search findings">
+            <input type="text" id="findingsSearch" placeholder="Search finding ID, title, domain, evidence..." aria-label="Search findings">
         </div>
         <div class="toolbar-select">
             <label for="sortSelect">Sort</label>
             <select id="sortSelect">
                 <option value="severity">Severity</option>
-                <option value="risk">Risk Score</option>
-                <option value="recent">Most Recent</option>
+                <option value="risk">Highest Risk</option>
+                <option value="riskAsc">Lowest Risk</option>
+                <option value="recent">Newest</option>
                 <option value="oldest">Oldest</option>
                 <option value="domain">Domain</option>
                 <option value="firewall">Firewall</option>
@@ -104,7 +133,26 @@
             <span class="filter-label">Domain</span>
             <div class="filter-chips" id="domainChips"></div>
         </div>
+        <div class="filter-group">
+            <label class="filter-label" for="firewallSelect">Firewall</label>
+            <select id="firewallSelect" class="filter-select"><option value="all">All</option></select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="riskRangeSelect">Risk Score</label>
+            <select id="riskRangeSelect" class="filter-select">
+                <option value="all">All</option>
+                <option value="critical">90–100 (Critical)</option>
+                <option value="high">70–89 (High)</option>
+                <option value="medium">40–69 (Medium)</option>
+                <option value="low">0–39 (Low)</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label" for="dateSelect">Assessment</label>
+            <select id="dateSelect" class="filter-select"><option value="all">All dates</option></select>
+        </div>
     </div>
+    <div class="active-filters" id="activeFilters" aria-label="Active filters"></div>
 </section>
 
 <div class="findings-layout">
@@ -123,16 +171,16 @@
 
     <aside class="findings-side">
         <div class="card side-panel">
-            <div class="side-panel-head"><h4>Compliance Trend</h4></div>
-            <div class="trend-chart" id="trendChart"></div>
-        </div>
-        <div class="card side-panel">
             <div class="side-panel-head"><h4>Assessment Timeline</h4></div>
             <div class="timeline" id="assessmentTimeline"></div>
         </div>
         <div class="card side-panel">
             <div class="side-panel-head"><h4>Top Risk Domains</h4></div>
             <div class="domain-list" id="domainList"></div>
+        </div>
+        <div class="card side-panel">
+            <div class="side-panel-head"><h4>Compliance Trend</h4></div>
+            <div class="trend-chart" id="trendChart"></div>
         </div>
     </aside>
 </div>
@@ -151,8 +199,9 @@
     <div class="copilot-actions" id="copilotActions">
         <button class="copilot-chip" data-action="explain" type="button">Explain Finding</button>
         <button class="copilot-chip" data-action="fixplan" type="button">Generate Fix Plan</button>
-        <button class="copilot-chip" data-action="risk" type="button">Show Risk Analysis</button>
-        <button class="copilot-chip" data-action="summarize" type="button">Summarize Finding</button>
+        <button class="copilot-chip" data-action="importance" type="button">Why Is This Important?</button>
+        <button class="copilot-chip" data-action="impact" type="button">Security Impact Analysis</button>
+        <button class="copilot-chip" data-action="summarize" type="button">Summarize for Management</button>
     </div>
     <div class="copilot-body" id="copilotBody"><p class="copilot-placeholder">Select an action to get AI assistance for this finding.</p></div>
 </div>
@@ -160,6 +209,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=5"></script>
-<script src="{{ url_for('static', filename='js/findings.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='js/findings.js') }}?v=7"></script>
 {% endblock %}

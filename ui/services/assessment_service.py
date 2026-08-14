@@ -333,8 +333,22 @@ def get_posture(force=False):
 
     severity = _severity_breakdown(findings)
 
+    risk_points = (
+        severity.get("critical", 0) * 4.0
+        + severity.get("high", 0) * 2.0
+        + severity.get("medium", 0) * 1.0
+        + severity.get("low", 0) * 0.5
+    )
+    max_points = total * 4.0
+    security_score = (
+        round(100.0 * (1.0 - risk_points / max_points), 1)
+        if max_points
+        else 100.0
+    )
+
     collected_at = data.get("_collected_at")
     stats = get_assessment_stats()
+    run_id = "ASM-{0:06d}".format(int(stats.get("assessments_run", 0)))
 
     prev_snapshots = _load_history()
     prev = prev_snapshots[-1] if prev_snapshots else None
@@ -357,6 +371,7 @@ def get_posture(force=False):
     history = _load_history()
 
     posture = {
+        "security_score": security_score,
         "compliance_pct": compliance_pct,
         "trend_pct": trend_pct,
         "compliant": compliant,
@@ -366,6 +381,7 @@ def get_posture(force=False):
         "severity": severity,
         "severity_change": severity_change,
         "assessments_run": int(stats.get("assessments_run", 0)),
+        "run_id": run_id,
         "last_assessment_ts": stats.get("last_assessment_ts"),
         "collected_at": collected_at,
         "_source": data.get("_source", "sample"),
@@ -381,6 +397,7 @@ def get_posture(force=False):
     return {
         "posture": posture,
         "firewall": firewall,
+        "firewalls": [firewall],
         "findings": findings,
         "assessment": results,
         "history": history,

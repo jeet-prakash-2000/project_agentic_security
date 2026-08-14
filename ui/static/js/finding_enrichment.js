@@ -7,7 +7,6 @@ var FINDING_ENRICHMENT = {
         impact: "Unpatched critical CVEs; no vendor support; potential full network compromise",
         risk_score: 95,
         evidence: ["show system info — version output"],
-        affected_rules: ["PAN-OS Lifecycle Policy", "Vendor Support SLA"],
         remediation: "Upgrade to latest supported PAN-OS release on recommended upgrade path. Schedule maintenance window."
     },
     "PA-02": {
@@ -18,7 +17,6 @@ var FINDING_ENRICHMENT = {
         impact: "Active exploitation of known vulnerabilities; data breach; ransomware delivery",
         risk_score: 95,
         evidence: ["CVE scan results", "PAN-OS version string"],
-        affected_rules: ["Vulnerability Management Policy", "Patch Management SLA"],
         remediation: "Apply patches immediately. Enable Threat Prevention to block exploit attempts in interim."
     },
     "PA-03": {
@@ -29,7 +27,6 @@ var FINDING_ENRICHMENT = {
         impact: "New malware variants and exploits not detected; bypass of threat prevention",
         risk_score: 72,
         evidence: ["Dynamic Updates status", "Content version timestamp"],
-        affected_rules: ["Threat Prevention Policy", "Update Management SOP"],
         remediation: "Configure automatic daily updates for Apps & Threats, AV, and WildFire. Verify connectivity to update servers."
     },
     "PA-04": {
@@ -40,7 +37,6 @@ var FINDING_ENRICHMENT = {
         impact: "Zero-day malware delivered before verdict update arrives; advanced persistent threats",
         risk_score: 72,
         evidence: ["WildFire update interval", "Advanced WildFire subscription status"],
-        affected_rules: ["Zero-Day Protection Policy", "WildFire SLA"],
         remediation: "Set WildFire update interval to 1 minute (minimum). Confirm Advanced WildFire subscription."
     },
     "PA-05": {
@@ -51,7 +47,6 @@ var FINDING_ENRICHMENT = {
         impact: "Client-side exploitation; VPN bypass; credential theft from outdated SSL/TLS stacks",
         risk_score: 72,
         evidence: ["GP client version report", "Connected endpoints inventory"],
-        affected_rules: ["Endpoint Security Policy", "VPN Access Policy"],
         remediation: "Push GP agent upgrades via Panorama or SCCM. Enforce minimum version policy."
     },
     "PA-06": {
@@ -62,7 +57,6 @@ var FINDING_ENRICHMENT = {
         impact: "Firewall unable to process all traffic; security features disabled under load; DoS impact",
         risk_score: 72,
         evidence: ["CPU utilization trending data", "ACC dashboard screenshots"],
-        affected_rules: ["Capacity Management Policy", "Performance SLA"],
         remediation: "Identify top CPU consumers (App-ID, decryption, NAT). Tune policies, add hardware, or scale out."
     },
     "PA-07": {
@@ -73,7 +67,6 @@ var FINDING_ENRICHMENT = {
         impact: "New connections refused; production outage; attacker can deliberately exhaust sessions",
         risk_score: 95,
         evidence: ["show session info output", "Session trending graphs"],
-        affected_rules: ["Capacity Management Policy", "DoS Protection Policy"],
         remediation: "Tune session timeouts (UDP/ICMP/half-open TCP). Consider hardware upgrade or load balancing."
     },
     "PA-08": {
@@ -84,7 +77,6 @@ var FINDING_ENRICHMENT = {
         impact: "Firewall instability; unexpected reboots; loss of security inspection",
         risk_score: 72,
         evidence: ["show system resources output", "Memory trending data"],
-        affected_rules: ["Capacity Management Policy", "Hardware Refresh Policy"],
         remediation: "Review memory-intensive features (decryption, logging). Upgrade to higher-memory platform."
     },
     "PA-09": {
@@ -95,7 +87,6 @@ var FINDING_ENRICHMENT = {
         impact: "No hardware replacement; no security patches; compliance failure; single point of failure",
         risk_score: 72,
         evidence: ["Hardware model and serial", "EOL/EOS matrix cross-reference"],
-        affected_rules: ["Hardware Lifecycle Policy", "Vendor Support Agreement"],
         remediation: "Plan hardware refresh. Prioritize EOL units in production critical paths."
     },
     "PA-10": {
@@ -106,7 +97,6 @@ var FINDING_ENRICHMENT = {
         impact: "Loss of audit trail; forensic blindspot; compliance violation (log retention)",
         risk_score: 45,
         evidence: ["show system disk-space output", "Log retention configuration"],
-        affected_rules: ["Logging & Monitoring Policy", "Compliance Retention Requirements"],
         remediation: "Configure log forwarding to Panorama or SIEM. Archive or purge old logs. Expand disk if supported."
     },
     "PA-11": {
@@ -117,7 +107,6 @@ var FINDING_ENRICHMENT = {
         impact: "Single point of failure; complete network outage during maintenance or hardware failure",
         risk_score: 95,
         evidence: ["HA status", "Peer connectivity logs"],
-        affected_rules: ["Business Continuity Policy", "High Availability Design Standard"],
         remediation: "Restore failed HA peer immediately. Validate HA sync and failover. Implement HA if absent."
     },
     "PA-12": {
@@ -128,7 +117,6 @@ var FINDING_ENRICHMENT = {
         impact: "Failover to secondary results in inconsistent policy enforcement; security gaps post-failover",
         risk_score: 72,
         evidence: ["Config Sync status", "State Sync status"],
-        affected_rules: ["Change Management Policy", "HA Configuration Standard"],
         remediation: "Force config sync. Investigate sync failures. Validate HA links (heartbeat and data)."
     },
     "PA-13": {
@@ -139,7 +127,6 @@ var FINDING_ENRICHMENT = {
         impact: "During real failure, secondary may not promote correctly; prolonged outage",
         risk_score: 72,
         evidence: ["Change records", "Failover test documentation"],
-        affected_rules: ["Business Continuity Testing Policy", "DR Plan"],
         remediation: "Schedule and execute controlled HA failover test. Document RTO results."
     },
     "PA-14": {
@@ -150,7 +137,6 @@ var FINDING_ENRICHMENT = {
         impact: "Unplanned traffic disruption; intermittent connectivity issues",
         risk_score: 45,
         evidence: ["HA preemption configuration", "Design document cross-reference"],
-        affected_rules: ["HA Design Standard", "Change Management Policy"],
         remediation: "Align preemption setting with operational design. Document intended HA active node."
     },
     "PA-15": {
@@ -161,7 +147,6 @@ var FINDING_ENRICHMENT = {
         impact: "Silent failure — primary firewall loses connectivity but HA stays active; traffic blackhole",
         risk_score: 72,
         evidence: ["HA link monitoring config", "Path monitoring settings"],
-        affected_rules: ["HA Design Standard", "Network Resilience Policy"],
         remediation: "Configure link monitoring on all external-facing interfaces and path monitoring to key hosts."
     },
     "PA-16": {
@@ -172,7 +157,6 @@ var FINDING_ENRICHMENT = {
         impact: "Unrestricted traffic bypasses all threat prevention; malware and exploits traverse freely",
         risk_score: 95,
         evidence: ["Security policy ruleset", "Rule hit counts", "Security profile attachment"],
-        affected_rules: ["Firewall Policy Standard", "Least Privilege Policy"],
         remediation: "Attach Threat Prevention, AV, URL Filtering, WildFire profiles to all allow rules. Remove any-any rules."
     },
     "PA-17": {
@@ -183,7 +167,6 @@ var FINDING_ENRICHMENT = {
         impact: "Misuse of stale overly permissive rules; audit failure; troubleshooting difficulty",
         risk_score: 45,
         evidence: ["Rule hit count report", "Policy optimizer output"],
-        affected_rules: ["Firewall Policy Lifecycle", "Rule Review SOP"],
         remediation: "Audit hit counts. Remove or disable zero-hit rules after business justification review."
     },
     "PA-18": {
@@ -194,7 +177,6 @@ var FINDING_ENRICHMENT = {
         impact: "Inability to determine rule purpose; stale rules retained; audit/compliance failure",
         risk_score: 45,
         evidence: ["Rule description audit", "Tag/ownership fields"],
-        affected_rules: ["Change Management Policy", "Audit Compliance Requirements"],
         remediation: "Mandate description field for all rules. Implement change management requiring business justification."
     },
     "PA-19": {
@@ -205,7 +187,6 @@ var FINDING_ENRICHMENT = {
         impact: "Unauthorized traffic may not be blocked/logged; blind spot for unauthorized connection attempts",
         risk_score: 72,
         evidence: ["Security policy rule order", "Default rule configuration"],
-        affected_rules: ["Firewall Policy Standard", "Logging & Monitoring Policy"],
         remediation: "Add explicit deny-all rule at bottom. Enable logging. Forward deny logs to SIEM."
     },
     "PA-20": {
@@ -216,7 +197,6 @@ var FINDING_ENRICHMENT = {
         impact: "Attacker who gains foothold in a zone can move laterally without detection",
         risk_score: 72,
         evidence: ["Intrazone default rule", "Zone configuration"],
-        affected_rules: ["Network Segmentation Policy", "Lateral Movement Prevention"],
         remediation: "Apply security profiles to intrazone rules. Segment network into smaller trust zones."
     },
     "PA-21": {
@@ -227,7 +207,6 @@ var FINDING_ENRICHMENT = {
         impact: "Tunneling, evasion, and malware delivery over allowed ports; App-ID bypass",
         risk_score: 72,
         evidence: ["Rule application usage report", "App-ID adoption metrics"],
-        affected_rules: ["App-ID Policy", "Application Control Standard"],
         remediation: "Migrate port-based rules to App-ID rules. Use application filters for categories."
     },
     "PA-22": {
@@ -238,7 +217,6 @@ var FINDING_ENRICHMENT = {
         impact: "Unauthorized access to firewall management; brute force attacks; configuration tampering",
         risk_score: 95,
         evidence: ["Management access rules", "Permitted IP list"],
-        affected_rules: ["Management Access Policy", "Network Security Standard"],
         remediation: "Restrict management access to dedicated management network. Enforce MFA for admin access."
     },
     "PA-23": {
@@ -249,7 +227,6 @@ var FINDING_ENRICHMENT = {
         impact: "Security controls silently bypassed; false sense of security from misconfigured rule order",
         risk_score: 45,
         evidence: ["Shadowed rule report", "Rule order analysis"],
-        affected_rules: ["Firewall Policy Standard", "Policy Review SOP"],
         remediation: "Review rule order. Remove or reorder shadowed rules. Use Policy Optimizer regularly."
     },
     "PA-24": {
@@ -260,7 +237,6 @@ var FINDING_ENRICHMENT = {
         impact: "IPS/IDS disabled; exploits and vulnerability attacks traverse network undetected",
         risk_score: 95,
         evidence: ["Threat Prevention license", "Security profile attachment report"],
-        affected_rules: ["Threat Prevention Policy", "Security Profile Standard"],
         remediation: "Renew subscription. Attach best-practice Threat Prevention profile to all allow rules."
     },
     "PA-25": {
@@ -271,7 +247,6 @@ var FINDING_ENRICHMENT = {
         impact: "Known exploits not blocked; attackers receive alert-only feedback while attack succeeds",
         risk_score: 95,
         evidence: ["Vulnerability Protection profile", "Signature action settings"],
-        affected_rules: ["IPS Policy", "Threat Prevention Standard"],
         remediation: "Set critical and high severity signatures to block-ip or reset-both. Test in lab first."
     },
     "PA-26": {
@@ -282,7 +257,6 @@ var FINDING_ENRICHMENT = {
         impact: "Malware communicates freely with attacker infrastructure; persistent compromise undetected",
         risk_score: 95,
         evidence: ["Anti-Spyware profile config", "DNS sinkhole settings"],
-        affected_rules: ["Anti-Spyware Policy", "DNS Security Standard"],
         remediation: "Enable DNS Sinkhole. Set C2 signatures to block. Configure sinkhole IP for detection."
     },
     "PA-27": {
@@ -293,7 +267,6 @@ var FINDING_ENRICHMENT = {
         impact: "Zero-day malware in email/web attachments not analyzed; advanced threats pass through",
         risk_score: 72,
         evidence: ["WildFire license", "File forwarding configuration"],
-        affected_rules: ["Zero-Day Protection Policy", "File Inspection Standard"],
         remediation: "License WildFire. Create WildFire analysis profile. Attach to all internet-facing allow rules."
     },
     "PA-28": {
@@ -304,7 +277,6 @@ var FINDING_ENRICHMENT = {
         impact: "Users access malicious sites delivering malware; phishing credentials harvested",
         risk_score: 72,
         evidence: ["URL Filtering license", "Category block settings"],
-        affected_rules: ["Web Security Policy", "Acceptable Use Policy"],
         remediation: "Renew URL Filtering. Set malware/phishing/C2 categories to block. Review allowed categories."
     },
     "PA-29": {
@@ -315,7 +287,6 @@ var FINDING_ENRICHMENT = {
         impact: "DNS tunneling exfiltration; DGA domain C2 communication; DNS-based attacks undetected",
         risk_score: 72,
         evidence: ["DNS Security license", "DNS Security configuration"],
-        affected_rules: ["DNS Security Policy", "Threat Prevention Standard"],
         remediation: "License DNS Security. Enable in Anti-Spyware profiles. Route all DNS through firewall."
     },
     "PA-30": {
@@ -326,7 +297,6 @@ var FINDING_ENRICHMENT = {
         impact: "Threats exempted without oversight; attackers exploit exempted signature categories",
         risk_score: 72,
         evidence: ["Signature exception list", "Exception justification docs"],
-        affected_rules: ["Exception Management Policy", "Change Management SOP"],
         remediation: "Audit all threat exceptions. Remove unjustified exceptions. Document approved exceptions with owner."
     },
     "PA-31": {
@@ -337,7 +307,6 @@ var FINDING_ENRICHMENT = {
         impact: "Malware, C2, data exfiltration all hiding in encrypted tunnels; IPS/AV blind to 80%+ traffic",
         risk_score: 95,
         evidence: ["Decryption policy rules", "Certificate deployment status"],
-        affected_rules: ["SSL Decryption Policy", "Certificate Management SOP"],
         remediation: "Implement SSL forward proxy decryption. Deploy root CA to endpoints. Start with high-risk categories."
     },
     "PA-32": {
@@ -348,7 +317,6 @@ var FINDING_ENRICHMENT = {
         impact: "User certificate errors bypass decryption; or rogue CA trusted enabling MITM attacks",
         risk_score: 72,
         evidence: ["Decryption certificate", "CA trust chain", "Endpoint cert deployment report"],
-        affected_rules: ["PKI Policy", "Certificate Management SOP"],
         remediation: "Use corporate PKI CA for decryption cert. Deploy via GPO/MDM to all endpoints."
     },
     "PA-33": {
@@ -359,7 +327,6 @@ var FINDING_ENRICHMENT = {
         impact: "Threat actors use excluded categories to smuggle malware and exfiltrate data",
         risk_score: 72,
         evidence: ["No-Decrypt rule list", "Exclusion justification docs"],
-        affected_rules: ["SSL Decryption Policy", "Exception Management Policy"],
         remediation: "Audit no-decrypt list. Remove unjustified exclusions. Retain only: banking/health/legal per policy."
     },
     "PA-34": {
@@ -370,7 +337,6 @@ var FINDING_ENRICHMENT = {
         impact: "POODLE/BEAST/downgrade attacks; compliance failure (PCI-DSS TLS 1.2 mandatory)",
         risk_score: 72,
         evidence: ["TLS minimum version setting", "Decryption profile config"],
-        affected_rules: ["Encryption Standard", "PCI-DSS Compliance"],
         remediation: "Set minimum protocol version to TLS 1.2. Block TLS 1.0/1.1 in decryption profile."
     },
     "PA-35": {
@@ -381,7 +347,6 @@ var FINDING_ENRICHMENT = {
         impact: "Encrypted traffic susceptible to decryption attacks; compliance failure",
         risk_score: 72,
         evidence: ["Cipher suite settings", "Decryption profile config"],
-        affected_rules: ["Encryption Standard", "Cipher Suite Policy"],
         remediation: "Disable weak ciphers in decryption profile. Allow only AES-GCM and CHACHA20 suites."
     },
     "PA-36": {
@@ -392,7 +357,6 @@ var FINDING_ENRICHMENT = {
         impact: "Lateral movement unrestricted; single compromise leads to full internal network access",
         risk_score: 95,
         evidence: ["Zone configuration", "Network diagram cross-reference"],
-        affected_rules: ["Network Segmentation Policy", "Security Architecture Standard"],
         remediation: "Implement zone segmentation: DMZ, Server, User, OT/IoT, Management. Apply inter-zone policies."
     },
     "PA-37": {
@@ -403,7 +367,6 @@ var FINDING_ENRICHMENT = {
         impact: "Compromise of IT network directly threatens OT/ICS systems; safety and operational risk",
         risk_score: 95,
         evidence: ["OT/IoT zone configuration", "Inter-zone access rules"],
-        affected_rules: ["OT Security Policy", "Network Segmentation Policy"],
         remediation: "Isolate OT/IoT in dedicated zone. Allow only required protocols. Block IT-to-OT lateral paths."
     },
     "PA-38": {
@@ -414,7 +377,6 @@ var FINDING_ENRICHMENT = {
         impact: "Internet-facing servers directly accessible beyond intended service; exploitation risk",
         risk_score: 72,
         evidence: ["Inbound rule audit", "Zone-to-zone policy review"],
-        affected_rules: ["Network Segmentation Policy", "Perimeter Security Standard"],
         remediation: "Restrict inbound rules to specific published services only. Apply IPS/WAF profiles on inbound rules."
     },
     "PA-39": {
@@ -425,7 +387,6 @@ var FINDING_ENRICHMENT = {
         impact: "Attacker in user network can pivot to firewall management; configuration tampering",
         risk_score: 95,
         evidence: ["Management zone config", "Inter-zone access rules"],
-        affected_rules: ["Management Access Policy", "Network Segmentation Policy"],
         remediation: "Place management interfaces in dedicated out-of-band management zone. Block production zone access."
     },
     "PA-40": {
@@ -436,7 +397,6 @@ var FINDING_ENRICHMENT = {
         impact: "Unintended services exposed to internet or other networks; attack surface expansion",
         risk_score: 45,
         evidence: ["NAT rule hit counts", "NAT policy documentation"],
-        affected_rules: ["NAT Policy Standard", "Policy Lifecycle SOP"],
         remediation: "Audit NAT rules vs. active services. Remove stale entries. Document all NAT rules with owner."
     },
     "PA-41": {
@@ -447,7 +407,6 @@ var FINDING_ENRICHMENT = {
         impact: "Internal network topology exposed; enables targeted attacks against internal systems",
         risk_score: 45,
         evidence: ["Source NAT configuration", "Packet capture analysis"],
-        affected_rules: ["NAT Policy", "Information Disclosure Prevention"],
         remediation: "Apply source NAT (masquerade/PAT) to all outbound traffic. Verify with packet capture."
     },
     "PA-42": {
@@ -458,7 +417,6 @@ var FINDING_ENRICHMENT = {
         impact: "Network segmentation defeated by routing; bypasses zone-based policy enforcement",
         risk_score: 72,
         evidence: ["Virtual router routing tables", "Inter-VR route audit"],
-        affected_rules: ["Routing Policy", "Network Architecture Standard"],
         remediation: "Audit virtual router routing tables. Remove unauthorized inter-VR route leaks."
     },
     "PA-43": {
@@ -469,7 +427,6 @@ var FINDING_ENRICHMENT = {
         impact: "Credential stuffing and phishing attacks grant full network access without MFA barrier",
         risk_score: 95,
         evidence: ["MFA configuration", "Authentication profile settings", "GP gateway config"],
-        affected_rules: ["MFA Policy", "Remote Access Standard"],
         remediation: "Integrate GP with MFA (Duo Okta RSA). Enforce for all users. No exceptions without compensating control."
     },
     "PA-44": {
@@ -480,7 +437,6 @@ var FINDING_ENRICHMENT = {
         impact: "VPN traffic susceptible to decryption; MITM attacks; compliance failure",
         risk_score: 72,
         evidence: ["IKE Crypto Profile", "IPsec tunnel configuration"],
-        affected_rules: ["Encryption Standard", "VPN Security Policy"],
         remediation: "Migrate all tunnels to IKEv2 with AES-256-GCM and SHA-256/384. Use DH Group 14 minimum."
     },
     "PA-45": {
@@ -491,7 +447,6 @@ var FINDING_ENRICHMENT = {
         impact: "Silent connectivity loss; business disruption; security monitoring gaps for branch traffic",
         risk_score: 45,
         evidence: ["Tunnel monitoring config", "Alert configuration"],
-        affected_rules: ["VPN Management Policy", "Monitoring & Alerting SOP"],
         remediation: "Enable tunnel monitoring on all IPsec tunnels. Alert on down state. Consider DPD configuration."
     },
     "PA-46": {
@@ -502,7 +457,6 @@ var FINDING_ENRICHMENT = {
         impact: "Non-compliant or compromised endpoints connect to corporate network spreading malware",
         risk_score: 72,
         evidence: ["HIP object configuration", "HIP profile enforcement status"],
-        affected_rules: ["Endpoint Compliance Policy", "Remote Access Standard"],
         remediation: "Define HIP profiles requiring: OS patch level, AV running, disk encryption, no malware detected."
     },
     "PA-47": {
@@ -513,7 +467,6 @@ var FINDING_ENRICHMENT = {
         impact: "Malware infection on user device over untunneled internet; C2 traffic bypasses corporate controls",
         risk_score: 45,
         evidence: ["Split tunnel configuration", "Business justification docs"],
-        affected_rules: ["Remote Access Policy", "Traffic Inspection Policy"],
         remediation: "Review split tunnel config. Route threat-relevant traffic (all or key categories) through tunnel."
     },
     "PA-48": {
@@ -524,7 +477,6 @@ var FINDING_ENRICHMENT = {
         impact: "Blind spot in audit trail; inability to investigate incidents; compliance failure",
         risk_score: 72,
         evidence: ["Security policy log settings", "Log forwarding configuration"],
-        affected_rules: ["Logging & Monitoring Policy", "Audit Compliance Requirements"],
         remediation: "Enable log-at-session-end on all rules. Forward all logs to Panorama and SIEM."
     },
     "PA-49": {
@@ -535,7 +487,6 @@ var FINDING_ENRICHMENT = {
         impact: "Logs lost if firewall compromised or disk full; no correlation with other security tools",
         risk_score: 72,
         evidence: ["Syslog profile config", "SIEM integration status"],
-        affected_rules: ["SIEM Integration Policy", "SOC Operations SOP"],
         remediation: "Configure syslog forwarding to SIEM. Include Traffic, Threat, URL, WildFire, Auth, System logs."
     },
     "PA-50": {
@@ -546,7 +497,6 @@ var FINDING_ENRICHMENT = {
         impact: "Compliance violation; inability to support forensic investigation of past incidents",
         risk_score: 72,
         evidence: ["Log retention configuration", "Storage capacity report"],
-        affected_rules: ["Log Retention Policy", "Compliance Requirements"],
         remediation: "Configure retention to meet strictest applicable compliance framework. Archive to long-term storage."
     },
     "PA-51": {
@@ -557,7 +507,6 @@ var FINDING_ENRICHMENT = {
         impact: "HA failovers, hardware failures, unauthorized access attempts go unnoticed until impact",
         risk_score: 72,
         evidence: ["Email/SNMP alert config", "Alert destination verification"],
-        affected_rules: ["Monitoring & Alerting Policy", "Incident Response SOP"],
         remediation: "Configure email/SNMP alerts for: HA failover, CPU >80%, auth failures, config changes, system errors."
     },
     "PA-52": {
@@ -568,7 +517,6 @@ var FINDING_ENRICHMENT = {
         impact: "Unauthorized configuration changes go undetected; insider threat blind spot",
         risk_score: 72,
         evidence: ["Config change logs", "Review documentation"],
-        affected_rules: ["Audit Logging Policy", "Change Management SOP"],
         remediation: "Enable config logging. Forward to SIEM. Implement weekly review of configuration change log."
     },
     "PA-53": {
@@ -579,7 +527,6 @@ var FINDING_ENRICHMENT = {
         impact: "Trivial brute-force or default credential attack grants full firewall control",
         risk_score: 95,
         evidence: ["Administrator accounts list", "Default account status"],
-        affected_rules: ["Admin Access Policy", "Password Standard"],
         remediation: "Disable default admin. Create named accounts. Enforce strong password policy with MFA."
     },
     "PA-54": {
@@ -590,7 +537,6 @@ var FINDING_ENRICHMENT = {
         impact: "Over-privileged accounts increase blast radius of compromise or insider threat",
         risk_score: 72,
         evidence: ["Admin role assignments", "Role-based access review"],
-        affected_rules: ["Least Privilege Policy", "Admin Access Policy"],
         remediation: "Define custom admin roles: read-only, security-admin, network-admin, superuser. Apply least privilege."
     },
     "PA-55": {
@@ -601,7 +547,6 @@ var FINDING_ENRICHMENT = {
         impact: "Admin credentials intercepted in transit; session hijacking of management sessions",
         risk_score: 95,
         evidence: ["Management interface settings", "Service profile"],
-        affected_rules: ["Management Access Policy", "Encryption Standard"],
         remediation: "Disable HTTP and Telnet. Allow only HTTPS (TLS 1.2+) and SSH for management access."
     },
     "PA-56": {
@@ -612,7 +557,6 @@ var FINDING_ENRICHMENT = {
         impact: "Internet-exposed management interface; brute force and exploitation attempts globally",
         risk_score: 95,
         evidence: ["Permitted IP list", "Management ACL config"],
-        affected_rules: ["Management Access Policy", "Network Security Standard"],
         remediation: "Define Permitted IP Addresses to management-only subnets. Block all other management source IPs."
     },
     "PA-57": {
@@ -623,7 +567,6 @@ var FINDING_ENRICHMENT = {
         impact: "Unattended admin terminal allows unauthorized access to active privileged session",
         risk_score: 45,
         evidence: ["Idle timeout setting", "Session management config"],
-        affected_rules: ["Session Management Policy", "Admin Access Policy"],
         remediation: "Set idle timeout to 15-30 minutes for both web UI and CLI sessions."
     },
     "PA-58": {
@@ -634,7 +577,6 @@ var FINDING_ENRICHMENT = {
         impact: "Log timestamps inaccurate; forensic correlation impossible; certificate validation failures",
         risk_score: 45,
         evidence: ["NTP server configuration", "Time sync status"],
-        affected_rules: ["Time Synchronization Policy", "Infrastructure Standard"],
         remediation: "Configure 2 authoritative NTP servers. Verify time accuracy against reference. Enable NTP authentication."
     },
     "PA-59": {
@@ -645,7 +587,6 @@ var FINDING_ENRICHMENT = {
         impact: "Network device enumeration; SNMP write access enables config manipulation",
         risk_score: 72,
         evidence: ["SNMP configuration", "Community string audit"],
-        affected_rules: ["SNMP Policy", "Monitoring Standard"],
         remediation: "Migrate to SNMPv3 with AuthPriv security level. Disable SNMPv1/v2 community strings."
     },
     "PA-60": {
@@ -656,7 +597,6 @@ var FINDING_ENRICHMENT = {
         impact: "Inconsistent policy across firewalls; no unified visibility; difficult audit and change control",
         risk_score: 72,
         evidence: ["Panorama connection status", "Device group assignment"],
-        affected_rules: ["Management Architecture Policy", "Configuration Management SOP"],
         remediation: "Onboard all firewalls to Panorama. Migrate to Panorama-managed policy packages."
     },
     "PA-61": {
@@ -667,7 +607,6 @@ var FINDING_ENRICHMENT = {
         impact: "SYN flood, ICMP flood, UDP flood attacks overwhelm firewall and internal hosts",
         risk_score: 72,
         evidence: ["Zone Protection Profile assignment", "External zone configuration"],
-        affected_rules: ["Zone Protection Policy", "Perimeter Security Standard"],
         remediation: "Create and apply Zone Protection Profile to all external zones. Configure flood thresholds."
     },
     "PA-62": {
@@ -678,7 +617,6 @@ var FINDING_ENRICHMENT = {
         impact: "Single attacker or botnet can exhaust server session capacity causing service denial",
         risk_score: 72,
         evidence: ["DoS Protection policy", "DoS profile configuration"],
-        affected_rules: ["DoS Protection Policy", "Business Continuity Plan"],
         remediation: "Apply DoS protection policies to web servers, authentication systems, and critical infrastructure."
     },
     "PA-63": {
@@ -689,7 +627,6 @@ var FINDING_ENRICHMENT = {
         impact: "IP spoofing, malformed packet attacks, fragmentation attacks bypass inspection",
         risk_score: 45,
         evidence: ["Packet protection settings", "Zone Protection Profile"],
-        affected_rules: ["Zone Protection Policy", "Network Security Standard"],
         remediation: "Enable all packet-based attack protections in Zone Protection Profile. Test for false positives."
     },
     "PA-64": {
@@ -700,7 +637,6 @@ var FINDING_ENRICHMENT = {
         impact: "Configuration loss after hardware failure or misconfiguration with no recovery option",
         risk_score: 95,
         evidence: ["Scheduled backup config", "Backup destination verification"],
-        affected_rules: ["Backup & Recovery Policy", "DR Plan"],
         remediation: "Configure daily automated config export to Panorama or secure external storage."
     },
     "PA-65": {
@@ -711,7 +647,6 @@ var FINDING_ENRICHMENT = {
         impact: "DR failure during incident — backup corrupt or incomplete; extended outage",
         risk_score: 72,
         evidence: ["Restore test documentation", "Change records"],
-        affected_rules: ["Backup & Recovery Policy", "DR Testing Policy"],
         remediation: "Schedule annual config restore test. Document procedure and validate restored state."
     },
     "PA-66": {
@@ -722,7 +657,6 @@ var FINDING_ENRICHMENT = {
         impact: "Unauthorized changes; misconfiguration goes unreviewed; audit failure",
         risk_score: 72,
         evidence: ["Change ticket audit", "Commit log review"],
-        affected_rules: ["Change Management Policy", "Audit Compliance SOP"],
         remediation: "Mandate CAB/ITSM ticket for all changes. Use Panorama commit locks to enforce process."
     },
     "PA-67": {
@@ -733,7 +667,6 @@ var FINDING_ENRICHMENT = {
         impact: "Bad change cannot be rolled back quickly; extended outage during recovery",
         risk_score: 45,
         evidence: ["Config versions count", "Rollback test documentation"],
-        affected_rules: ["Backup & Recovery Policy", "Change Management SOP"],
         remediation: "Retain minimum 10 versioned config snapshots. Test rollback procedure quarterly."
     }
 };
@@ -746,10 +679,10 @@ var FINDING_ENRICHMENT_CATEGORIES = {
     "SSL/TLS Decryption": "Security Services",
     "Zone Protection & DoS": "Security Services",
     "Security Policy & Rule Base": "Security Services",
-    "NAT & Routing": "Network Configuration",
-    "Network Segmentation & Zones": "Network Configuration",
-    "VPN": "Network Configuration",
-    "Admin Access & Hardening": "Administration & Management",
-    "Backup & Change Management": "Administration & Management",
-    "Logging & Monitoring": "Administration & Management"
+    "NAT & Routing": "Networking",
+    "Network Segmentation & Zones": "Networking",
+    "VPN": "VPN & Remote Access",
+    "Admin Access & Hardening": "Administration",
+    "Backup & Change Management": "Administration",
+    "Logging & Monitoring": "Logging & Monitoring"
 };
