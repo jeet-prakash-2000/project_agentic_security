@@ -278,8 +278,14 @@
         var gaugeFill = document.getElementById("securityGaugeFill");
         if (gaugeFill) {
             var CIRC = 326.7;
-            gaugeFill.style.strokeDashoffset = (CIRC - (CIRC * score / 100)).toFixed(1);
-            gaugeFill.className = "gauge-fill" + (score >= 80 ? " is-good" : score >= 60 ? "" : " is-warn");
+            gaugeFill.style.strokeDashoffset =(CIRC - (CIRC * score / 100)).toFixed(1);
+            var cls = "gauge-fill";
+            if (score >= 80) {
+                cls += " is-good";
+            } else if (score < 60) {
+                cls += " is-warn";
+            }
+            gaugeFill.setAttribute("class", cls);
         }
 
         var bar = document.getElementById("complianceBar");
