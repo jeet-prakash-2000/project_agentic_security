@@ -130,6 +130,27 @@ def _record_history(snapshot):
         snapshots.append(snapshot)
         snapshots = snapshots[-60:]
     storage.save_document(HISTORY_DOC, {"snapshots": snapshots})
+    _record_history_db(snapshot)
+
+
+def _record_history_db(snapshot):
+    """Also write the assessment snapshot to PostgreSQL when configured.
+
+    This powers the Compliance Trend chart directly from the
+    ``assessment_history`` table. Failures are ignored so JSON storage remains
+    the source of truth when the database is unreachable.
+    """
+    try:
+        from database.db import get_session, is_configured
+
+        if not is_configured():
+            return
+
+        from database.repositories import AssessmentsRepository
+
+        AssessmentsRepository(get_session()).record(snapshot)
+    except Exception:
+        pass
 
 
 def _severity_breakdown(findings):

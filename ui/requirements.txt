@@ -6,3 +6,7 @@ azure-keyvault-secrets
 azure-data-tables
 openpyxl
 reportlab
+SQLAlchemy
+Flask-SQLAlchemy
+psycopg2-binary
+alembic
