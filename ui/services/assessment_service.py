@@ -87,15 +87,28 @@ def _seed_history():
     base = 36.0
     for i in range(12):
         pct = round(base + rng.uniform(-4.5, 3.0), 1)
+        severity = {
+            "critical": rng.randint(9, 14),
+            "high": rng.randint(9, 14),
+            "medium": rng.randint(2, 6),
+            "low": rng.randint(0, 3),
+        }
+        points = (
+            severity["critical"] * 4.0
+            + severity["high"] * 2.0
+            + severity["medium"] * 1.0
+            + severity["low"] * 0.5
+        )
         snapshots.append({
+            "run_id": "ASM-{0:06d}".format(i + 1),
             "ts": now - (12 - i) * 86400,
             "compliance_pct": pct,
-            "severity": {
-                "critical": rng.randint(9, 14),
-                "high": rng.randint(9, 14),
-                "medium": rng.randint(2, 6),
-                "low": rng.randint(0, 3),
-            },
+            "security_score": round(
+                100.0 * (1.0 - points / (44 * 4.0)),
+                1,
+            ),
+            "severity": severity,
+            "finding_count": sum(severity.values()),
         })
     storage.save_document(HISTORY_DOC, {"snapshots": snapshots})
 
@@ -360,9 +373,12 @@ def get_posture(force=False):
     prev = prev_snapshots[-1] if prev_snapshots else None
 
     snapshot = {
+        "run_id": run_id,
         "ts": time.time(),
         "compliance_pct": compliance_pct,
+        "security_score": security_score,
         "severity": severity,
+        "finding_count": len(findings),
     }
     _record_history(snapshot)
 

@@ -91,114 +91,6 @@
 #postureBadge[data-posture="bad"] { border-color: rgba(220, 38, 38, 0.35); background: var(--danger-soft); }
 
 /* ============================================================
-   POSTURE OVERVIEW
-   ============================================================ */
-
-.posture-overview {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 14px;
-    margin-bottom: 16px;
-}
-
-.posture-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 16px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    min-height: 128px;
-}
-
-.posture-card-label {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--text-3);
-}
-
-.posture-score-row { display: flex; align-items: center; gap: 14px; }
-
-.score-gauge {
-    position: relative;
-    width: 88px;
-    height: 88px;
-    flex-shrink: 0;
-}
-.score-gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
-.gauge-track, .gauge-fill {
-    fill: none;
-    stroke-width: 10;
-    stroke-linecap: round;
-}
-.gauge-track { stroke: var(--bg); }
-.gauge-fill {
-    stroke: var(--crimson);
-    stroke-dasharray: 326.7;
-    stroke-dashoffset: 326.7;
-    transition: stroke-dashoffset 0.9s cubic-bezier(0.34, 1.3, 0.64, 1);
-}
-.gauge-fill.is-good { stroke: var(--success); }
-.gauge-fill.is-warn { stroke: var(--warning); }
-.score-gauge-value {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-direction: row;
-    gap: 2px;
-}
-.score-gauge-value span:first-child { font-size: 24px; font-weight: 800; color: var(--text); }
-.score-gauge-pct { font-size: 12px; font-weight: 700; color: var(--text-2); }
-
-.trend-chip {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-.trend-chip-value { font-size: 17px; font-weight: 800; line-height: 1; }
-.trend-chip-value.up.good { color: var(--success); }
-.trend-chip-value.down.bad { color: var(--crimson); }
-.trend-chip-value.up.bad { color: var(--crimson); }
-.trend-chip-value.down.good { color: var(--success); }
-.trend-chip-value.flat { color: var(--text-2); }
-.trend-chip-label { font-size: 10.5px; color: var(--text-3); }
-
-.posture-big { font-size: 30px; font-weight: 800; color: var(--text); line-height: 1; }
-.posture-big-sm { font-size: 20px; line-height: 1.3; }
-.posture-big-sub { font-size: 14px; font-weight: 600; color: var(--text-3); }
-
-.posture-bar {
-    height: 8px;
-    border-radius: 6px;
-    background: var(--bg);
-    overflow: hidden;
-}
-.posture-bar-fill {
-    height: 100%;
-    border-radius: 6px;
-    background: var(--gradient-red);
-    transition: width 0.7s ease;
-}
-
-.posture-subline {
-    font-size: 11.5px;
-    color: var(--text-2);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-.posture-subline.muted { color: var(--text-3); font-size: 11px; }
-
-.posture-card-sev.critical .posture-big { color: #ef4444; }
-.posture-card-sev.high .posture-big { color: #f97316; }
-
-/* ============================================================
    SEVERITY TREND STRIP
    ============================================================ */
 
@@ -699,27 +591,23 @@
 .side-panel-head { margin-bottom: 12px; }
 .side-panel-head h4 { font-size: 13px; font-weight: 700; color: var(--text); margin: 0; }
 
-.trend-chart { display: flex; flex-direction: column; gap: 10px; }
-.trend-bars {
-    display: flex;
-    align-items: flex-end;
-    gap: 5px;
-    height: 92px;
-}
-.trend-bar {
-    flex: 1;
-    background: var(--gradient-red);
-    border-radius: 4px 4px 0 0;
-    opacity: 0.85;
-    min-height: 4px;
-    transition: height 0.6s ease;
-    position: relative;
-}
-.trend-bar:hover { opacity: 1; }
-.trend-bar.last { background: var(--crimson); }
+.trend-chart { display: flex; flex-direction: column; gap: 8px; }
+.trend-line-svg { width: 100%; height: 120px; display: block; }
+.trend-grid { stroke: var(--border); stroke-width: 1; }
+.trend-axis-label { font-size: 9px; fill: var(--text-3); }
+.trend-line { stroke: var(--crimson); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.trend-dot { fill: var(--surface); stroke: var(--crimson); stroke-width: 2; }
+.trend-dot.latest { fill: var(--crimson); stroke: var(--crimson); }
 .trend-labels { display: flex; gap: 5px; }
 .trend-label { flex: 1; font-size: 8.5px; color: var(--text-3); text-align: center; }
 .trend-summary { font-size: 11.5px; color: var(--text-2); line-height: 1.5; }
+.trend-analysis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 2px; }
+.trend-metric { display: flex; flex-direction: column; gap: 2px; background: var(--bg); border-radius: 8px; padding: 8px 10px; }
+.trend-metric-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-3); }
+.trend-metric-value { font-size: 14px; font-weight: 800; color: var(--text); }
+.trend-metric-value.good { color: var(--success); }
+.trend-metric-value.bad { color: var(--crimson); }
+.trend-metric-value.flat { color: var(--text-2); }
 
 .timeline { display: flex; flex-direction: column; }
 .timeline-item {
@@ -847,7 +735,6 @@
    ============================================================ */
 
 @media (max-width: 1280px) {
-    .posture-overview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .severity-trend-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 1200px) {
@@ -855,11 +742,9 @@
     .findings-side { position: static; }
 }
 @media (max-width: 768px) {
-    .posture-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .risk-context-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-    .posture-overview { grid-template-columns: 1fr; }
     .severity-trend-strip { grid-template-columns: 1fr; }
     .findings-header { flex-direction: column; align-items: flex-start; }
     .findings-header-actions { width: 100%; }

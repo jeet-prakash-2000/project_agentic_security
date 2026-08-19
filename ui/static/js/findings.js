@@ -260,73 +260,8 @@
     // POSTURE OVERVIEW
     // ============================================================
 
-    function computeSecurityScore(severity, total) {
-        var points = (severity.critical || 0) * 4 + (severity.high || 0) * 2 + (severity.medium || 0) * 1 + (severity.low || 0) * 0.5;
-        var max = total * 4;
-        return max ? 100 * (1 - points / max) : 100;
-    }
-
     function renderPosture(posture, data) {
-        var score = posture.security_score;
-        var pct = posture.compliance_pct || 0;
-
-        setText("securityScore", score);
-        setText("complianceScore", pct);
-        setText("compliantCount", posture.compliant);
-        setText("totalControls", posture.total_controls);
-
-        var gaugeFill = document.getElementById("securityGaugeFill");
-        if (gaugeFill) {
-            var CIRC = 326.7;
-            gaugeFill.style.strokeDashoffset =(CIRC - (CIRC * score / 100)).toFixed(1);
-            var cls = "gauge-fill";
-            if (score >= 80) {
-                cls += " is-good";
-            } else if (score < 60) {
-                cls += " is-warn";
-            }
-            gaugeFill.setAttribute("class", cls);
-        }
-
-        var bar = document.getElementById("complianceBar");
-        if (bar) bar.style.width = pct + "%";
-
-        // Security score trend (recomputed from history)
-        var history = data.history || [];
-        var prevScore = null;
-        for (var i = history.length - 2; i >= 0; i--) {
-            var h = history[i];
-            if (h && h.severity) { prevScore = computeSecurityScore(h.severity, posture.total_controls); break; }
-        }
-        var delta = (prevScore != null) ? Math.round((score - prevScore) * 10) / 10 : null;
-        renderTrendChip("securityScoreTrend", delta, "%", "vs previous assessment");
-
-        // Severity counts + deltas
-        var change = posture.severity_change || {};
-        setText("criticalCount", (posture.severity || {}).critical);
-        setText("highCount", (posture.severity || {}).high);
-        renderTrendChip("criticalTrend", change.critical, "", "vs previous assessment", true);
-        renderTrendChip("highTrend", change.high, "", "vs previous assessment", true);
-
-        var last = document.getElementById("lastAssessed");
-        if (last) last.textContent = formatShortTs(posture.last_assessment_ts || posture.collected_at);
-        setText("runId", posture.run_id ? "Run " + posture.run_id : "\u2014");
-
         renderSeverityTrendStrip(posture);
-    }
-
-    function renderTrendChip(id, value, suffix, label, invert) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        if (value == null || isNaN(value)) { el.innerHTML = ""; return; }
-        var up = value > 0;
-        var down = value < 0;
-        var cls = up ? "up" : down ? "down" : "flat";
-        var arrow = up ? "\u25B2" : down ? "\u25BC" : "\u25AC";
-        var sign = up ? "+" : "";
-        var good = invert ? down : up;
-        var tone = good ? "good" : (down ? "bad" : "flat");
-        el.innerHTML = '<span class="trend-chip-value ' + cls + ' ' + tone + '">' + arrow + ' ' + sign + value + (suffix || "") + '</span><span class="trend-chip-label">' + escapeHtml(label) + '</span>';
     }
 
     function renderSeverityTrendStrip(posture) {
@@ -349,11 +284,6 @@
                 '</button>';
         });
         el.innerHTML = html;
-    }
-
-    function setText(id, value) {
-        var el = document.getElementById(id);
-        if (el) el.textContent = value == null ? "\u2014" : String(value);
     }
 
     // ============================================================
@@ -613,26 +543,81 @@
     function renderTrend(history, posture) {
         var el = document.getElementById("trendChart");
         if (!el) return;
-        var snapshots = (history || []).slice(-14);
-        if (!snapshots.length) { el.innerHTML = '<p class="trend-summary">No history yet.</p>'; return; }
-        var max = 100;
-        var html = '<div class="trend-bars">';
-        snapshots.forEach(function (s, i) {
-            var h = Math.max(4, (s.compliance_pct / max) * 100);
-            html += '<div class="trend-bar' + (i === snapshots.length - 1 ? ' last' : '') + '" style="height:' + h + '%" title="' + s.compliance_pct + '%"></div>';
+
+        var snapshots = (history || []).filter(function (s) {
+            return s && typeof s.compliance_pct === "number";
         });
-        html += '</div><div class="trend-labels">';
+        if (!snapshots.length) {
+            el.innerHTML = '<p class="trend-summary">No history yet. Run an assessment to start tracking compliance.</p>';
+            return;
+        }
+        if (snapshots.length > 7) snapshots = snapshots.slice(-7);
+
+        var W = 260, H = 120;
+        var PAD_LEFT = 30, PAD_RIGHT = 8, PAD_TOP = 10, PAD_BOTTOM = 18;
+        var min = 0, max = 100;
+        var n = snapshots.length;
+
+        function x(i) {
+            if (n === 1) return PAD_LEFT + (W - PAD_LEFT - PAD_RIGHT) / 2;
+            return PAD_LEFT + (i / (n - 1)) * (W - PAD_LEFT - PAD_RIGHT);
+        }
+        function y(v) {
+            return PAD_TOP + (1 - (v - min) / (max - min)) * (H - PAD_TOP - PAD_BOTTOM);
+        }
+
+        var points = snapshots.map(function (s, i) { return [x(i), y(s.compliance_pct)]; });
+        var linePath = "M" + points.map(function (p) { return p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" L");
+        var areaPath = linePath + " L" + points[points.length - 1][0].toFixed(1) + " " + (H - PAD_BOTTOM) + " L" + points[0][0].toFixed(1) + " " + (H - PAD_BOTTOM) + " Z";
+
+        var html = '<svg class="trend-line-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Compliance score over time">';
+        html += '<defs><linearGradient id="trendAreaFill" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#ef4444" stop-opacity="0.22"/>' +
+            '<stop offset="100%" stop-color="#ef4444" stop-opacity="0"/>' +
+            '</linearGradient></defs>';
+
+        for (var g = 0; g <= 4; g++) {
+            var gv = g * 25;
+            var gy = y(gv);
+            html += '<line x1="' + PAD_LEFT + '" y1="' + gy.toFixed(1) + '" x2="' + (W - PAD_RIGHT) + '" y2="' + gy.toFixed(1) + '" class="trend-grid"/>';
+            html += '<text x="' + (PAD_LEFT - 6) + '" y="' + (gy + 3).toFixed(1) + '" class="trend-axis-label" text-anchor="end">' + gv + '</text>';
+        }
+
+        html += '<path d="' + areaPath + '" fill="url(#trendAreaFill)"/>';
+        html += '<path d="' + linePath + '" class="trend-line" fill="none" vector-effect="non-scaling-stroke"/>';
+
+        points.forEach(function (p, i) {
+            var s = snapshots[i];
+            var latest = i === n - 1;
+            var label = formatShortTs(s.ts) + " \u00b7 " + s.compliance_pct + "%";
+            html += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (latest ? 4 : 2.6) + '" class="trend-dot' + (latest ? ' latest' : '') + '" vector-effect="non-scaling-stroke"><title>' + escapeHtml(label) + '</title></circle>';
+        });
+
+        html += '</svg>';
+
+        html += '<div class="trend-labels">';
         snapshots.forEach(function (s, i) {
-            if (i === 0 || i === snapshots.length - 1 || i === Math.floor(snapshots.length / 2)) {
-                html += '<span class="trend-label">' + formatShortTs(s.ts) + '</span>';
+            if (i === 0 || i === n - 1 || i === Math.floor((n - 1) / 2)) {
+                html += '<span class="trend-label">' + escapeHtml(formatShortTs(s.ts)) + '</span>';
             } else {
                 html += '<span class="trend-label"></span>';
             }
         });
         html += '</div>';
-        var trend = posture.trend_pct || 0;
-        var dir = trend > 0 ? "improved" : trend < 0 ? "declined" : "held steady";
-        html += '<p class="trend-summary">Compliance ' + dir + ' by ' + Math.abs(trend) + '% since the previous assessment.</p>';
+
+        var latest = snapshots[n - 1];
+        var prev = n > 1 ? snapshots[n - 2] : null;
+        var change = prev ? Math.round((latest.compliance_pct - prev.compliance_pct) * 10) / 10 : null;
+        var dir = change == null ? "\u2014" : (change > 0 ? "Improving" : change < 0 ? "Declining" : "Stable");
+        var dirCls = change == null ? "" : (change > 0 ? "good" : change < 0 ? "bad" : "flat");
+        var changeText = change == null ? "\u2014" : (change > 0 ? "+" : "") + change + "%";
+
+        html += '<div class="trend-analysis">' +
+            '<div class="trend-metric"><span class="trend-metric-label">Current Score</span><span class="trend-metric-value">' + latest.compliance_pct + '%</span></div>' +
+            '<div class="trend-metric"><span class="trend-metric-label">Change</span><span class="trend-metric-value ' + dirCls + '">' + changeText + '</span></div>' +
+            '<div class="trend-metric"><span class="trend-metric-label">Trend</span><span class="trend-metric-value ' + dirCls + '">' + dir + '</span></div>' +
+            '</div>';
+
         el.innerHTML = html;
     }
 

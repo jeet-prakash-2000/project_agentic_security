@@ -49,37 +49,6 @@
     </div>
 </div>
 
-<section class="posture-overview" aria-label="Security posture overview">
-    <div class="posture-card posture-card-score">
-        <div class="posture-card-label">Security Score</div>
-        <div class="posture-score-row">
-            <div class="score-gauge"><svg viewBox="0 0 120 120"><circle class="gauge-track" cx="60" cy="60" r="52"/><circle class="gauge-fill" id="securityGaugeFill" cx="60" cy="60" r="52"/></svg><div class="score-gauge-value"><span id="securityScore">—</span><span class="score-gauge-pct">%</span></div></div>
-            <div class="score-trend" id="securityScoreTrend"></div>
-        </div>
-    </div>
-    <div class="posture-card">
-        <div class="posture-card-label">Compliance Score</div>
-        <div class="posture-big"><span id="complianceScore">—</span><span class="posture-big-sub">%</span></div>
-        <div class="posture-bar"><div class="posture-bar-fill" id="complianceBar"></div></div>
-        <div class="posture-subline"><span id="compliantCount">—</span> of <span id="totalControls">—</span> controls passed</div>
-    </div>
-    <div class="posture-card posture-card-sev critical">
-        <div class="posture-card-label">Critical Findings</div>
-        <div class="posture-big" id="criticalCount">—</div>
-        <div class="posture-trend" id="criticalTrend"></div>
-    </div>
-    <div class="posture-card posture-card-sev high">
-        <div class="posture-card-label">High Findings</div>
-        <div class="posture-big" id="highCount">—</div>
-        <div class="posture-trend" id="highTrend"></div>
-    </div>
-    <div class="posture-card">
-        <div class="posture-card-label">Last Assessment</div>
-        <div class="posture-big posture-big-sm" id="lastAssessed">—</div>
-        <div class="posture-subline muted" id="runId">—</div>
-    </div>
-</section>
-
 <section class="severity-trend-strip" id="severityTrendStrip" aria-label="Severity change indicators"></section>
 
 <section class="findings-toolbar card" id="toolbarFilters">
@@ -210,5 +179,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=7"></script>
-<script src="{{ url_for('static', filename='js/findings.js') }}?v=8"></script>
+<script src="{{ url_for('static', filename='js/findings.js') }}?v=9"></script>
 {% endblock %}
