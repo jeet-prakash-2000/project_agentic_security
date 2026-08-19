@@ -95,7 +95,6 @@
         conversations: [],
         messages: [],
         activeId: null,
-        autoOpened: false,
         activeAgentId: null,
         activeAgent: null,
         agents: []
@@ -165,10 +164,6 @@
             .then(function (data) {
                 state.conversations = (data && data.conversations) || [];
                 renderConversationList();
-                if (!state.activeId && state.conversations.length && !state.autoOpened) {
-                    state.autoOpened = true;
-                    setActive(state.conversations[0].id);
-                }
                 return state.conversations;
             })
             .catch(function () { return []; });
@@ -497,85 +492,10 @@
     // CHAT / SEND
     // ============================================================
 
-    function detectDataAction(lower) {
-        if (lower.indexOf("inventory") !== -1 || lower.indexOf("device info") !== -1) return "inventory";
-        if (lower.indexOf("health") !== -1 || lower.indexOf("cpu") !== -1 || lower.indexOf("memory") !== -1 || lower.indexOf("disk") !== -1 || lower.indexOf("session") !== -1) return "health";
-        if (lower.indexOf("policy") !== -1 || lower.indexOf("rule") !== -1 || lower.indexOf("firewall rules") !== -1) return "policy";
-        if (lower.indexOf("ha") !== -1 || lower.indexOf("high availability") !== -1) return "ha";
-        if (lower.indexOf("service") !== -1 || lower.indexOf("security service") !== -1 || lower.indexOf("threat") !== -1 || lower.indexOf("wildfire") !== -1 || lower.indexOf("url filter") !== -1 || lower.indexOf("dns security") !== -1 || lower.indexOf("ssl decrypt") !== -1) return "services";
-        if (lower.indexOf("routing") !== -1 || lower.indexOf("route") !== -1) return "routing";
-        if (lower.indexOf("vpn") !== -1 || lower.indexOf("tunnel") !== -1) return "vpn";
-        if (lower.indexOf("logging") !== -1 || lower.indexOf("log") !== -1 || lower.indexOf("siem") !== -1 || lower.indexOf("retention") !== -1) return "logging";
-        if (lower.indexOf("admin") !== -1 || lower.indexOf("management") !== -1 || lower.indexOf("administration") !== -1 || lower.indexOf("ntp") !== -1 || lower.indexOf("snmp") !== -1) return "administration";
-        if (lower.indexOf("zone protect") !== -1 || lower.indexOf("zone protection") !== -1 || lower.indexOf("dos") !== -1 || lower.indexOf("packet") !== -1) return "zone_protection";
-        if (lower.indexOf("backup") !== -1 || lower.indexOf("recovery") !== -1) return "backup";
-        return null;
-    }
-
-    function runDataAction(action) {
-        var prompts = {
-            inventory: "Show inventory details.", health: "Show health status.",
-            policy: "Show policy configuration.", ha: "Show HA configuration.",
-            services: "Show security services status.", routing: "Show routing configuration.",
-            vpn: "Show VPN configuration.", logging: "Show logging configuration.",
-            administration: "Show administration configuration.", zone_protection: "Show zone protection configuration.",
-            backup: "Show backup configuration."
-        };
-        var endpoints = {
-            inventory: "/api/firewall/inventory", health: "/api/firewall/health", policy: "/api/firewall/policy",
-            ha: "/api/firewall/ha", services: "/api/firewall/services", routing: "/api/firewall/routing",
-            vpn: "/api/firewall/vpn", logging: "/api/firewall/logging", administration: "/api/firewall/administration",
-            zone_protection: "/api/firewall/zone-protection", backup: "/api/firewall/backup"
-        };
-        var titles = {
-            inventory: "Firewall Inventory", health: "Health Status", policy: "Policy Configuration",
-            ha: "HA Configuration", services: "Security Services", routing: "Routing Configuration",
-            vpn: "VPN Configuration", logging: "Logging Configuration", administration: "Administration Configuration",
-            zone_protection: "Zone Protection Configuration", backup: "Backup Configuration"
-        };
-
-        ensureActiveId();
-        var userMsg = { role: "user", content: prompts[action], ts: now() };
-        appendMessage(userMsg);
-        renderConversationList();
-
-        var typing = appendTyping("Firewall Data");
-        sendBtn.disabled = true;
-
-        var finish = function (asstMsg) {
-            persistMessages([userMsg, asstMsg]);
-            loadConversations();
-        };
-
-        fetch(endpoints[action])
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                removeTyping(typing);
-                if (data && data.error) throw new Error(data.error);
-                var html = action === "policy" ? renderPolicyCard(data) : renderTableCard(titles[action], data);
-                var asstMsg = { role: "assistant", content: "", html: html, cardTitle: titles[action], agentName: "Firewall Data", ts: now() };
-                appendMessage(asstMsg);
-                renderConversationList();
-                finish(asstMsg);
-            })
-            .catch(function () {
-                removeTyping(typing);
-                var asstMsg = { role: "assistant", content: "Unable to fetch data from the firewall function. Check connectivity.", agentName: "Firewall Data", ts: now() };
-                appendMessage(asstMsg);
-                renderConversationList();
-                finish(asstMsg);
-            })
-            .finally(function () { sendBtn.disabled = false; promptInput.focus(); });
-    }
-
     function sendPrompt(prompt, opts) {
         opts = opts || {};
         var text = (prompt || "").trim();
         if (!text) return;
-
-        var lower = text.toLowerCase();
-        var dataAction = detectDataAction(lower);
-        if (dataAction) { runDataAction(dataAction); return; }
 
         ensureActiveId();
         appendMessage({ role: "user", content: text, ts: now() });
@@ -929,30 +849,6 @@
         }
         closeList();
         return html.join("");
-    }
-
-    function renderTableCard(title, data) {
-        var html = '<div class="msg-card"><strong>' + escapeHtml(title) + "</strong><br><br>";
-        html += '<table style="width:100%;font-size:12px;">';
-        for (var k in data) {
-            if (data.hasOwnProperty(k)) {
-                var val = data[k];
-                var display = val === null ? "\u2014" : typeof val === "object" ? JSON.stringify(val).substring(0, 120) : String(val);
-                html += '<tr><td style="padding:4px 8px;color:var(--text-3);font-weight:600">' + escapeHtml(k) + '</td><td style="padding:4px 8px;font-family:monospace">' + escapeHtml(display) + "</td></tr>";
-            }
-        }
-        return html + "</table></div>";
-    }
-
-    function renderPolicyCard(data) {
-        var rules = data.security_rules || [], zones = data.zones || [];
-        var html = '<div class="msg-card"><strong>Policy Configuration</strong><br><br>';
-        html += "<strong>Security Rules (" + rules.length + "):</strong><ul style=\"margin:6px 0;font-size:12px\">";
-        rules.forEach(function (r) { html += "<li>" + escapeHtml(r.name || "Unnamed") + ' \u2014 <span style="color:var(--text-3)">' + escapeHtml(r.action || "?") + "</span></li>"; });
-        html += "</ul>";
-        html += "<strong>Zones (" + zones.length + "):</strong><ul style=\"margin:6px 0;font-size:12px\">";
-        zones.forEach(function (z) { html += "<li>" + escapeHtml(z.name || z) + "</li>"; });
-        return html + "</ul></div>";
     }
 
     function buildAssistantReply(prompt) {

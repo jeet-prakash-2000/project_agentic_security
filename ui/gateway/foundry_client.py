@@ -7,6 +7,8 @@ from config import keyvault
 
 CHAT_TIMEOUT = 90
 
+AGENTS_API_VERSION = "2025-05-01"
+
 # Tool schemas in Azure AI Foundry Responses API format (flat function objects).
 TOOL_SCHEMAS = [
     {
@@ -150,8 +152,147 @@ def _responses_url(agent_endpoint):
     return endpoint + "/openai/v1/responses"
 
 
+def _entra_headers():
+    from azure.identity import DefaultAzureCredential
+
+    credential = DefaultAzureCredential()
+    token = credential.get_token(
+        "https://management.azure.com/.default"
+    ).token
+    return {
+        "Authorization": "Bearer {0}".format(token),
+        "Content-Type": "application/json",
+    }
+
+
+def _invoke_agent(agent, messages):
+    """Invoke the Foundry Agent (assistant) server-side via the Agents API.
+
+    The agent executes its connected tools (the firewall functions) server-side
+    and returns the result, so the client never needs the individual function
+    keys. Requires Azure Entra authentication (Managed Identity on Azure, or a
+    service principal via environment variables locally).
+    """
+    base = (agent.get("agent_endpoint") or "").rstrip("/")
+    agent_ref = (agent.get("agent_id") or "").strip()
+    if not base or not agent_ref:
+        raise ValueError("Agent is missing the agent endpoint or agent id.")
+
+    headers = _entra_headers()
+    params = {"api-version": AGENTS_API_VERSION}
+
+    resp = requests.get(
+        "{0}/assistants".format(base),
+        params=params,
+        headers=headers,
+        timeout=CHAT_TIMEOUT,
+    )
+    resp.raise_for_status()
+    assistants = (
+        resp.json().get("data")
+        or resp.json().get("value")
+        or []
+    )
+    assistant = None
+    for item in assistants:
+        if item.get("name") == agent_ref or item.get("id") == agent_ref:
+            assistant = item
+            break
+    if assistant is None:
+        raise RuntimeError(
+            "Agent '{0}' was not found.".format(agent_ref)
+        )
+
+    resp = requests.post(
+        "{0}/threads".format(base),
+        params=params,
+        headers=headers,
+        json={},
+        timeout=CHAT_TIMEOUT,
+    )
+    resp.raise_for_status()
+    thread_id = resp.json()["id"]
+
+    text = ""
+    for message in reversed(messages):
+        if message.get("role") == "user":
+            text = message.get("content") or ""
+            break
+
+    requests.post(
+        "{0}/threads/{1}/messages".format(base, thread_id),
+        params=params,
+        headers=headers,
+        json={"role": "user", "content": text},
+        timeout=CHAT_TIMEOUT,
+    ).raise_for_status()
+
+    resp = requests.post(
+        "{0}/threads/{1}/runs".format(base, thread_id),
+        params=params,
+        headers=headers,
+        json={"assistant_id": assistant["id"]},
+        timeout=CHAT_TIMEOUT,
+    )
+    resp.raise_for_status()
+    run_id = resp.json()["id"]
+
+    for _ in range(60):
+        resp = requests.get(
+            "{0}/threads/{1}/runs/{2}".format(base, thread_id, run_id),
+            params=params,
+            headers=headers,
+            timeout=CHAT_TIMEOUT,
+        )
+        resp.raise_for_status()
+        status = resp.json().get("status")
+        if status == "completed":
+            break
+        if status in ("failed", "cancelled", "expired"):
+            raise RuntimeError(
+                "Agent run ended with status '{0}'.".format(status)
+            )
+        time.sleep(2)
+
+    resp = requests.get(
+        "{0}/threads/{1}/messages".format(base, thread_id),
+        params=params,
+        headers=headers,
+        timeout=CHAT_TIMEOUT,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    reply = ""
+    for message in data.get("data") or []:
+        if message.get("role") != "assistant":
+            continue
+        for part in message.get("content") or []:
+            if part.get("type") == "text":
+                text_block = part.get("text") or {}
+                reply += (
+                    text_block.get("value")
+                    if isinstance(text_block, dict)
+                    else str(part.get("text") or "")
+                )
+
+    return {
+        "reply": reply or None,
+        "usage": {},
+        "latency_ms": 0,
+        "model": agent.get("model", ""),
+    }
+
+
 def chat(agent, messages):
     from gateway import tools as tool_registry
+
+    if agent.get("agent_id"):
+        try:
+            result = _invoke_agent(agent, messages)
+            if result.get("reply"):
+                return result
+        except Exception:
+            pass
 
     agent_endpoint = (agent.get("agent_endpoint") or "").rstrip("/")
     api_key = _resolve_api_key(agent)

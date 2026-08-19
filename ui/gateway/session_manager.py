@@ -209,6 +209,12 @@ def list_conversations(user_id=None):
                     "message_count": len(conversation.get("messages", [])),
                 }
             )
+
+        result.sort(
+            key=lambda c: c.get("updated") or 0,
+            reverse=True
+        )
+
         return result
 
 
