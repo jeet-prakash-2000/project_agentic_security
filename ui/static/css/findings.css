@@ -21,10 +21,8 @@
 .group-head:focus-visible,
 .chip:focus-visible,
 .action-btn:focus-visible,
-.sev-strip-item:focus-visible,
 .copilot-chip:focus-visible,
 .active-pill-x:focus-visible,
-.status-chip:focus-visible,
 .btn:focus-visible,
 .toolbar-search input:focus-visible,
 .toolbar-select select:focus-visible,
@@ -50,76 +48,12 @@
 .findings-header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* ============================================================
-   HEADER STATUS STRIP
+   COMPLIANCE TREND (full-width section above the findings list)
    ============================================================ */
 
-.header-status-strip {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+.compliance-trend-section {
     margin-bottom: 16px;
 }
-.status-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 11.5px;
-    font-weight: 600;
-    color: var(--text-2);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    padding: 6px 12px;
-    border-radius: 20px;
-}
-.status-chip strong { color: var(--text); font-weight: 700; }
-.status-chip svg { width: 13px; height: 13px; color: var(--crimson); flex-shrink: 0; }
-
-.status-dot {
-    display: inline-block;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--text-muted);
-    flex-shrink: 0;
-}
-.status-dot.ok { background: var(--success); }
-.status-dot.warn { background: var(--warning); }
-.status-dot.bad { background: var(--crimson); }
-.status-dot-env.ok { background: var(--success); }
-
-#postureBadge[data-posture="ok"] { border-color: rgba(22, 163, 74, 0.3); }
-#postureBadge[data-posture="warn"] { border-color: rgba(217, 119, 6, 0.35); }
-#postureBadge[data-posture="bad"] { border-color: rgba(220, 38, 38, 0.35); background: var(--danger-soft); }
-
-/* ============================================================
-   SEVERITY TREND STRIP
-   ============================================================ */
-
-.severity-trend-strip {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-    margin-bottom: 16px;
-}
-.sev-strip-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 11px 14px;
-    cursor: pointer;
-    transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
-}
-.sev-strip-item:hover { border-color: var(--sev); transform: translateY(-1px); box-shadow: var(--shadow-soft); }
-.sev-strip-item.is-selected { border-color: var(--sev); box-shadow: 0 0 0 1px var(--sev); }
-.sev-strip-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--sev); flex-shrink: 0; }
-.sev-strip-name { font-size: 12px; font-weight: 700; color: var(--text); }
-.sev-strip-count { font-size: 20px; font-weight: 800; color: var(--text); margin-left: auto; line-height: 1; }
-.sev-strip-delta { font-size: 11px; font-weight: 700; }
-.sev-strip-delta.up { color: var(--crimson); }
-.sev-strip-delta.down { color: var(--success); }
-.sev-strip-delta.flat { color: var(--text-3); }
 
 /* ============================================================
    TOOLBAR
@@ -734,9 +668,6 @@
    RESPONSIVE
    ============================================================ */
 
-@media (max-width: 1280px) {
-    .severity-trend-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
 @media (max-width: 1200px) {
     .findings-layout { grid-template-columns: 1fr; }
     .findings-side { position: static; }
@@ -745,7 +676,6 @@
     .risk-context-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-    .severity-trend-strip { grid-template-columns: 1fr; }
     .findings-header { flex-direction: column; align-items: flex-start; }
     .findings-header-actions { width: 100%; }
     .findings-header-actions .btn { flex: 1; }

@@ -16,8 +16,6 @@
         "Logging & Monitoring"
     ];
 
-    var SEVERITY_KEYS = ["critical", "high", "medium", "low"];
-
     var PRESET_VIEWS = [
         { id: "all", name: "All Findings", filters: { severity: "all", status: "all", domain: "all", firewall: "all", riskRange: "all", date: "all", search: "", sort: "severity" } },
         { id: "critical", name: "Critical Only", filters: { severity: "critical", status: "all", domain: "all", firewall: "all", riskRange: "all", date: "all", search: "", sort: "severity" } },
@@ -205,85 +203,6 @@
 
     function getVisible() {
         return sortRecords(state.records.filter(matchesFilters));
-    }
-
-    // ============================================================
-    // HEADER BADGES
-    // ============================================================
-
-    function renderHeaderBadges(data) {
-        var posture = data.posture || {};
-        var score = posture.security_score;
-        var sev = posture.severity || {};
-
-        var postureText = document.getElementById("postureBadgeText");
-        var postureDot = document.getElementById("postureBadgeDot");
-        var badge = document.getElementById("postureBadge");
-        if (typeof score === "number") {
-            var label, cls;
-            if (score >= 80) { label = "Healthy Posture"; cls = "ok"; }
-            else if (score >= 60) { label = "At Risk"; cls = "warn"; }
-            else { label = "Critical Posture"; cls = "bad"; }
-            postureText.textContent = label + " \u00b7 " + score + "%";
-            postureDot.className = "status-dot " + cls;
-            badge.setAttribute("data-posture", cls);
-        }
-
-        var src = document.getElementById("sourceBadgeText");
-        if (src) src.textContent = data._source === "live" ? "Live" : "Sample";
-
-        var refresh = document.getElementById("refreshBadgeText");
-        if (refresh) refresh.textContent = formatTs(data._collected_at || posture.collected_at);
-
-        var envText = document.getElementById("envBadgeText");
-        var envDot = document.getElementById("envBadgeDot");
-        if (envText) {
-            var isProd = data._source === "live";
-            envText.textContent = "Environment: " + (isProd ? "Production" : "Lab");
-            envDot.className = "status-dot status-dot-env" + (isProd ? " ok" : "");
-        }
-    }
-
-    function renderAgentBadge() {
-        fetch("/api/agents")
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                var agents = (data && data.agents) || [];
-                var connected = agents.find(function (a) { return a.connected; }) || agents[0];
-                var el = document.getElementById("agentBadgeText");
-                if (el && connected) el.textContent = "Agent: " + (connected.name || "Firewall Auditor");
-            })
-            .catch(function () { /* badge stays at placeholder */ });
-    }
-
-    // ============================================================
-    // POSTURE OVERVIEW
-    // ============================================================
-
-    function renderPosture(posture, data) {
-        renderSeverityTrendStrip(posture);
-    }
-
-    function renderSeverityTrendStrip(posture) {
-        var el = document.getElementById("severityTrendStrip");
-        if (!el) return;
-        var sev = posture.severity || {};
-        var change = posture.severity_change || {};
-        var colors = { critical: "#ef4444", high: "#f97316", medium: "#f59e0b", low: "#22c55e" };
-        var html = "";
-        SEVERITY_KEYS.forEach(function (k) {
-            var count = sev[k] || 0;
-            var delta = change[k] || 0;
-            var dcls = delta > 0 ? "up" : delta < 0 ? "down" : "flat";
-            var dtext = delta > 0 ? "+" + delta : delta < 0 ? String(delta) : "\u00b70";
-            html += '<button class="sev-strip-item" type="button" data-sev="' + k + '" style="--sev:' + colors[k] + '">' +
-                '<span class="sev-strip-dot"></span>' +
-                '<span class="sev-strip-name">' + k.charAt(0).toUpperCase() + k.slice(1) + '</span>' +
-                '<span class="sev-strip-count">' + count + '</span>' +
-                '<span class="sev-strip-delta ' + dcls + '">' + dtext + '</span>' +
-                '</button>';
-        });
-        el.innerHTML = html;
     }
 
     // ============================================================
@@ -1208,17 +1127,6 @@
             });
         }
 
-        var strip = document.getElementById("severityTrendStrip");
-        if (strip) {
-            strip.addEventListener("click", function (e) {
-                var item = e.target.closest(".sev-strip-item");
-                if (!item) return;
-                var sev = item.getAttribute("data-sev");
-                state.filters.severity = state.filters.severity === sev ? "all" : sev;
-                applyFilters();
-            });
-        }
-
         var activeFilters = document.getElementById("activeFilters");
         if (activeFilters) {
             activeFilters.addEventListener("click", function (e) {
@@ -1310,8 +1218,6 @@
                     return enrich(r, findingMap[(r.control || "").toUpperCase()], null, ctx);
                 });
 
-                renderHeaderBadges(data);
-                renderPosture(posture, data);
                 renderTrend(data.history, posture);
                 renderTimeline(posture, data.firewall, data);
                 renderDomainChips();
@@ -1322,7 +1228,6 @@
                 if (searchInput) searchInput.value = state.filters.search || "";
                 syncFilterChips();
                 renderAll();
-                renderAgentBadge();
             })
             .catch(function () {
                 if (root) root.innerHTML = '<div class="empty-state card"><h4>Unable to load findings</h4></div>';

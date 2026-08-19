@@ -28,29 +28,6 @@
 <div class="alert alert-error"><strong>Error</strong><span>{{ error }}</span></div>
 {% endif %}
 
-<div class="header-status-strip" aria-label="Assessment status">
-    <div class="status-chip" id="postureBadge" title="Overall security posture">
-        <span class="status-dot" id="postureBadgeDot"></span>
-        <span id="postureBadgeText">—</span>
-    </div>
-    <div class="status-chip" id="agentBadge" title="Active AI agent">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>
-        <span id="agentBadgeText">Agent: —</span>
-    </div>
-    <div class="status-chip" id="sourceBadge" title="Assessment data source">
-        <span>Source: <strong id="sourceBadgeText">—</strong></span>
-    </div>
-    <div class="status-chip" id="refreshBadge" title="Last data refresh">
-        <span>Refreshed: <strong id="refreshBadgeText">—</strong></span>
-    </div>
-    <div class="status-chip" id="envBadge" title="Environment">
-        <span class="status-dot status-dot-env" id="envBadgeDot"></span>
-        <span id="envBadgeText">Environment: —</span>
-    </div>
-</div>
-
-<section class="severity-trend-strip" id="severityTrendStrip" aria-label="Severity change indicators"></section>
-
 <section class="findings-toolbar card" id="toolbarFilters">
     <div class="toolbar-row">
         <div class="toolbar-search">
@@ -124,6 +101,13 @@
     <div class="active-filters" id="activeFilters" aria-label="Active filters"></div>
 </section>
 
+<section class="compliance-trend-section" aria-label="Compliance trend">
+    <div class="card side-panel">
+        <div class="side-panel-head"><h4>Compliance Trend</h4></div>
+        <div class="trend-chart" id="trendChart"></div>
+    </div>
+</section>
+
 <div class="findings-layout">
     <div class="findings-main">
         <div class="findings-list-head">
@@ -146,10 +130,6 @@
         <div class="card side-panel">
             <div class="side-panel-head"><h4>Top Risk Domains</h4></div>
             <div class="domain-list" id="domainList"></div>
-        </div>
-        <div class="card side-panel">
-            <div class="side-panel-head"><h4>Compliance Trend</h4></div>
-            <div class="trend-chart" id="trendChart"></div>
         </div>
     </aside>
 </div>
@@ -179,5 +159,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=7"></script>
-<script src="{{ url_for('static', filename='js/findings.js') }}?v=9"></script>
+<script src="{{ url_for('static', filename='js/findings.js') }}?v=10"></script>
 {% endblock %}
