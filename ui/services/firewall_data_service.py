@@ -32,48 +32,92 @@ def _call_function(endpoint, cache_key=None):
     return None
 
 
+def _assessment_section(key):
+    """Fall back to the latest assessment snapshot when the live function
+    is unreachable (e.g. the function key is not configured in the current
+    environment). The assessment payload already carries every firewall
+    configuration section.
+    """
+    try:
+        from services import assessment_service
+
+        assessment = assessment_service.get_full_assessment()
+        if isinstance(assessment, dict):
+            data = assessment.get(key)
+            if data is not None:
+                return data
+    except Exception:
+        pass
+    return {"status": "No data collected for this section"}
+
+
+def _get_or_fallback(endpoint, cache_key, section_key):
+    data = _call_function(endpoint, cache_key)
+    if data is None:
+        data = _assessment_section(section_key)
+    return data
+
+
 def get_inventory():
-    return _call_function("get_inventory", "inventory")
+    return _get_or_fallback("get_inventory", "inventory", "inventory")
 
 
 def get_health_status():
-    return _call_function("get_health_status", "health")
+    return _get_or_fallback("get_health_status", "health", "health_status")
 
 
 def get_ha_configuration():
-    return _call_function("get_ha_configuration", "ha")
+    return _get_or_fallback("get_ha_configuration", "ha", "ha_configuration")
 
 
 def get_policy_configuration():
-    return _call_function("get_policy_configuration", "policy")
+    return _get_or_fallback(
+        "get_policy_configuration", "policy", "policy_configuration"
+    )
 
 
 def get_security_services():
-    return _call_function("get_security_services", "services")
+    return _get_or_fallback(
+        "get_security_services", "services", "security_services"
+    )
 
 
 def get_routing_configuration():
-    return _call_function("get_routing_configuration", "routing")
+    return _get_or_fallback(
+        "get_routing_configuration", "routing", "routing_configuration"
+    )
 
 
 def get_vpn_configuration():
-    return _call_function("get_vpn_configuration", "vpn")
+    return _get_or_fallback("get_vpn_configuration", "vpn", "vpn_configuration")
 
 
 def get_logging_configuration():
-    return _call_function("get_logging_configuration", "logging")
+    return _get_or_fallback(
+        "get_logging_configuration", "logging", "logging_configuration"
+    )
 
 
 def get_administration_configuration():
-    return _call_function("get_administration_configuration", "admin")
+    return _get_or_fallback(
+        "get_administration_configuration",
+        "admin",
+        "administration_configuration",
+    )
 
 
 def get_zone_protection_configuration():
-    return _call_function("get_zone_protection_configuration", "zone_protection")
+    return _get_or_fallback(
+        "get_zone_protection_configuration",
+        "zone_protection",
+        "zone_protection_configuration",
+    )
 
 
 def get_backup_configuration():
-    return _call_function("get_backup_configuration", "backup")
+    return _get_or_fallback(
+        "get_backup_configuration", "backup", "backup_configuration"
+    )
 
 
 def get_full_status():
