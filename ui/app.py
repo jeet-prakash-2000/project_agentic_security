@@ -178,7 +178,7 @@ def logout():
 def home():
 
     return redirect(
-        url_for("workspace")
+        url_for("dashboard")
     )
 
 # --------------------------------------------------
