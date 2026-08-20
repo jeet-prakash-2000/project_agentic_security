@@ -73,6 +73,11 @@ def get_assessment_stats():
     return _load_stats()
 
 
+def get_history():
+    """Return the stored assessment history snapshots (read-only)."""
+    return _load_history()
+
+
 def _record_assessment():
     stats = _load_stats()
     stats["assessments_run"] = int(stats.get("assessments_run", 0)) + 1

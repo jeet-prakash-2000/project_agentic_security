@@ -101,13 +101,6 @@
     <div class="active-filters" id="activeFilters" aria-label="Active filters"></div>
 </section>
 
-<section class="compliance-trend-section" aria-label="Compliance trend">
-    <div class="card side-panel">
-        <div class="side-panel-head"><h4>Compliance Trend</h4></div>
-        <div class="trend-chart" id="trendChart"></div>
-    </div>
-</section>
-
 <div class="findings-layout">
     <div class="findings-main">
         <div class="findings-list-head">
@@ -159,5 +152,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=7"></script>
-<script src="{{ url_for('static', filename='js/findings.js') }}?v=10"></script>
+<script src="{{ url_for('static', filename='js/findings.js') }}?v=11"></script>
 {% endblock %}

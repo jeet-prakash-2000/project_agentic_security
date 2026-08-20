@@ -105,7 +105,7 @@
 
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
     margin-bottom: 24px;
 }
@@ -319,276 +319,31 @@
     transform: translateX(4px);
 }
 
-.dashboard-lower {
-    display: grid;
-    grid-template-columns: 1.5fr 1fr;
-    gap: 16px;
-}
-
-.overview-rows {
-    display: flex;
-    flex-direction: column;
-}
-
-.overview-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 12px 4px;
-    border-top: 1px solid var(--border-soft);
-}
-
-.overview-row:first-child {
-    border-top: none;
-}
-
-.overview-key {
-    font-size: 12.5px;
-    color: var(--muted);
-    flex-shrink: 0;
-}
-
-.overview-val {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    text-align: right;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-.overview-val strong {
-    font-weight: 600;
-}
-
-.overview-tags {
-    gap: 7px;
-}
-
-.posture-card {
-    display: flex;
-    flex-direction: column;
-}
-
-.posture-ring {
-    position: relative;
-    width: 160px;
-    margin: 8px auto 18px;
-}
-
-.ring-chart {
-    width: 100%;
-    height: auto;
-    transform: rotate(-90deg);
-}
-
-.ring-bg {
-    fill: none;
-    stroke: var(--border);
-    stroke-width: 10;
-}
-
-.ring-fg {
-    fill: none;
-    stroke: url(#gradientStroke);
-    stroke-width: 10;
-    stroke-linecap: round;
-    stroke-dasharray: 314;
-    stroke-dashoffset: 273;
-    animation: ringFill 1.4s ease forwards;
-}
-
-@keyframes ringFill {
-    from {
-        stroke-dashoffset: 314;
-    }
-}
-
-.ring-center {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-}
-
-.ring-center strong {
-    font-size: 25px;
-    font-weight: 700;
-    font-family: var(--font-display);
-}
-
-.ring-center span {
-    font-size: 10.5px;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.posture-legend {
-    display: flex;
-    justify-content: center;
-    gap: 18px;
-    font-size: 12px;
-    color: var(--muted);
-}
-
-.posture-legend span {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-}
-
-.dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.dot-green {
-    background: var(--success);
-}
-
-.dot-red {
-    background: var(--danger);
-}
-
-.dot-muted {
-    background: #8A94A3;
-}
-
-.kpi-grid-alt {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 16px;
+.compliance-trend-section {
     margin-bottom: 24px;
 }
 
-.agent-health {
-    margin-bottom: 24px;
-}
-
-.agent-health-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
-    margin-top: 16px;
-}
-
-.agent-health-card {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    padding: 18px;
-    box-shadow: var(--shadow-soft);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.agent-health-card:hover {
-    border-color: rgba(228, 0, 43, 0.3);
-    box-shadow: var(--shadow-glass);
-}
-
-.agent-health-head {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
-}
-
-.agent-health-head h4 {
-    font-size: 15px;
-    font-weight: 700;
-    font-family: var(--font-display);
-    line-height: 1.2;
-}
-
-.agent-health-head p {
-    font-size: 11.5px;
-    color: var(--muted);
-    margin-top: 2px;
-}
-
-.agent-health-head .status-chip {
-    margin-left: auto;
-    flex-shrink: 0;
-}
-
-.agent-health-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px 12px;
-    border-top: 1px solid var(--border-soft);
-    padding-top: 12px;
-}
-
-.agent-health-stat span {
-    display: block;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--muted);
-    margin-bottom: 3px;
-}
-
-.agent-health-stat strong {
-    font-size: 14px;
-    font-weight: 700;
-    font-family: var(--font-display);
-    color: var(--text);
-}
-
-.agent-health-skeleton {
-    grid-column: 1 / -1;
-    height: 96px;
-    border-radius: var(--radius-lg);
-    background-image: linear-gradient(90deg, transparent 0%, rgba(148, 163, 184, 0.06) 50%, transparent 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.4s infinite;
-}
-
-.agent-health-empty {
-    grid-column: 1 / -1;
-    color: var(--muted);
-    font-size: 13px;
-    padding: 24px;
-    text-align: center;
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: 200% 0;
-    }
-    100% {
-        background-position: -200% 0;
-    }
-}
-
-.agent-avatar-blue {
-    background: var(--blue-soft);
-    color: var(--blue);
-}
+.trend-chart { display: flex; flex-direction: column; gap: 8px; }
+.trend-line-svg { width: 100%; height: 160px; display: block; }
+.trend-grid { stroke: var(--border); stroke-width: 1; }
+.trend-axis-label { font-size: 10px; fill: var(--muted); }
+.trend-line { stroke: var(--red); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.trend-dot { fill: var(--surface); stroke: var(--red); stroke-width: 2; }
+.trend-dot.latest { fill: var(--red); stroke: var(--red); }
+.trend-labels { display: flex; gap: 5px; }
+.trend-label { flex: 1; font-size: 10px; color: var(--muted); text-align: center; }
+.trend-summary { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.trend-analysis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 2px; }
+.trend-metric { display: flex; flex-direction: column; gap: 3px; background: var(--bg); border-radius: 10px; padding: 12px 14px; }
+.trend-metric-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+.trend-metric-value { font-size: 16px; font-weight: 800; color: var(--text); }
+.trend-metric-value.good { color: var(--success); }
+.trend-metric-value.bad { color: var(--danger); }
+.trend-metric-value.flat { color: var(--muted); }
 
 @media (max-width: 1100px) {
     .kpi-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .kpi-grid-alt {
         grid-template-columns: repeat(3, 1fr);
-    }
-
-    .agent-health-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .dashboard-lower {
-        grid-template-columns: 1fr;
     }
 }
 
@@ -614,16 +369,5 @@
 @media (max-width: 480px) {
     .kpi-grid {
         grid-template-columns: 1fr;
-    }
-
-    .overview-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 6px;
-    }
-
-    .overview-val {
-        justify-content: flex-start;
-        text-align: left;
     }
 }

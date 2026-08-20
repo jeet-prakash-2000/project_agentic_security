@@ -1,15 +1,8 @@
 (function () {
     "use strict";
 
-    var RING_LENGTH = 314.159;
-
     var sourceBadge = document.getElementById("dataSourceBadge");
     var refreshBtn = document.getElementById("refreshBtn");
-    var ringFg = document.getElementById("ringFg");
-    var ringPercent = document.getElementById("ringPercent");
-    var agentHealthGrid = document.getElementById("agentHealthGrid");
-    var kpiGrid = document.getElementById("kpiRow");
-    var kpiGridAlt = document.getElementById("kpiRowAlt");
 
     function animateCount(el, target) {
         var start = null;
@@ -32,15 +25,6 @@
         sourceBadge.style.color = source === "live" ? "#059669" : "#B45309";
     }
 
-    function updateRing(compliant, total) {
-        var pct = total > 0 ? Math.round((compliant / total) * 100) : 0;
-        if (ringPercent) ringPercent.textContent = pct + "%";
-        if (ringFg) {
-            ringFg.style.transition = "stroke-dashoffset 1.2s ease";
-            ringFg.style.strokeDashoffset = RING_LENGTH - (RING_LENGTH * pct) / 100;
-        }
-    }
-
     function setKpi(id, value, animate) {
         var el = document.getElementById(id);
         if (!el) return;
@@ -48,52 +32,107 @@
         else { el.textContent = value == null ? "-" : String(value); }
     }
 
-    function fmtToken(value) { if (value == null) return "-"; var n=Number(value); return n>=1e6?(n/1e6).toFixed(1)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":String(n); }
-    function fmtCost(value) { if (value == null) return "-"; var n=Number(value); return n>=1000?"$"+(n/1000).toFixed(2)+"K":n>=1?"$"+n.toFixed(2):"$"+n.toFixed(4); }
-    function fmtRelative(ts) { if (!ts) return "-"; var d=Math.floor(Date.now()/1000-ts); return d<60?"just now":d<3600?Math.floor(d/60)+"m ago":d<86400?Math.floor(d/3600)+"h ago":Math.floor(d/86400)+"d ago"; }
-    function fmtPercent(value) { return value==null?"-":value+"%"; }
-    function escapeHtml(value) { var d=document.createElement("div"); d.textContent=value==null?"":String(value); return d.innerHTML; }
-    function avatarFor(name) { var p=String(name||"").trim().split(/\s+/); return p.map(function(x){return x.charAt(0)}).join("").toUpperCase().slice(0,2)||"AG"; }
-    function statusClass(status) { var k=String(status||"").toLowerCase(); if(k==="healthy")return"status-on"; if(k==="faulted")return"status-fail"; return"status-warn"; }
-    function healthColor(s) { if(s==null)return"#8A94A3"; if(s>=70)return"#22c55e"; if(s>=40)return"#f59e0b"; return"#ef4444"; }
-    function fmtNumber(value) { if(value==null)return"-"; return Number(value).toLocaleString("en-US"); }
-    function fmtLatency(value) { if(value==null)return"-"; return value>=1000?(value/1000).toFixed(2)+"s":value+"ms"; }
+    function escapeHtml(value) {
+        var d = document.createElement("div");
+        d.textContent = value == null ? "" : String(value);
+        return d.innerHTML;
+    }
 
-    function renderAgentHealth(agents) {
-        if (!agentHealthGrid) return;
-        var list = agents || [];
-        agentHealthGrid.innerHTML = "";
-        if (!list.length) {
-            agentHealthGrid.innerHTML = '<p class="agent-health-empty">No agents connected. Add one in the AI Workspace.</p>';
+    function parseDate(ts) {
+        if (typeof ts === "number") return new Date(ts * 1000);
+        var d = new Date(ts);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatShortTs(ts) {
+        var d = parseDate(ts);
+        if (!d) return "";
+        return d.toLocaleString(undefined, { month: "short", day: "numeric" });
+    }
+
+    function renderComplianceTrend(history) {
+        var el = document.getElementById("trendChart");
+        if (!el) return;
+
+        var snapshots = (history || []).filter(function (s) {
+            return s && typeof s.compliance_pct === "number";
+        });
+        if (!snapshots.length) {
+            el.innerHTML = '<p class="trend-summary">No history yet. Run an assessment to start tracking compliance.</p>';
             return;
         }
-        list.forEach(function (agent) {
-            var card = document.createElement("div");
-            card.className = "agent-health-card";
-            var h = agent.health_score == null ? "-" : agent.health_score + "%";
-            var sr = agent.success_rate == null ? "-" : agent.success_rate + "%";
-            card.innerHTML =
-                '<div class="agent-health-head">' +
-                '<span class="agent-avatar agent-avatar-blue">' + escapeHtml(avatarFor(agent.name)) + "</span>" +
-                "<div><h4>" + escapeHtml(agent.name) + "</h4><p>" + escapeHtml(agent.type||"Agent") + " &middot; " + escapeHtml(agent.model||"-") + "</p></div>" +
-                '<span class="status-chip ' + statusClass(agent.status) + '"><span class="pulse-dot"></span> ' + escapeHtml(agent.status) + "</span>" +
-                "</div>" +
-                '<div class="agent-health-stats">' +
-                '<div class="agent-health-stat"><span>Health</span><strong style="color:' + healthColor(agent.health_score) + '">' + h + "</strong></div>" +
-                '<div class="agent-health-stat"><span>Tools</span><strong>' + fmtNumber(agent.tools) + "</strong></div>" +
-                '<div class="agent-health-stat"><span>Success Rate</span><strong>' + sr + "</strong></div>" +
-                '<div class="agent-health-stat"><span>Last Assessment</span><strong>' + fmtRelative(agent.last_assessment_ts) + "</strong></div>" +
-                '<div class="agent-health-stat"><span>Latency</span><strong>' + fmtLatency(agent.avg_latency_ms) + "</strong></div>" +
-                '<div class="agent-health-stat"><span>Est. Cost</span><strong>' + fmtCost(agent.cost) + "</strong></div>" +
-                "</div>";
-            agentHealthGrid.appendChild(card);
+        if (snapshots.length > 12) snapshots = snapshots.slice(-12);
+
+        var W = 900, H = 160;
+        var PAD_LEFT = 36, PAD_RIGHT = 12, PAD_TOP = 12, PAD_BOTTOM = 22;
+        var min = 0, max = 100;
+        var n = snapshots.length;
+
+        function x(i) {
+            if (n === 1) return PAD_LEFT + (W - PAD_LEFT - PAD_RIGHT) / 2;
+            return PAD_LEFT + (i / (n - 1)) * (W - PAD_LEFT - PAD_RIGHT);
+        }
+        function y(v) {
+            return PAD_TOP + (1 - (v - min) / (max - min)) * (H - PAD_TOP - PAD_BOTTOM);
+        }
+
+        var points = snapshots.map(function (s, i) { return [x(i), y(s.compliance_pct)]; });
+        var linePath = "M" + points.map(function (p) { return p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" L");
+        var areaPath = linePath + " L" + points[points.length - 1][0].toFixed(1) + " " + (H - PAD_BOTTOM) + " L" + points[0][0].toFixed(1) + " " + (H - PAD_BOTTOM) + " Z";
+
+        var html = '<svg class="trend-line-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Compliance score over time">';
+        html += '<defs><linearGradient id="trendAreaFill" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#E4002B" stop-opacity="0.18"/>' +
+            '<stop offset="100%" stop-color="#E4002B" stop-opacity="0"/>' +
+            '</linearGradient></defs>';
+
+        for (var g = 0; g <= 4; g++) {
+            var gv = g * 25;
+            var gy = y(gv);
+            html += '<line x1="' + PAD_LEFT + '" y1="' + gy.toFixed(1) + '" x2="' + (W - PAD_RIGHT) + '" y2="' + gy.toFixed(1) + '" class="trend-grid"/>';
+            html += '<text x="' + (PAD_LEFT - 8) + '" y="' + (gy + 3).toFixed(1) + '" class="trend-axis-label" text-anchor="end">' + gv + '</text>';
+        }
+
+        html += '<path d="' + areaPath + '" fill="url(#trendAreaFill)"/>';
+        html += '<path d="' + linePath + '" class="trend-line" fill="none" vector-effect="non-scaling-stroke"/>';
+
+        points.forEach(function (p, i) {
+            var s = snapshots[i];
+            var latest = i === n - 1;
+            var label = formatShortTs(s.ts) + " \u00b7 " + s.compliance_pct + "%";
+            html += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (latest ? 4 : 2.6) + '" class="trend-dot' + (latest ? ' latest' : '') + '" vector-effect="non-scaling-stroke"><title>' + escapeHtml(label) + '</title></circle>';
         });
+
+        html += '</svg>';
+
+        html += '<div class="trend-labels">';
+        snapshots.forEach(function (s, i) {
+            if (i === 0 || i === n - 1 || i === Math.floor((n - 1) / 2)) {
+                html += '<span class="trend-label">' + escapeHtml(formatShortTs(s.ts)) + '</span>';
+            } else {
+                html += '<span class="trend-label"></span>';
+            }
+        });
+        html += '</div>';
+
+        var latest = snapshots[n - 1];
+        var prev = n > 1 ? snapshots[n - 2] : null;
+        var change = prev ? Math.round((latest.compliance_pct - prev.compliance_pct) * 10) / 10 : null;
+        var dir = change == null ? "\u2014" : (change > 0 ? "Improving" : change < 0 ? "Declining" : "Stable");
+        var dirCls = change == null ? "" : (change > 0 ? "good" : change < 0 ? "bad" : "flat");
+        var changeText = change == null ? "\u2014" : (change > 0 ? "+" : "") + change + "%";
+
+        html += '<div class="trend-analysis">' +
+            '<div class="trend-metric"><span class="trend-metric-label">Current Score</span><span class="trend-metric-value">' + latest.compliance_pct + '%</span></div>' +
+            '<div class="trend-metric"><span class="trend-metric-label">Change</span><span class="trend-metric-value ' + dirCls + '">' + changeText + '</span></div>' +
+            '<div class="trend-metric"><span class="trend-metric-label">Trend</span><span class="trend-metric-value ' + dirCls + '">' + dir + '</span></div>' +
+            '</div>';
+
+        el.innerHTML = html;
     }
 
     function applyNetsecData(data) {
         var c = data.compliance || {};
-        var f = data.findings || {};
-        var cost = data.cost || {};
 
         var values = document.querySelectorAll(".kpi-grid .kpi-value[data-count]");
         var keys = ["total_controls", "compliant", "non_compliant", "not_assessed"];
@@ -104,15 +143,10 @@
             if (typeof targets[i] === "number") animateCount(el, targets[i]);
             else el.textContent = "-";
         });
-        updateRing(Number(c.compliant)||0, Number(c.total_controls)||0);
         setSource(c.source);
 
-        setKpi("kpiComplianceScore", c.compliance_score==null?"-":c.compliance_score+"%", false);
-        setKpi("kpiCritical", f.critical==null?"-":Number(f.critical), true);
-        setKpi("kpiAssessments", data.assessments_run==null?"-":Number(data.assessments_run), true);
-        setKpi("kpiTokens", fmtToken(cost.total_tokens), false);
-        setKpi("kpiCost", fmtCost(cost.total_cost), false);
-        setKpi("kpiAgentHealth", fmtPercent(data.avg_health), false);
+        setKpi("kpiComplianceScore", c.compliance_score == null ? "-" : c.compliance_score + "%", false);
+        renderComplianceTrend(data.history || []);
     }
 
     function load() {

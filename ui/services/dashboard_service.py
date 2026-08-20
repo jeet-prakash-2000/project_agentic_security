@@ -140,5 +140,6 @@ def get_dashboard():
         "assessments_run": int((stats or {}).get("assessments_run", 0)),
         "avg_health": avg_health,
         "agents": health_cards,
+        "history": assessment_service.get_history(),
         "generated_at": time.time(),
     }
