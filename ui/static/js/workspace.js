@@ -40,23 +40,30 @@
     // ============================================================
 
     var ACTIONS = {
-        assess: { label: "Run Assessment", tool: "assess", prompt: "Run a full compliance assessment of the firewall estate." },
-        summary: { label: "Executive Summary", tool: "summary", prompt: "Generate an executive summary of the security posture." },
-        excel: { label: "Generate Report", tool: "excel", prompt: "Generate the assessment workbook report." },
-        findings: { label: "Show Findings", tool: "findings", prompt: "Review the compliance findings from the latest assessment." },
-        config: { label: "Analyze Configuration", tool: null, prompt: "Analyze the current firewall configuration and highlight any misconfigurations." },
-        recommend: { label: "Security Recommendations", tool: null, prompt: "Provide prioritized security recommendations to harden my firewall estate." }
+        assess: { label: "Compliance Assessment", tool: "assess", prompt: "Run a full compliance assessment of the firewall estate." }
     };
 
-    var COMPOSER_CHIPS = ["assess", "summary", "excel", "findings", "recommend"];
+    var COMPOSER_CHIPS = ["assess"];
 
     var SUGGESTIONS = [
-        { label: "Run Compliance Assessment", action: "assess" },
-        { label: "Generate Executive Summary", action: "summary" },
-        { label: "Generate Firewall Report", action: "excel" },
-        { label: "Review Compliance Findings", action: "findings" },
-        { label: "Analyze Firewall Configuration", action: "config" },
-        { label: "Security Recommendations", action: "recommend" }
+        { label: "Run Compliance Assessment", action: "assess" }
+    ];
+
+    var ASSESSMENT_SECTIONS = [
+        { id: "inventory", label: "Inventory", endpoint: "/api/firewall/inventory", domains: ["Software & Platform Currency", "Hardware & Capacity"] },
+        { id: "health", label: "Health Status", endpoint: "/api/firewall/health", domains: ["Hardware & Capacity"] },
+        { id: "ha", label: "HA Configuration", endpoint: "/api/firewall/ha", domains: ["High Availability"] },
+        { id: "policy", label: "Security Policy", endpoint: "/api/firewall/policy", domains: ["Security Policy & Rule Base"] },
+        { id: "segmentation", label: "Network Segmentation", endpoint: "/api/firewall/policy", domains: ["Network Segmentation & Zones"] },
+        { id: "services", label: "Security Services", endpoint: "/api/firewall/services", domains: ["Threat Prevention", "SSL/TLS Decryption"] },
+        { id: "routing", label: "Routing", endpoint: "/api/firewall/routing", domains: ["NAT & Routing"] },
+        { id: "vpn", label: "VPN", endpoint: "/api/firewall/vpn", domains: ["VPN"] },
+        { id: "logging", label: "Logging", endpoint: "/api/firewall/logging", domains: ["Logging & Monitoring"] },
+        { id: "administration", label: "Administration", endpoint: "/api/firewall/administration", domains: ["Admin Access & Hardening"] },
+        { id: "zone_protection", label: "Zone Protection", endpoint: "/api/firewall/zone-protection", domains: ["Zone Protection & DoS"] },
+        { id: "backup", label: "Backup", endpoint: "/api/firewall/backup", domains: ["Backup & Change Management"] },
+        { id: "report", label: "Report Generation", action: "report" },
+        { id: "summary", label: "Executive Summary", action: "summary" }
     ];
 
     var TOOL_META = {
@@ -483,9 +490,197 @@
     }
 
     function runAction(action) {
+        if (action === "assess") {
+            showMcqCard();
+            return;
+        }
         var a = ACTIONS[action];
         if (!a) return;
         sendPrompt(a.prompt, { tool: a.tool });
+    }
+
+    // ============================================================
+    // COMPLIANCE ASSESSMENT MCQ
+    // ============================================================
+
+    var assessmentCache = null;
+
+    function loadAssessmentData() {
+        if (assessmentCache) return Promise.resolve(assessmentCache);
+        return fetch("/api/findings")
+            .then(function (r) { return r.json(); })
+            .then(function (data) { assessmentCache = data; return data; })
+            .catch(function () { return null; });
+    }
+
+    function showMcqCard() {
+        ensureActiveId();
+        appendMessage({ role: "user", content: "Compliance Assessment", ts: now() });
+        renderConversationList();
+
+        var options = ASSESSMENT_SECTIONS.map(function (s) {
+            return '<button class="mcq-option" type="button" data-section="' + s.id + '">' +
+                '<span class="mcq-option-label">' + escapeHtml(s.label) + '</span>' +
+                '<span class="mcq-option-arrow">' + ARROW_ICON + '</span>' +
+                '</button>';
+        }).join("");
+
+        var html = '<div class="ws-mcq-card">' +
+            '<div class="ws-mcq-head"><strong>Compliance Assessment</strong><span>Select a section to review</span></div>' +
+            '<div class="ws-mcq-options">' + options + '</div>' +
+            '</div>';
+
+        appendMessage({ role: "assistant", content: "", html: html, cardTitle: "Compliance Assessment", agentName: "Firewall Auditor", ts: now() });
+        renderConversationList();
+    }
+
+    function showSection(sectionId) {
+        var section = null;
+        for (var i = 0; i < ASSESSMENT_SECTIONS.length; i++) {
+            if (ASSESSMENT_SECTIONS[i].id === sectionId) { section = ASSESSMENT_SECTIONS[i]; break; }
+        }
+        if (!section) return;
+
+        if (section.action === "report") { generateReportFromMcq(); return; }
+        if (section.action === "summary") { generateSummaryFromMcq(); return; }
+        loadSectionData(section);
+    }
+
+    function generateReportFromMcq() {
+        ensureActiveId();
+        appendMessage({ role: "user", content: "Report Generation", ts: now() });
+        renderConversationList();
+        var typing = appendTyping();
+        sendBtn.disabled = true;
+        fetch("/api/excel")
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                removeTyping(typing);
+                if (data && data.error) throw new Error(data.error);
+                appendMessage({ role: "assistant", content: "Assessment workbook generated and stored in Reports.", tool: "excel", ts: now() });
+                loadConversations();
+            })
+            .catch(function () {
+                removeTyping(typing);
+                appendMessage({ role: "assistant", content: "Report generation failed.", ts: now() });
+            })
+            .finally(function () { sendBtn.disabled = false; promptInput.focus(); });
+    }
+
+    function generateSummaryFromMcq() {
+        ensureActiveId();
+        appendMessage({ role: "user", content: "Executive Summary", ts: now() });
+        renderConversationList();
+        var typing = appendTyping();
+        sendBtn.disabled = true;
+        fetch("/executive-summary")
+            .then(function (r) { return r.ok; })
+            .then(function (ok) {
+                removeTyping(typing);
+                if (!ok) throw new Error("failed");
+                appendMessage({ role: "assistant", content: "Executive summary generated and stored in Reports.", tool: "summary", ts: now() });
+                loadConversations();
+            })
+            .catch(function () {
+                removeTyping(typing);
+                appendMessage({ role: "assistant", content: "Executive summary generation failed.", ts: now() });
+            })
+            .finally(function () { sendBtn.disabled = false; promptInput.focus(); });
+    }
+
+    function loadSectionData(section) {
+        ensureActiveId();
+        appendMessage({ role: "user", content: section.label, ts: now() });
+        renderConversationList();
+        var typing = appendTyping("Firewall Auditor");
+        sendBtn.disabled = true;
+
+        var dataPromise = section.endpoint
+            ? fetch(section.endpoint).then(function (r) { return r.json(); }).catch(function () { return null; })
+            : Promise.resolve(null);
+        var assessPromise = loadAssessmentData();
+
+        Promise.all([dataPromise, assessPromise]).then(function (results) {
+            removeTyping(typing);
+            var sectionData = results[0];
+            var assess = results[1];
+            var html = buildSectionHtml(section, sectionData, assess);
+            appendMessage({ role: "assistant", content: "", html: html, cardTitle: section.label, agentName: "Firewall Auditor", ts: now() });
+            renderConversationList();
+        }).finally(function () { sendBtn.disabled = false; promptInput.focus(); });
+    }
+
+    function controlDomain(cid) {
+        if (typeof FINDING_ENRICHMENT !== "undefined" && FINDING_ENRICHMENT[cid]) {
+            return FINDING_ENRICHMENT[cid].domain;
+        }
+        return null;
+    }
+
+    function computeSectionCompliance(assess, domains) {
+        var total = 0, compliant = 0;
+        var controls = (assess && assess.assessment) || [];
+        controls.forEach(function (c) {
+            var cid = (c.control || "").toUpperCase();
+            var domain = controlDomain(cid);
+            if (domain && domains.indexOf(domain) !== -1) {
+                total++;
+                if ((c.status || "").toUpperCase() === "COMPLIANT") compliant++;
+            }
+        });
+        var pct = total ? Math.round(compliant / total * 100) : 0;
+        return { total: total, compliant: compliant, pct: pct };
+    }
+
+    function collectRecommendations(assess, domains) {
+        var recs = [];
+        var seen = {};
+        var findings = (assess && assess.findings) || [];
+        findings.forEach(function (f) {
+            var cid = (f.control || "").toUpperCase();
+            var domain = controlDomain(cid);
+            if (domain && domains.indexOf(domain) !== -1) {
+                var r = f.remediation || (typeof FINDING_ENRICHMENT !== "undefined" && FINDING_ENRICHMENT[cid] ? FINDING_ENRICHMENT[cid].remediation : "") || "";
+                if (r && !seen[r]) { seen[r] = true; recs.push(r); }
+            }
+        });
+        return recs.slice(0, 5);
+    }
+
+    function buildSectionHtml(section, sectionData, assess) {
+        var compliance = computeSectionCompliance(assess, section.domains);
+        var recs = collectRecommendations(assess, section.domains);
+
+        var tone = compliance.pct >= 80 ? "good" : (compliance.pct >= 50 ? "warn" : "bad");
+
+        var html = '<div class="ws-section-card">';
+        html += '<div class="ws-section-title">' + escapeHtml(section.label) + '</div>';
+        html += '<div class="ws-section-compliance">' +
+            '<span class="ws-comp-badge ' + tone + '">' + compliance.compliant + ' / ' + compliance.total + ' compliant</span>' +
+            '<span class="ws-comp-pct">' + compliance.pct + '%</span>' +
+            '</div>';
+
+        if (recs.length) {
+            html += '<div class="ws-section-recs"><strong>Recommendations</strong><ul>';
+            recs.forEach(function (r) { html += '<li>' + escapeHtml(r) + '</li>'; });
+            html += '</ul></div>';
+        } else if (compliance.total) {
+            html += '<div class="ws-section-recs"><strong>All compliant</strong> \u2014 no recommendations needed.</div>';
+        }
+
+        if (sectionData && typeof sectionData === "object") {
+            html += '<div class="ws-section-data"><strong>Section Data</strong><div class="ws-section-kv">';
+            for (var k in sectionData) {
+                if (sectionData.hasOwnProperty(k)) {
+                    var v = sectionData[k];
+                    var display = v === null ? "\u2014" : typeof v === "object" ? JSON.stringify(v).substring(0, 140) : String(v);
+                    html += '<div class="ws-kv-row"><span>' + escapeHtml(k) + '</span><span>' + escapeHtml(display) + '</span></div>';
+                }
+            }
+            html += '</div></div>';
+        }
+        html += '</div>';
+        return html;
     }
 
     // ============================================================
@@ -887,6 +1082,15 @@
     // ============================================================
     // WIRING
     // ============================================================
+
+    if (chatWindow) {
+        chatWindow.addEventListener("click", function (e) {
+            var option = e.target.closest(".mcq-option");
+            if (!option) return;
+            var sectionId = option.getAttribute("data-section");
+            if (sectionId) showSection(sectionId);
+        });
+    }
 
     if (newChatBtn) newChatBtn.addEventListener("click", function () { createConversation(); promptInput.focus(); });
 
