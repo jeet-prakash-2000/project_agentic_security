@@ -883,6 +883,26 @@ def api_telemetry_map_history():
 
 
 # --------------------------------------------------
+# STARTUP VALIDATION
+# --------------------------------------------------
+
+def log_database_status():
+    try:
+        from database.db import check_connection
+
+        ok, message = check_connection()
+        if ok:
+            app.logger.info("Database: %s", message)
+        else:
+            app.logger.warning("Database: %s", message)
+    except Exception as exc:
+        app.logger.warning("Database startup check failed: %s", exc)
+
+
+log_database_status()
+
+
+# --------------------------------------------------
 # START
 # --------------------------------------------------
 

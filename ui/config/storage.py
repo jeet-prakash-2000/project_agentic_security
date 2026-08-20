@@ -74,8 +74,16 @@ def enabled():
     return bool(connection_string() or account_name())
 
 
+def postgres_enabled():
+    return bool((os.environ.get("DATABASE_URL") or "").strip())
+
+
 def backend():
-    return "azure-table" if enabled() else "json"
+    if postgres_enabled():
+        return "postgres"
+    if enabled():
+        return "azure-table"
+    return "json"
 
 
 def _table_name(document_name):
@@ -263,6 +271,16 @@ def load_document(document_name, default):
     if document_name not in DOCUMENTS:
         return default
 
+    if postgres_enabled():
+        try:
+            from database import storage_bridge
+
+            data = storage_bridge.load(document_name)
+            if data is not None:
+                return data
+        except Exception:
+            pass
+
     if enabled():
         try:
             data = _table_load(document_name)
@@ -272,7 +290,7 @@ def load_document(document_name, default):
             pass
 
     # Fall back to the local file (also seeds on first run after enabling
-    # Azure Storage: the next save will write the table).
+    # a remote backend: the next save will write the remote store).
     data = _file_load(document_name, default)
     if enabled() and data is not None and data != default:
         try:
@@ -286,7 +304,16 @@ def save_document(document_name, data):
     if document_name not in DOCUMENTS:
         return
 
+    # JSON files remain as a legacy migration backup.
     _file_save(document_name, data)
+
+    if postgres_enabled():
+        try:
+            from database import storage_bridge
+
+            storage_bridge.save(document_name, data)
+        except Exception:
+            pass
 
     if enabled():
         try:

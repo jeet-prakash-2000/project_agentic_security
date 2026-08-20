@@ -53,6 +53,23 @@ def remove_session():
         _session_factory.remove()
 
 
+def check_connection():
+    """Return ``(ok, message)`` after attempting a database connection.
+
+    Used for startup validation; never raises.
+    """
+    if not is_configured():
+        return False, "DATABASE_URL is not configured (using JSON fallback)."
+    try:
+        from sqlalchemy import text
+
+        with get_engine().connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True, "PostgreSQL connected."
+    except Exception as exc:
+        return False, "PostgreSQL unavailable: {0}".format(str(exc)[:200])
+
+
 def create_all():
     # Import models so they register with the metadata before creating tables.
     from database import models  # noqa: F401
