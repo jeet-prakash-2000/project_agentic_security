@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTM Security Platform — Agentic Network &amp; Cloud Security</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=1">
+</head>
+<body>
+
+    <header class="land-nav">
+        <a href="{{ url_for('home') }}" class="land-brand">
+            <span class="land-logo"><img src="{{ url_for('static', filename='images/logo.svg') }}" alt="LTM Security Platform"></span>
+            <span class="land-brand-text"><strong>LTM Security</strong><span>Platform</span></span>
+        </a>
+        <nav class="land-nav-links">
+            <a href="#features">Features</a>
+            <a href="#benefits">Benefits</a>
+            <a href="#usecases">Use Cases</a>
+            <a href="#faq">FAQ</a>
+        </nav>
+        <a href="{{ url_for('login') }}" class="land-login-btn">Login</a>
+    </header>
+
+    <section class="land-hero">
+        <div class="land-hero-inner">
+            <span class="land-eyebrow">Agentic Security Operations</span>
+            <h1>Continuous Network &amp; Cloud <span>Security Compliance</span></h1>
+            <p>LTM Security Platform uses AI agents to assess your Palo Alto firewall estate, surface risks, and generate executive-ready reports — automatically.</p>
+            <div class="land-hero-cta">
+                <a href="{{ url_for('login') }}" class="land-btn land-btn-primary">Get Started</a>
+                <a href="{{ url_for('login') }}" class="land-btn land-btn-ghost">Request a Demo</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="land-section" id="features">
+        <h2>Platform Features</h2>
+        <p class="land-sub">Everything your security team needs to assess, understand, and report on compliance — powered by AI.</p>
+        <div class="land-grid land-grid-3">
+            <div class="land-card">
+                <span class="land-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/></svg>
+                </span>
+                <h3>Compliance Assessment</h3>
+                <p>Automatically evaluate 44+ controls across your firewall estate against hardened security baselines.</p>
+            </div>
+            <div class="land-card">
+                <span class="land-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>
+                </span>
+                <h3>AI Copilot</h3>
+                <p>Ask natural-language questions and receive instant answers with prioritized remediation guidance.</p>
+            </div>
+            <div class="land-card">
+                <span class="land-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                </span>
+                <h3>Executive Reporting</h3>
+                <p>Generate management-ready executive summaries and detailed Excel workbooks in a single click.</p>
+            </div>
+            <div class="land-card">
+                <span class="land-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><circle cx="12" cy="17" r="1"/></svg>
+                </span>
+                <h3>Risk Prioritization</h3>
+                <p>Findings are ranked by severity and risk score so your team focuses on what matters most first.</p>
+            </div>
+            <div class="land-card">
+                <span class="land-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 00-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0012 2z"/><path d="M9 18h6M10 22h4"/></svg>
+                </span>
+                <h3>Trend Analytics</h3>
+                <p>Track compliance scores over time and understand whether your posture is improving or declining.</p>
+            </div>
+            <div class="land-card">
+                <span class="land-card-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+                </span>
+                <h3>Audit-Ready Outputs</h3>
+                <p>Keep a full history of assessments, findings, and reports for compliance and audit reviews.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="land-benefits" id="benefits">
+        <h2>Why security teams choose LTM</h2>
+        <div>
+            <div class="land-benefit">
+                <span class="land-check">&#10003;</span>
+                <div><strong>Faster, continuous assessments</strong><p>Move from quarterly manual audits to on-demand, automated compliance checks.</p></div>
+            </div>
+            <div class="land-benefit">
+                <span class="land-check">&#10003;</span>
+                <div><strong>Less alert fatigue</strong><p>AI triage turns thousands of configuration details into a focused, prioritized action list.</p></div>
+            </div>
+            <div class="land-benefit">
+                <span class="land-check">&#10003;</span>
+                <div><strong>Executive clarity</strong><p>Management-ready summaries translate technical findings into business risk language.</p></div>
+            </div>
+            <div class="land-benefit">
+                <span class="land-check">&#10003;</span>
+                <div><strong>Actionable remediation</strong><p>Every finding includes concrete remediation steps and severity-based prioritization.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <section class="land-section" id="usecases">
+        <h2>Use Cases</h2>
+        <p class="land-sub">Where the LTM Security Platform delivers value every day.</p>
+        <div class="land-grid land-grid-2">
+            <div class="land-card">
+                <h3>Firewall Configuration Audits</h3>
+                <p>Routinely verify policies, routing, VPN, HA, logging, and hardening settings against best-practice baselines.</p>
+            </div>
+            <div class="land-card">
+                <h3>Compliance &amp; Audit Preparation</h3>
+                <p>Produce evidence-backed compliance reports for internal audits and regulatory reviews on demand.</p>
+            </div>
+            <div class="land-card">
+                <h3>Security Posture Tracking</h3>
+                <p>Monitor compliance trends over time and demonstrate continuous improvement to leadership.</p>
+            </div>
+            <div class="land-card">
+                <h3>Remediation Planning</h3>
+                <p>Use prioritized, severity-ranked findings and recommendations to drive your hardening roadmap.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="land-section land-faq" id="faq">
+        <h2>Frequently Asked Questions</h2>
+        <p class="land-sub">Answers to the questions we hear most.</p>
+        <details>
+            <summary>What does the LTM Security Platform assess?</summary>
+            <p>The platform evaluates your Palo Alto firewall estate across 44+ controls covering software &amp; platform currency, capacity, security services, networking, VPN, administration, and logging &amp; monitoring.</p>
+        </details>
+        <details>
+            <summary>How does the AI copilot work?</summary>
+            <p>The AI Workspace connects to your firewall data through an agent endpoint. Ask questions in plain English and the copilot returns data-driven answers with remediation guidance.</p>
+        </details>
+        <details>
+            <summary>Is my data stored securely?</summary>
+            <p>Yes. Assessment history, conversations, and reports are persisted in your own PostgreSQL database or secure storage, never shared.</p>
+        </details>
+        <details>
+            <summary>Can I export reports?</summary>
+            <p>Absolutely. Generate executive summaries (PDF) and detailed assessment workbooks (XLSX), all stored in your Reports history.</p>
+        </details>
+    </section>
+
+    <footer class="land-footer">
+        <p><strong>LTM Security Platform</strong> &mdash; Agentic network &amp; cloud security compliance. &copy; 2026. Built for enterprise security teams.</p>
+    </footer>
+
+</body>
+</html>

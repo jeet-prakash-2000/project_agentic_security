@@ -85,8 +85,8 @@
     --shadow-md: 0 12px 32px rgba(11, 27, 43, 0.1);
 
     /* ---- Layout ---- */
-    --sidebar-width: 84px;
-    --sidebar-expanded-width: 268px;
+    --sidebar-width: 96px;
+    --sidebar-expanded-width: 300px;
     --topbar-height: 68px;
 
     /* ---- Typography ---- */
@@ -507,12 +507,64 @@ input, select, textarea {
     transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 
+/* --------------------------------------------------
+   DESKTOP COLLAPSIBLE SIDEBAR
+   -------------------------------------------------- */
+
+@media (min-width: 769px) {
+    .sidebar {
+        width: var(--sidebar-width);
+    }
+
+    .sidebar.expanded {
+        width: var(--sidebar-expanded-width);
+        padding: 18px 16px;
+    }
+
+    .sidebar.expanded .brand-text {
+        opacity: 1;
+        width: auto;
+    }
+
+    .sidebar.expanded .nav-link {
+        justify-content: flex-start;
+        width: 100%;
+        height: auto;
+        margin: 0;
+        gap: 13px;
+        padding: 12px 14px;
+    }
+
+    .sidebar.expanded .nav-link > span {
+        opacity: 1;
+        width: auto;
+    }
+
+    .sidebar.expanded .nav-link::before {
+        display: none;
+    }
+
+    .sidebar.expanded .system-status .status-label {
+        opacity: 1;
+        width: auto;
+    }
+
+    .sidebar.expanded .sidebar-version {
+        opacity: 1;
+    }
+
+    body.sidebar-expanded .content {
+        margin-left: calc(var(--sidebar-expanded-width) + 28px);
+    }
+}
+
 .content {
     margin-left: calc(var(--sidebar-width) + 28px);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     position: relative;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1;
 }
 

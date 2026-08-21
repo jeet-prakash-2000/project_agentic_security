@@ -177,8 +177,9 @@
         var risk = rec.risk.toLowerCase();
         if (f.severity !== "all" && risk !== f.severity) return false;
         if (f.status !== "all") {
-            if (f.status === "non-compliant" && rec._compliant) return false;
-            if (f.status === "compliant" && !rec._compliant) return false;
+            if (f.status === "non-compliant" && rec.status !== "NON_COMPLIANT") return false;
+            if (f.status === "compliant" && rec.status !== "COMPLIANT") return false;
+            if (f.status === "not-assessed" && rec.status !== "NOT_ASSESSED") return false;
         }
         if (f.domain !== "all" && rec._category !== f.domain) return false;
         if (f.firewall !== "all" && rec._firewall !== f.firewall) return false;
@@ -456,60 +457,12 @@
     }
 
     // ============================================================
-    // SIDE RAIL
-    // ============================================================
-
-    function renderTimeline(posture, firewall, data) {
-        var el = document.getElementById("assessmentTimeline");
-        if (!el) return;
-        var collected = posture.collected_at || posture.last_assessment_ts;
-        var sev = posture.severity || {};
-        var items = [
-            { label: "Assessment Started", detail: "Compliance assessment initiated", ts: posture.last_assessment_ts, dot: "warn" },
-            { label: "Data Collected", detail: firewall.hostname + " \u00b7 PAN-OS " + firewall.version, ts: collected, dot: "" },
-            { label: "Controls Evaluated", detail: posture.compliant + " of " + posture.total_controls + " compliant \u00b7 " + posture.non_compliant + " findings", ts: collected, dot: "" },
-            { label: "Findings Generated", detail: sev.critical + " critical \u00b7 " + sev.high + " high \u00b7 " + sev.medium + " medium \u00b7 " + sev.low + " low", ts: collected, dot: "ok" },
-            { label: "Report Ready", detail: "Run " + (posture.run_id || "\u2014") + " \u00b7 " + (data._source === "live" ? "Live data" : "Sample data"), ts: collected, dot: "ok" }
-        ];
-        var html = "";
-        items.forEach(function (it) {
-            html += '<div class="timeline-item">' +
-                '<span class="timeline-dot ' + it.dot + '"></span>' +
-                '<div class="timeline-label">' + escapeHtml(it.label) + '</div>' +
-                '<div class="timeline-detail">' + escapeHtml(it.detail) + '</div>' +
-                '<div class="timeline-ts">' + escapeHtml(formatTs(it.ts)) + '</div>' +
-                '</div>';
-        });
-        el.innerHTML = html;
-    }
-
-    function renderDomainList(records) {
-        var el = document.getElementById("domainList");
-        if (!el) return;
-        var counts = {};
-        records.forEach(function (r) { if (!r._compliant) counts[r._category] = (counts[r._category] || 0) + 1; });
-        var max = 1;
-        CATEGORY_ORDER.forEach(function (c) { max = Math.max(max, counts[c] || 0); });
-        var html = "";
-        CATEGORY_ORDER.forEach(function (c) {
-            var n = counts[c] || 0;
-            if (!n) return;
-            html += '<div class="domain-row">' +
-                '<div class="domain-row-head"><span class="domain-row-name">' + escapeHtml(c) + '</span><span class="domain-row-count">' + n + '</span></div>' +
-                '<div class="domain-row-bar"><div class="domain-row-bar-fill" style="width:' + (n / max * 100) + '%"></div></div>' +
-                '</div>';
-        });
-        el.innerHTML = html || '<p class="trend-summary">No non-compliant findings.</p>';
-    }
-
-    // ============================================================
     // RENDER ALL
     // ============================================================
 
     function renderAll() {
         var visible = getVisible();
         renderGroups(visible);
-        renderDomainList(state.records);
         renderActiveFilters();
     }
 
@@ -673,6 +626,13 @@
         try {
             var saved = JSON.parse(localStorage.getItem(STORAGE_FILTERS) || "null");
             if (saved && typeof saved === "object") state.filters = Object.assign(defaultFilters(), saved);
+        } catch (e) { /* ignore */ }
+        try {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get("status")) state.filters.status = params.get("status");
+            if (params.get("domain")) state.filters.domain = params.get("domain");
+            if (params.get("severity")) state.filters.severity = params.get("severity");
+            if (params.get("search")) state.filters.search = params.get("search");
         } catch (e) { /* ignore */ }
         try {
             state.reviewed = JSON.parse(localStorage.getItem(STORAGE_REVIEWED) || "{}") || {};
@@ -1137,7 +1097,6 @@
                     return enrich(r, findingMap[(r.control || "").toUpperCase()], null, ctx);
                 });
 
-                renderTimeline(posture, data.firewall, data);
                 renderDomainChips();
                 populateFirewallSelect(data.firewalls);
                 populateDateSelect(data.history);

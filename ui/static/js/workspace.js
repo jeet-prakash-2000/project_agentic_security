@@ -513,25 +513,50 @@
             .catch(function () { return null; });
     }
 
+    function kpiCard(label, sub, value) {
+        return '<div class="ws-kpi"><span class="ws-kpi-label">' + escapeHtml(label) + '</span>' +
+            '<strong class="ws-kpi-value">' + escapeHtml(value == null ? "-" : String(value)) + '</strong>' +
+            '<span class="ws-kpi-sub">' + escapeHtml(sub) + '</span></div>';
+    }
+
+    function loadKpiCards() {
+        return fetch("/api/dashboard")
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var c = data.compliance || {};
+                return '<div class="ws-kpi-row">' +
+                    kpiCard("Scope", "Total Controls", c.total_controls) +
+                    kpiCard("Compliant", "Compliant", c.compliant) +
+                    kpiCard("Issues", "Non-Compliant", c.non_compliant) +
+                    kpiCard("Pending", "Not Assessed", c.not_assessed) +
+                    kpiCard("Score", "Compliance Score", (c.compliance_score == null ? "-" : c.compliance_score + "%")) +
+                    "</div>";
+            })
+            .catch(function () { return '<div class="ws-kpi-row"></div>'; });
+    }
+
     function showMcqCard() {
         ensureActiveId();
         appendMessage({ role: "user", content: "Compliance Assessment", ts: now() });
         renderConversationList();
 
-        var options = ASSESSMENT_SECTIONS.map(function (s) {
-            return '<button class="mcq-option" type="button" data-section="' + s.id + '">' +
-                '<span class="mcq-option-label">' + escapeHtml(s.label) + '</span>' +
-                '<span class="mcq-option-arrow">' + ARROW_ICON + '</span>' +
-                '</button>';
-        }).join("");
+        loadKpiCards().then(function (kpiHtml) {
+            var options = ASSESSMENT_SECTIONS.map(function (s) {
+                return '<button class="mcq-option" type="button" data-section="' + s.id + '">' +
+                    '<span class="mcq-option-label">' + escapeHtml(s.label) + '</span>' +
+                    '<span class="mcq-option-arrow">' + ARROW_ICON + '</span>' +
+                    '</button>';
+            }).join("");
 
-        var html = '<div class="ws-mcq-card">' +
-            '<div class="ws-mcq-head"><strong>Compliance Assessment</strong><span>Select a section to review</span></div>' +
-            '<div class="ws-mcq-options">' + options + '</div>' +
-            '</div>';
+            var html = '<div class="ws-mcq-card">' +
+                kpiHtml +
+                '<div class="ws-mcq-head"><strong>Compliance Assessment</strong><span>Select a section to review</span></div>' +
+                '<div class="ws-mcq-options">' + options + '</div>' +
+                '</div>';
 
-        appendMessage({ role: "assistant", content: "", html: html, cardTitle: "Compliance Assessment", agentName: "Firewall Auditor", ts: now() });
-        renderConversationList();
+            appendMessage({ role: "assistant", content: "", html: html, cardTitle: "Compliance Assessment", agentName: "Firewall Auditor", ts: now() });
+            renderConversationList();
+        });
     }
 
     function showSection(sectionId) {

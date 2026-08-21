@@ -86,8 +86,32 @@ def get_dashboard():
         round(compliant / total_controls * 100) if total_controls else 0
     )
 
-    critical = sum(1 for f in findings if (f.get("risk") or "").upper() == "CRITICAL")
-    high = sum(1 for f in findings if (f.get("risk") or "").upper() == "HIGH")
+    sev_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+    severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    for f in findings:
+        risk = (f.get("risk") or "").upper()
+        if risk in sev_order:
+            severity_counts[risk.lower()] += 1
+
+    ordered_findings = sorted(
+        findings,
+        key=lambda f: sev_order.get((f.get("risk") or "").upper(), 4),
+    )
+    recent_findings = [
+        {
+            "control": f.get("control"),
+            "risk": (f.get("risk") or "LOW").upper(),
+            "title": (f.get("finding") or "")[:100],
+        }
+        for f in ordered_findings[:5]
+    ]
+    findings_list = [
+        {
+            "control": f.get("control"),
+            "risk": (f.get("risk") or "LOW").upper(),
+        }
+        for f in findings
+    ]
 
     insights = insights_service.summarize()
     totals = insights.get("totals", {})
@@ -128,10 +152,14 @@ def get_dashboard():
             "source": assessment.get("_source", "sample"),
         },
         "findings": {
-            "critical": critical,
-            "high": high,
+            "critical": severity_counts["critical"],
+            "high": severity_counts["high"],
+            "medium": severity_counts["medium"],
+            "low": severity_counts["low"],
             "open": len(findings),
         },
+        "recent_findings": recent_findings,
+        "findings_list": findings_list,
         "cost": {
             "total_cost": total_cost,
             "total_tokens": total_tokens,

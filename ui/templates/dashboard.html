@@ -6,88 +6,35 @@
 
 {% block content %}
 
-<section class="hero">
-    <div class="hero-glow"></div>
-    <div class="hero-content">
-        <span class="hero-eyebrow">Security Operations</span>
-        <h1>Welcome Back, Jeet</h1>
-        <p>Monitor and manage your AI Security Workspace</p>
-        <div class="hero-meta">
-            <span class="hero-chip">
-                <span class="pulse-dot"></span>
-                Firewall Auditor — Connected
-            </span>
-            <span class="hero-chip" id="dataSourceBadge">Connecting…</span>
-            <button class="hero-chip hero-chip-btn" id="refreshBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 102.6-8L1 10"/></svg>
-                Refresh
-            </button>
-        </div>
-    </div>
-</section>
+<div class="dash-meta">
+    <span class="hero-chip" id="dataSourceBadge">Connecting…</span>
+    <button class="hero-chip hero-chip-btn" id="refreshBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 102.6-8L1 10"/></svg>
+        Refresh
+    </button>
+</div>
 
-<section class="kpi-grid">
-    <div class="kpi-card">
-        <div class="kpi-top">
-            <span class="kpi-icon kpi-icon-blue">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/></svg>
-            </span>
-            <span class="kpi-trend">Scope</span>
+<section class="dash-grid-2">
+    <div class="card dash-panel pie-panel">
+        <div class="section-head"><h3>Compliance Score</h3></div>
+        <div class="donut-wrap">
+            <svg id="compliancePie" viewBox="0 0 200 200" aria-label="Compliance donut"></svg>
+            <div class="donut-center" id="donutCenter">
+                <strong id="donutPercent">—%</strong>
+                <span>Compliance Score</span>
+                <em id="donutStatus">—</em>
+            </div>
         </div>
-        <div class="kpi-value" data-count="{{ total_controls }}">{{ total_controls }}</div>
-        <div class="kpi-label">Total Controls</div>
+        <div class="donut-pills" id="donutPills"></div>
     </div>
-
-    <div class="kpi-card">
-        <div class="kpi-top">
-            <span class="kpi-icon kpi-icon-green">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-            </span>
-            <span class="kpi-trend kpi-trend-good">Compliant</span>
-        </div>
-        <div class="kpi-value kpi-value-good" data-count="{{ compliant }}">{{ compliant }}</div>
-        <div class="kpi-label">Compliant Controls</div>
-    </div>
-
-    <div class="kpi-card">
-        <div class="kpi-top">
-            <span class="kpi-icon kpi-icon-red">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 16.5v.5"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg>
-            </span>
-            <span class="kpi-trend kpi-trend-bad">Needs Action</span>
-        </div>
-        <div class="kpi-value kpi-value-bad" data-count="{{ non_compliant }}">{{ non_compliant }}</div>
-        <div class="kpi-label">Non-Compliant Controls</div>
-    </div>
-
-    <div class="kpi-card">
-        <div class="kpi-top">
-            <span class="kpi-icon kpi-icon-purple">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-            </span>
-            <span class="kpi-trend">Pending</span>
-        </div>
-        <div class="kpi-value" data-count="{{ not_assessed }}">{{ not_assessed }}</div>
-        <div class="kpi-label">Not Assessed Controls</div>
-    </div>
-
-    <div class="kpi-card">
-        <div class="kpi-top">
-            <span class="kpi-icon kpi-icon-green">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M9.5 12l1.8 1.8 3.2-3.6"/></svg>
-            </span>
-            <span class="kpi-trend kpi-trend-good">Score</span>
-        </div>
-        <div class="kpi-value" id="kpiComplianceScore">-</div>
-        <div class="kpi-label">Compliance Score</div>
+    <div class="card dash-panel">
+        <div class="section-head"><h3>Findings by Severity</h3></div>
+        <div class="severity-grid" id="severityGrid"></div>
     </div>
 </section>
 
 <section class="quick-actions">
-    <div class="section-head">
-        <h3>Quick Actions</h3>
-        <span class="section-sub">One-click operations powered by the Firewall Auditor agent</span>
-    </div>
+    <div class="section-head"><h3>Quick Actions</h3></div>
     <div class="quick-grid">
         <a href="{{ url_for('run_assessment') }}" class="quick-card">
             <span class="quick-icon quick-icon-blue">
@@ -95,41 +42,53 @@
             </span>
             <div class="quick-body">
                 <h4>Run Assessment</h4>
-                <p>Execute a complete Palo Alto firewall compliance assessment across all controls.</p>
+                <p>Execute a full compliance assessment</p>
             </div>
             <span class="quick-arrow">→</span>
         </a>
-
         <a href="{{ url_for('executive_report') }}" class="quick-card">
             <span class="quick-icon quick-icon-purple">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
             </span>
             <div class="quick-body">
                 <h4>Executive Summary</h4>
-                <p>Generate a management-level summary of your security posture and risk exposure.</p>
+                <p>Generate a management-level summary</p>
             </div>
             <span class="quick-arrow">→</span>
         </a>
-
         <a href="{{ url_for('generate_excel') }}" class="quick-card">
             <span class="quick-icon quick-icon-green">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8l4 4V21.5H6V2.5z"/><path d="M14 2.5v4h4"/><path d="M9 12h6M9 16h6"/></svg>
             </span>
             <div class="quick-body">
                 <h4>Generate Report</h4>
-                <p>Produce the detailed assessment workbook with findings and remediation guidance.</p>
+                <p>Produce the assessment workbook</p>
             </div>
             <span class="quick-arrow">→</span>
         </a>
     </div>
 </section>
 
-<section class="compliance-trend-section card" aria-label="Compliance trend">
+<section class="card dash-panel">
+    <div class="section-head">
+        <h3>Recent Findings</h3>
+        <a href="{{ url_for('findings') }}" class="view-all">View All &rarr;</a>
+    </div>
+    <div class="recent-findings" id="recentFindings"></div>
+</section>
+
+<section class="card dash-panel">
+    <div class="section-head"><h3>Top Risk Domains</h3></div>
+    <div class="vertical-bars" id="verticalBars"></div>
+</section>
+
+<section class="compliance-trend-section card">
     <div class="section-head">
         <div>
             <h3>Compliance Trend</h3>
             <span class="section-sub">Historical compliance score over time</span>
         </div>
+        <div class="trend-stats" id="trendStats"></div>
     </div>
     <div class="trend-chart" id="trendChart"></div>
 </section>
@@ -137,5 +96,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/dashboard.js') }}?v=2"></script>
+<script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=7"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}?v=7"></script>
 {% endblock %}

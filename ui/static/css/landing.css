@@ -1,0 +1,296 @@
+:root {
+    --ltm-red: #E4002B;
+    --ltm-red-gradient: linear-gradient(135deg, #FF3040, #FF1F36);
+    --navy: #0F172A;
+    --slate: #475569;
+    --muted: #64748B;
+    --line: #E2E8F0;
+    --bg: #F8FAFC;
+    --white: #FFFFFF;
+    --success: #16A34A;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: "Inter", "Segoe UI", -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--navy);
+    line-height: 1.6;
+}
+
+a { text-decoration: none; color: inherit; }
+
+/* ---------------- NAV ---------------- */
+.land-nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 16px 40px;
+    background: rgba(255, 255, 255, 0.85);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--line);
+}
+
+.land-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.land-logo {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.land-logo img { width: 100%; height: 100%; object-fit: contain; }
+
+.land-brand-text { display: flex; flex-direction: column; line-height: 1.1; }
+.land-brand-text strong { font-size: 17px; font-weight: 800; color: var(--navy); }
+.land-brand-text span { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+
+.land-nav-links {
+    display: flex;
+    gap: 26px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--slate);
+}
+
+.land-nav-links a:hover { color: var(--ltm-red); }
+
+.land-login-btn {
+    background: var(--ltm-red-gradient);
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 10px 22px;
+    border-radius: 999px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.land-login-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(228, 0, 43, 0.35);
+}
+
+/* ---------------- HERO ---------------- */
+.land-hero {
+    position: relative;
+    overflow: hidden;
+    padding: 90px 40px 100px;
+    background: linear-gradient(135deg, #FFFFFF 0%, #FFF0F2 55%, #FFE3E7 100%);
+    text-align: center;
+}
+
+.land-hero-inner { max-width: 860px; margin: 0 auto; }
+
+.land-eyebrow {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ltm-red);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(228, 0, 43, 0.3);
+    padding: 7px 16px;
+    border-radius: 999px;
+    margin-bottom: 22px;
+}
+
+.land-hero h1 {
+    font-size: 52px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin-bottom: 20px;
+}
+
+.land-hero h1 span { color: var(--ltm-red); }
+
+.land-hero p {
+    font-size: 18px;
+    color: var(--slate);
+    max-width: 640px;
+    margin: 0 auto 34px;
+}
+
+.land-hero-cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+.land-btn {
+    display: inline-block;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 14px 30px;
+    border-radius: 12px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.land-btn-primary {
+    background: var(--ltm-red-gradient);
+    color: #fff;
+    box-shadow: 0 12px 28px rgba(228, 0, 43, 0.3);
+}
+
+.land-btn-primary:hover { transform: translateY(-2px); }
+
+.land-btn-ghost {
+    background: #fff;
+    color: var(--navy);
+    border: 1px solid var(--line);
+}
+
+.land-btn-ghost:hover { transform: translateY(-2px); box-shadow: var(--shadow-soft, 0 4px 14px rgba(15, 23, 42, 0.08)); }
+
+/* ---------------- SECTIONS ---------------- */
+.land-section {
+    padding: 72px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.land-section h2 {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.land-section > .land-sub {
+    text-align: center;
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 620px;
+    margin: 0 auto 44px;
+}
+
+.land-grid { display: grid; gap: 20px; }
+.land-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.land-grid-2 { grid-template-columns: repeat(2, 1fr); }
+
+.land-card {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.land-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(228, 0, 43, 0.35);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.1);
+}
+
+.land-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: var(--red-soft, #FFF0F2);
+    color: var(--ltm-red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.land-card-icon svg { width: 24px; height: 24px; }
+
+.land-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.land-card p { font-size: 14px; color: var(--slate); }
+
+/* ---------------- BENEFITS ---------------- */
+.land-benefits {
+    background: var(--navy);
+    color: #fff;
+    padding: 72px 40px;
+    border-radius: 28px;
+    max-width: 1200px;
+    margin: 0 auto 72px;
+}
+
+.land-benefits h2 { text-align: center; font-size: 32px; margin-bottom: 40px; }
+
+.land-benefit {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.land-benefit:first-of-type { border-top: none; }
+
+.land-benefit strong { color: #fff; font-size: 16px; }
+.land-benefit p { color: #B8C2D0; font-size: 14px; }
+
+.land-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--success);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* ---------------- FAQ ---------------- */
+.land-faq details {
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin-bottom: 12px;
+}
+
+.land-faq summary {
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.land-faq summary::after { content: "+"; float: right; color: var(--ltm-red); font-size: 18px; }
+.land-faq details[open] summary::after { content: "\2212"; }
+
+.land-faq p {
+    margin-top: 12px;
+    color: var(--slate);
+    font-size: 14px;
+}
+
+/* ---------------- FOOTER ---------------- */
+.land-footer {
+    background: var(--navy);
+    color: #B8C2D0;
+    padding: 36px 40px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.land-footer strong { color: #fff; }
+
+/* ---------------- RESPONSIVE ---------------- */
+@media (max-width: 900px) {
+    .land-nav-links { display: none; }
+    .land-hero { padding: 60px 24px 70px; }
+    .land-hero h1 { font-size: 36px; }
+    .land-section { padding: 48px 24px; }
+    .land-grid-3, .land-grid-2 { grid-template-columns: 1fr; }
+    .land-benefits { padding: 48px 24px; }
+}

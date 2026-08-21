@@ -5,6 +5,10 @@
     var backdrop = document.getElementById("sidebarBackdrop");
     var menuToggle = document.getElementById("menuToggle");
 
+    function isDesktop() {
+        return window.innerWidth > 768;
+    }
+
     function toggleSidebar(open) {
         if (!sidebar || !backdrop) return;
         sidebar.classList.toggle("open", open);
@@ -12,10 +16,33 @@
         document.body.style.overflow = open ? "hidden" : "";
     }
 
+    function toggleDesktopSidebar(expanded) {
+        if (!sidebar) return;
+        sidebar.classList.toggle("expanded", expanded);
+        document.body.classList.toggle("sidebar-expanded", expanded);
+        try { sessionStorage.setItem("ltm.sidebar.expanded", expanded ? "1" : "0"); } catch (e) { /* ignore */ }
+    }
+
+    function restoreDesktopSidebar() {
+        if (!isDesktop() || !sidebar) return;
+        var expanded = true;
+        try {
+            var saved = sessionStorage.getItem("ltm.sidebar.expanded");
+            if (saved === "0") expanded = false;
+            else if (saved === "1") expanded = true;
+        } catch (e) { /* ignore */ }
+        toggleDesktopSidebar(expanded);
+    }
+
     if (menuToggle) {
         menuToggle.addEventListener("click", function () {
-            var isOpen = sidebar.classList.contains("open");
-            toggleSidebar(!isOpen);
+            if (isDesktop()) {
+                var isExpanded = sidebar.classList.contains("expanded");
+                toggleDesktopSidebar(!isExpanded);
+            } else {
+                var isOpen = sidebar.classList.contains("open");
+                toggleSidebar(!isOpen);
+            }
         });
     }
 
@@ -30,10 +57,15 @@
             sidebar.classList.remove("open");
             if (backdrop) backdrop.classList.remove("show");
             document.body.style.overflow = "";
+        } else if (sidebar) {
+            sidebar.classList.remove("expanded");
+            document.body.classList.remove("sidebar-expanded");
         }
     });
 
-    window.showToast = function (message, type) {
+    restoreDesktopSidebar();
+
+    window.showToast = function (message, type, duration) {
         var container = document.getElementById("toastContainer");
         if (!container) return;
 
@@ -42,12 +74,13 @@
         toast.textContent = message;
         container.appendChild(toast);
 
+        var ms = (typeof duration === "number" && duration > 0) ? duration : 3400;
         setTimeout(function () {
             toast.classList.add("hide");
             setTimeout(function () {
                 if (toast.parentNode) toast.parentNode.removeChild(toast);
             }, 300);
-        }, 3400);
+        }, ms);
     };
 
     document.addEventListener("click", function (event) {

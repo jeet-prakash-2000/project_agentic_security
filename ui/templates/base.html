@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}LTM Security Platform{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=4">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}?v=5">
     {% if page_css %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/' ~ page_css) }}?v=8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/' ~ page_css) }}?v=10">
     {% endif %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -110,7 +110,7 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=3"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}?v=5"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

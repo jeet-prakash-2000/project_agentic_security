@@ -1541,3 +1541,46 @@
 @media (max-width: 640px) {
     .ws-mcq-options { grid-template-columns: 1fr; }
 }
+
+/* KPI strip inside the Compliance Assessment MCQ card */
+.ws-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.ws-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    background: var(--glass-soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.ws-kpi-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+}
+
+.ws-kpi-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+    font-family: var(--font-display);
+}
+
+.ws-kpi-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+@media (max-width: 640px) {
+    .ws-kpi-row { grid-template-columns: repeat(2, 1fr); }
+}

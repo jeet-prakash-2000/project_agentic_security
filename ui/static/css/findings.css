@@ -144,10 +144,7 @@
    ============================================================ */
 
 .findings-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 340px;
-    gap: 18px;
-    align-items: start;
+    display: block;
 }
 
 .findings-main { min-width: 0; }
@@ -512,47 +509,7 @@
    SIDE RAIL
    ============================================================ */
 
-.findings-side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: 84px; }
-.side-panel { padding: 16px 18px; }
-.side-panel-head { margin-bottom: 12px; }
-.side-panel-head h4 { font-size: 13px; font-weight: 700; color: var(--text); margin: 0; }
-
 .trend-summary { font-size: 11.5px; color: var(--text-2); line-height: 1.5; }
-
-.timeline { display: flex; flex-direction: column; }
-.timeline-item {
-    position: relative;
-    padding: 0 0 16px 22px;
-}
-.timeline-item:last-child { padding-bottom: 0; }
-.timeline-item::before {
-    content: "";
-    position: absolute;
-    left: 6px; top: 4px; bottom: 0;
-    width: 2px;
-    background: var(--border);
-}
-.timeline-item:last-child::before { display: none; }
-.timeline-dot {
-    position: absolute;
-    left: 0; top: 2px;
-    width: 12px; height: 12px; border-radius: 50%;
-    background: var(--surface);
-    border: 2px solid var(--crimson);
-}
-.timeline-dot.ok { border-color: var(--success); }
-.timeline-dot.warn { border-color: var(--warning); }
-.timeline-label { font-size: 12.5px; font-weight: 700; color: var(--text); }
-.timeline-detail { font-size: 11px; color: var(--text-3); margin-top: 1px; line-height: 1.4; }
-.timeline-ts { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
-
-.domain-list { display: flex; flex-direction: column; gap: 10px; }
-.domain-row { display: flex; flex-direction: column; gap: 4px; }
-.domain-row-head { display: flex; justify-content: space-between; align-items: center; }
-.domain-row-name { font-size: 12px; font-weight: 600; color: var(--text-2); }
-.domain-row-count { font-size: 11px; font-weight: 700; color: var(--text-3); }
-.domain-row-bar { height: 6px; border-radius: 4px; background: var(--bg); overflow: hidden; }
-.domain-row-bar-fill { height: 100%; border-radius: 4px; background: var(--gradient-red); }
 
 /* ============================================================
    AI COPILOT PANEL
@@ -645,8 +602,6 @@
    ============================================================ */
 
 @media (max-width: 1200px) {
-    .findings-layout { grid-template-columns: 1fr; }
-    .findings-side { position: static; }
 }
 @media (max-width: 768px) {
     .risk-context-grid { grid-template-columns: 1fr; }

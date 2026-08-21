@@ -135,39 +135,36 @@ def render_reports(**context):
 
 @app.route("/login", methods=["GET", "POST"], endpoint="login")
 def login():
-    error = None
     if request.method == "POST":
+        # Demo login: any credentials land on the dashboard.
         email = (request.form.get("email") or "").strip()
-        password = request.form.get("password") or ""
-        user = users_service.authenticate(email, password)
+        user = users_service.authenticate(email, request.form.get("password") or "")
         if user:
             session["user_id"] = user["id"]
-            return redirect(url_for("workspace"))
-        error = "Invalid email or password."
-
-    return render_template("login.html", mode="login", error=error)
+        else:
+            session["user_id"] = "demo"
+        return redirect(url_for("dashboard"))
+    return render_template("login.html", mode="login", error=None)
 
 
 @app.route("/signup", methods=["POST"], endpoint="signup")
 def signup():
-    name = (request.form.get("name") or "").strip()
-    email = (request.form.get("email") or "").strip()
-    password = request.form.get("password") or ""
-
+    # Demo sign-up: any details land on the dashboard.
+    name = (request.form.get("name") or "").strip() or "Demo User"
+    email = (request.form.get("email") or "").strip() or "demo@ltm.com"
+    password = request.form.get("password") or "demo"
     try:
         user = users_service.create_user(name, email, password)
-    except ValueError as e:
-        return render_template("login.html", mode="signup", error=str(e), form={"name": name, "email": email}), 400
-
-    session_manager.claim_anonymous_conversations(user["id"])
-    session["user_id"] = user["id"]
-    return redirect(url_for("workspace"))
+        session["user_id"] = user["id"]
+    except ValueError:
+        session["user_id"] = "demo"
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("login"))
+    return redirect(url_for("home"))
 
 
 # --------------------------------------------------
@@ -177,8 +174,8 @@ def logout():
 @app.route("/")
 def home():
 
-    return redirect(
-        url_for("dashboard")
+    return render_with_css(
+        "landing.html"
     )
 
 # --------------------------------------------------
