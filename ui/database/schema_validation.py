@@ -12,6 +12,31 @@ def _expected_type(column):
     return str(column.type)
 
 
+def _types_compatible(db_type, model_type):
+    """Return True when two type strings are equivalent (or in the same family)."""
+    db_type = (db_type or "").upper()
+    model_type = (model_type or "").upper()
+    if db_type == model_type:
+        return True
+
+    def base(t):
+        return t.split("(")[0].strip()
+
+    family = {
+        "VARCHAR": "TEXT", "CHAR": "TEXT", "TEXT": "TEXT", "CLOB": "TEXT",
+        "UUID": "UUID",
+        "INTEGER": "INT", "INT": "INT", "BIGINT": "INT", "SMALLINT": "INT",
+        "SERIAL": "INT", "BIGSERIAL": "INT",
+        "FLOAT": "FLOAT", "REAL": "FLOAT", "DOUBLE": "FLOAT", "DOUBLE PRECISION": "FLOAT",
+        "BOOLEAN": "BOOL", "BOOL": "BOOL",
+        "JSON": "JSON", "JSONB": "JSON",
+        "TIMESTAMP": "TIMESTAMP", "DATETIME": "TIMESTAMP",
+    }
+    db_b = base(db_type)
+    model_b = base(model_type)
+    return family.get(db_b, db_b) == family.get(model_b, model_b)
+
+
 def compare_schema(engine):
     """Compare ORM metadata against the database.
 
@@ -19,10 +44,10 @@ def compare_schema(engine):
 
         {
             "table": "agents",
-            "column": "agent_endpoint",
-            "db_type": "MISSING",        # or None for table/index issues
-            "expected_type": "VARCHAR(512)",
-            "issue": "missing column",
+            "column": "id",
+            "db_type": "UUID",
+            "expected_type": "VARCHAR(64)",
+            "issue": "type mismatch",
         }
     """
     from sqlalchemy import inspect
@@ -55,6 +80,14 @@ def compare_schema(engine):
                     "db_type": "MISSING",
                     "expected_type": _expected_type(column),
                     "issue": "missing column",
+                })
+            elif not _types_compatible(str(db_columns[column.name]["type"]), str(column.type)):
+                drifts.append({
+                    "table": table_name,
+                    "column": column.name,
+                    "db_type": str(db_columns[column.name]["type"]),
+                    "expected_type": _expected_type(column),
+                    "issue": "type mismatch",
                 })
 
         db_indexes = {ix["name"] for ix in insp.get_indexes(table_name)}

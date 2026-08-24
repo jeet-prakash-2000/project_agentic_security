@@ -34,7 +34,7 @@ def sync_schema(dry_run=False):
     # 1. Create any missing tables (never alters existing ones).
     create_all()
 
-    # 2. Detect remaining drift (missing columns / indexes).
+    # 2. Detect drift (missing columns / indexes / type mismatches).
     drifts = compare_schema(engine)
 
     if not drifts:
@@ -46,6 +46,35 @@ def sync_schema(dry_run=False):
         log.info("  %s: %s", d["table"], d["issue"])
 
     statements = alter_statements(drifts, engine)
+
+    # 3. Type mismatches on EMPTY tables: drop + recreate from the ORM models.
+    #    This is the safe fix for legacy UUID-schema tables that conflict with
+    #    the current VARCHAR string-id models. Tables are only dropped when they
+    #    hold no rows, so no data is ever lost.
+    tables_to_recreate = sorted({
+        d["table"] for d in drifts if d["issue"] == "type mismatch"
+    })
+
+    if dry_run and tables_to_recreate:
+        log.info("DRY RUN - would drop+recreate empty tables with type mismatches: %s", ", ".join(tables_to_recreate))
+        return drifts, statements
+
+    with engine.begin() as conn:
+        drop_stmt = "DROP TABLE IF EXISTS \"{0}\"{1}".format
+        cascade = " CASCADE" if engine.dialect.name == "postgresql" else ""
+        for table_name in tables_to_recreate:
+            row_count = conn.execute(text('SELECT count(*) FROM "{0}"'.format(table_name))).scalar()
+            if row_count == 0:
+                log.info("Dropping empty table %s (type mismatch) for recreation.", table_name)
+                conn.execute(text(drop_stmt(table_name, cascade)))
+            else:
+                log.warning("Table %s has %s rows - type mismatch NOT auto-fixed (manual ALTER required).", table_name, row_count)
+
+    if tables_to_recreate:
+        Base.metadata.create_all(engine)
+        drifts = compare_schema(engine)
+        statements = alter_statements(drifts, engine)
+        log.info("Recreated %s table(s) from ORM models.", len(tables_to_recreate))
 
     if dry_run:
         log.info("DRY RUN - repair SQL not applied:")
