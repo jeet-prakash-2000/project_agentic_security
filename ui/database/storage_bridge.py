@@ -138,22 +138,55 @@ def _load_sessions(session):
 
 
 def _save_sessions(session, data):
+    """Upsert conversations and append messages, preserving existing history.
+
+    Conversations are upserted by id. Messages already stored for a
+    conversation are skipped, and all new messages are appended. Autoflush is
+    disabled while appending so that duplicate source rows are preserved during
+    the one-time migration (matching the JSON exactly).
+    """
     from database.models import Conversation, Message
 
-    session.query(Message).delete()
-    session.query(Conversation).delete()
-    for conv in data.get("conversations", []):
-        session.add(
-            Conversation(
-                id=conv.get("id"),
-                user_id=conv.get("user_id") or "anonymous",
-                title=conv.get("title") or "",
-                created=conv.get("created"),
-                updated=conv.get("updated"),
-            )
-        )
-        for msg in conv.get("messages", []):
-            session.add(_dict_to_message(conv.get("id"), msg))
+    session.autoflush = False
+    try:
+        for conv in data.get("conversations", []):
+            conv_id = conv.get("id")
+            existing = session.get(Conversation, conv_id) if conv_id else None
+
+            if existing is None:
+                session.add(
+                    Conversation(
+                        id=conv_id,
+                        user_id=conv.get("user_id") or "anonymous",
+                        title=conv.get("title") or "",
+                        created=conv.get("created"),
+                        updated=conv.get("updated"),
+                    )
+                )
+            else:
+                if conv.get("user_id"):
+                    existing.user_id = conv.get("user_id")
+                if conv.get("title"):
+                    existing.title = conv.get("title")
+                if conv.get("created") is not None:
+                    existing.created = conv.get("created")
+                if conv.get("updated") is not None:
+                    existing.updated = conv.get("updated")
+
+            stored_keys = {
+                (m.conversation_id, m.role, m.content or "", m.ts)
+                for m in session.query(Message)
+                .filter(Message.conversation_id == conv_id)
+                .all()
+            }
+            for msg in conv.get("messages", []):
+                key = (conv_id, msg.get("role") or "user", msg.get("content") or "", msg.get("ts"))
+                if key in stored_keys:
+                    continue
+                session.add(_dict_to_message(conv_id, msg))
+    finally:
+        session.autoflush = True
+
     session.commit()
 
 
@@ -323,7 +356,7 @@ def _save_assessment_history(session, data):
                 high_findings=severity.get("high", 0),
                 medium_findings=severity.get("medium", 0),
                 low_findings=severity.get("low", 0),
-                total_findings=s.get("finding_count") or sum(severity.values()),
+                total_findings=s.get("finding_count"),
             )
         )
     session.commit()

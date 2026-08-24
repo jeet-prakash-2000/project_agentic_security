@@ -190,6 +190,55 @@ def _migrate_document(session, doc, saver, report):
     }
 
 
+def _check_pks(issues, table, ids):
+    nulls = [i for i in ids if i is None or (isinstance(i, str) and not i.strip())]
+    dup_count = len(ids) - len({i for i in ids if i is not None})
+    if nulls:
+        issues.append({"type": "NULL primary key", "detail": "{} has {} NULL id(s)".format(table, len(nulls))})
+    if dup_count:
+        issues.append({"type": "duplicate primary key", "detail": "{} has {} duplicate id(s)".format(table, dup_count)})
+
+
+def _validate_source_data():
+    """Detect data-quality issues in the source JSON before migrating."""
+    issues = []
+
+    users = load_json("users.json")
+    if users is not None:
+        _check_pks(issues, "users", [u.get("id") for u in users.get("users", [])])
+
+    agents = load_json("agents.json")
+    if agents is not None:
+        _check_pks(issues, "agents", [a.get("id") for a in agents.get("agents", [])])
+
+    sessions = load_json("sessions.json")
+    if sessions is not None:
+        convs = sessions.get("conversations", [])
+        _check_pks(issues, "conversations", [c.get("id") for c in convs])
+        conv_ids = {c.get("id") for c in convs}
+        for conv in convs:
+            if conv.get("id") not in conv_ids and conv.get("id") is not None:
+                issues.append({"type": "self-reference", "detail": "conversation list anomaly"})
+            for field in ("created", "updated"):
+                value = conv.get(field)
+                if value is not None and not isinstance(value, (int, float)):
+                    issues.append({"type": "invalid timestamp", "detail": "conversation {} {}".format(conv.get("id"), field)})
+            for msg in conv.get("messages", []):
+                ts = msg.get("ts")
+                if ts is not None and not isinstance(ts, (int, float)):
+                    issues.append({"type": "invalid timestamp", "detail": "message in conversation {}".format(conv.get("id"))})
+
+    insights = load_json("insights.json")
+    if insights is not None:
+        _check_pks(issues, "insights", [i.get("id") for i in insights.get("conversations", [])])
+
+    telemetry = load_json("telemetry_metrics.json")
+    if telemetry is not None:
+        _check_pks(issues, "telemetry_metrics", list((telemetry.get("agents") or {}).keys()))
+
+    return issues
+
+
 def _migrate_findings(session, report):
     """Migrate historical findings when a findings.json document exists.
 
@@ -259,21 +308,82 @@ def _migrate_findings(session, report):
 
 
 def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Migrate JSON documents into PostgreSQL")
+    parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="Synchronize the schema first (add missing columns/tables/indexes) before migrating",
+    )
+    args = parser.parse_args()
+
     from database.db import create_all, get_session
     from database import storage_bridge
+    from database.schema_validation import alter_statements, compare_schema
 
     report = {
         "start_time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "schema": {"issues": 0, "columns_added": 0, "details": []},
+        "data_validation": {"issues": []},
         "documents": [],
         "errors": [],
     }
 
+    data_issues = _validate_source_data()
+    report["data_validation"]["issues"] = data_issues
+    if data_issues:
+        log.warning("Source data validation found %s issue(s):", len(data_issues))
+        for issue in data_issues:
+            log.warning("  [%s] %s", issue["type"], issue["detail"])
+
+    # ---- Pre-migration schema validation ---------------------------------
     try:
-        create_all()
-        session = get_session()
+        create_all()  # creates missing tables only
+        engine = get_session().get_bind()
     except Exception as exc:
         report["errors"].append(str(exc))
         log.error("Migration aborted: %s", exc)
+        _write_report(report)
+        return 1
+
+    drifts = compare_schema(engine)
+    if drifts:
+        repair = alter_statements(drifts, engine)
+        report["schema"]["issues"] = len(drifts)
+        report["schema"]["details"] = drifts
+        log.warning("Schema drift detected (%s issue(s)).", len(drifts))
+        for d in drifts:
+            log.warning("  %s: %s", d["table"], d["issue"])
+
+        if args.sync:
+            log.info("--sync: applying %s repair statement(s).", len(repair))
+            try:
+                from sqlalchemy import text
+                with engine.begin() as conn:
+                    for statement in repair:
+                        conn.execute(text(statement))
+                report["schema"]["columns_added"] = sum(
+                    1 for d in drifts if d["issue"] == "missing column"
+                )
+                log.info("Schema synchronized.")
+            except Exception as exc:
+                report["errors"].append("schema sync failed: {}".format(exc))
+                log.error("Schema sync failed: %s", exc)
+                _write_report(report)
+                return 1
+        else:
+            log.error("Migration BLOCKED - schema mismatch. Repair SQL:")
+            for statement in repair:
+                print(statement)
+            log.error("Run 'python scripts/sync_postgres_schema.py' or retry with --sync.")
+            _write_report(report)
+            return 2
+
+    try:
+        session = get_session()
+    except Exception as exc:
+        report["errors"].append(str(exc))
         _write_report(report)
         return 1
 
