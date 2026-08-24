@@ -1,10 +1,10 @@
-# LTM Security Platform — Final Project Structure
+# LTM Security Platform — Project Structure
 
 Agentic network & cloud security assessment platform. Three deployable units plus a web console:
 
 | Unit | Technology | Purpose |
 |------|------------|---------|
-| `ui/` | Flask (Python 3.11) | Web console (AI Workspace, Security Ops, Telemetry Map, Reports) |
+| `ui/` | Flask (Python 3.11) | Web console: landing page, dashboard, AI Workspace, Security Ops, Telemetry Map, Reports, Insights, Settings |
 | `netsec-agent/` | Azure Functions (Python) | Palo Alto Networks firewall auditor (network security) |
 | `cloudsec-agent/` | Azure Functions (Python) | Azure / Microsoft 365 cloud security & incident response |
 | `.github/` | GitHub Actions | CI/CD build + deploy to Azure App Service |
@@ -19,68 +19,79 @@ project_agentic_security/
 │   └── workflows/
 │       └── master_ltm-security-platform-ui.yml   # Build & deploy ui/ -> Azure Web App
 ├── .gitignore
+├── PROJECT_STRUCTURE.md                          # This document
 │
 ├── ui/                              # Flask web console
-│   ├── app.py                       # Flask app, routes, auth (now bypassed)
+│   ├── app.py                       # Flask app, routes, demo auth (bypassed), startup validation
 │   ├── requirements.txt
 │   ├── config/
 │   │   ├── settings.py              # App settings, SECRET_KEY, env-driven values
-│   │   ├── storage.py               # JSON file <-> Azure Table storage abstraction
-│   │   ├── keyvault.py              # Azure Key Vault access
-│   │   ├── agents.json              # Agent registry (live API key — never committed)
-│   │   ├── sessions.json            # Conversation history (runtime)
-│   │   ├── users.json               # User accounts (scrypt-hashed passwords)
-│   │   ├── insights.json            # Insight summaries (runtime)
-│   │   ├── assessment_history.json  # Rolling posture snapshots
-│   │   ├── assessment_stats.json    # Run counters / timestamps
-│   │   ├── reports_history.json     # Generated report ledger
-│   │   └── telemetry_*.json         # Telemetry metrics + history (runtime)
+│   │   ├── storage.py               # JSON / Azure Table / PostgreSQL storage abstraction
+│   │   ├── keyvault.py              # Azure Key Vault secret resolution
+│   │   ├── *.json                   # Runtime data (sessions, agents, insights, reports, telemetry…) — uncommitted
+│   ├── database/                    # PostgreSQL persistence layer
+│   │   ├── db.py                    # SQLAlchemy engine/session/Base + connection check
+│   │   ├── models.py                # ORM models (users, agents, conversations, messages, findings…)
+│   │   ├── storage_bridge.py        # JSON-document <-> relational conversion
+│   │   ├── migrations/README.md     # Schema + migration guidance
+│   │   └── repositories/
+│   │       ├── base.py              # Shared repository CRUD
+│   │       ├── users_repository.py
+│   │       ├── agents_repository.py
+│   │       ├── conversations_repository.py
+│   │       ├── findings_repository.py
+│   │       ├── reports_repository.py
+│   │       ├── telemetry_repository.py
+│   │       └── assessments_repository.py
 │   ├── gateway/
 │   │   ├── agent_gateway.py         # Chat orchestration entry point
-│   │   ├── foundry_client.py        # Azure AI Foundry (LLM) client
-│   │   ├── session_manager.py       # Conversation persistence / scoping
+│   │   ├── foundry_client.py        # Azure AI Foundry agent / responses client
+│   │   ├── session_manager.py       # Conversation persistence / listing
 │   │   └── tools.py                 # Agent tool registry
 │   ├── services/
-│   │   ├── assessment_service.py    # Posture aggregation (get_posture/get_full_assessment)
+│   │   ├── assessment_service.py    # Posture, findings, history, live/sample assessment
+│   │   ├── dashboard_service.py     # Dashboard metrics + recent findings + history
 │   │   ├── agents_service.py        # Agent CRUD / connected-agent lookup
-│   │   ├── chat_service.py          # Chat helpers
-│   │   ├── dashboard_service.py     # Dashboard metrics
-│   │   ├── app_insights.py          # App Insights telemetry
-│   │   ├── firewall_data_service.py # Per-connector firewall calls
-│   │   ├── function_client.py       # Azure Function HTTP client + live fallback
+│   │   ├── users_service.py         # User create/authenticate (demo)
 │   │   ├── insights_service.py      # Conversation/insight summarisation
 │   │   ├── report_history_service.py# Report ledger
-│   │   ├── sample_assessment.py     # Sample/fallback assessment data
+│   │   ├── telemetry_map_service.py # Telemetry map graph + metrics
+│   │   ├── firewall_data_service.py # Per-connector firewall data (with assessment fallback)
+│   │   ├── function_client.py       # Azure Function HTTP client + live fallback
 │   │   ├── system_status_service.py # Live/sample status
-│   │   ├── telemetry_map_service.py # Telemetry map graph + baselines
-│   │   ├── timeutil.py              # IST/formatting helpers
-│   │   └── users_service.py         # User create/authenticate (werkzeug)
-│   ├── templates/
-│   │   ├── base.html                # Shell: sidebar, topbar, toast, global agent
-│   │   ├── login.html               # Auth screen (kept, not enforced)
-│   │   ├── workspace.html           # AI Workspace (landing page)
-│   │   ├── dashboard.html
-│   │   ├── findings.html            # Security Operations Center
-│   │   ├── telemetry_map.html
-│   │   ├── insights.html
-│   │   ├── reports.html
-│   │   └── settings.html
-│   └── static/
-│       ├── css/                     # main.css + one per page
-│       ├── js/                      # main.js + one per page (+finding_enrichment.js)
-│       ├── images/logo.svg          # LTM monogram shield
-│       ├── reports/                 # Generated PDF / XLSX artifacts
-│       └── vendor/                  # cytoscape.js + webfonts
+│   │   ├── sample_assessment.py     # Sample/fallback assessment data
+│   │   ├── app_insights.py          # App Insights telemetry
+│   │   ├── chat_service.py
+│   │   ├── timeutil.py
+│   │   └── dashboard_service.py
+│   ├── scripts/
+│   │   ├── migrate_json_to_postgres.py   # One-time JSON -> PostgreSQL migration
+│   │   └── test_db_connection.py         # DB connectivity check
+│   ├── static/
+│   │   ├── css/                     # main.css, dashboard.css, findings.css, workspace.css, landing.css, login.css, …
+│   │   ├── js/                      # main.js, dashboard.js, findings.js, workspace.js, finding_enrichment.js, …
+│   │   ├── images/logo.svg          # LTM monogram shield
+│   │   ├── reports/                 # Generated PDF / XLSX artifacts
+│   │   └── vendor/                  # cytoscape.js + webfonts
+│   └── templates/
+│       ├── base.html                # Shell: collapsible sidebar, topbar, toast, global agent
+│       ├── landing.html             # Public marketing page (login -> dashboard)
+│       ├── login.html               # Demo login/register (any button -> dashboard)
+│       ├── dashboard.html           # Security posture dashboard
+│       ├── workspace.html           # AI Workspace (chat + conversation history)
+│       ├── findings.html            # Security Operations Center
+│       ├── telemetry_map.html
+│       ├── insights.html
+│       ├── reports.html
+│       └── settings.html
 │
-├── netsec-agent/                    # Palo Alto firewall auditor
+├── netsec-agent/                    # Palo Alto firewall auditor (Azure Functions)
 │   └── functions/
 │       ├── function_app.py          # HTTP-triggered endpoints
-│       ├── host.json
-│       ├── local.settings.json
-│       ├── requirements.txt
+│       ├── host.json / local.settings.json / requirements.txt
 │       ├── connectors/
-│       │   ├── paloalto/            # XML/API collectors (inventory, HA, policy,
-│       │   │                        #   routing, VPN, zones, backup, logging…)
+│       │   ├── paloalto/            # Collectors: inventory, health, HA, policy, security services,
+│       │   │                        #   routing, VPN, logging, administration, zone protection, backup
 │       │   │   └── paloalto_connector.py
 │       │   └── utils/xml_parser.py
 │       ├── compliance/
@@ -94,14 +105,13 @@ project_agentic_security/
 │       │   ├── executive_summary.py / _pdf.py
 │       │   ├── risk_summary.py
 │       │   └── excel_report.py
-│       └── openapi/firewall-auditor-openapi.json
+│       ├── openapi/firewall-auditor-openapi.json
+│       └── applogs/                 # Azure runtime logs (tracked legacy, not source)
 │
-└── cloudsec-agent/                  # Azure / M365 cloud security & IR
+└── cloudsec-agent/                  # Azure / M365 cloud security & incident response
     └── functions/
         ├── function_app_cloudsec.py # IR tool endpoints
-        ├── host.json
-        ├── requirements.txt
-        ├── incident_response_schema.json
+        ├── host.json / requirements.txt / incident_response_schema.json
         ├── connectors/
         │   ├── azure_config_cloudsec.py
         │   ├── compute_connector_cloudsec.py
@@ -122,26 +132,25 @@ project_agentic_security/
 ```
 +-------------------------------------------------------+
 |                     Browser (Client)                   |
-|  Workspace | Security Ops | Telemetry Map | Insights  |
-|  Dashboard | Reports | Settings                       |
+|  Landing -> Login -> Dashboard -> Workspace -> SOC     |
 +-------------------------+-----------------------------+
                           | HTTP (Flask, port 8003)
                           v
 +-------------------------------------------------------+
 |                 Flask Web Console (ui/)                |
 |  +-----------+  +------------+  +------------------+   |
-|  | gateway/  |  | services/  |  | config/          |   |
-|  | agent chat|  | assessment |  | storage (JSON/   |   |
-|  | sessions  |  | dashboard  |  | Azure Table)     |   |
-|  | tools     |  | telemetry  |  | settings/keyvault|   |
-|  | foundry   |  | insights   |  +------------------+   |
-|  +-----+-----+  +-----+------+                        |
+|  | gateway/  |  | services/  |  | config/storage   |   |
+|  | agent chat|  | assessment |  | JSON / Azure     |   |
+|  | sessions  |  | dashboard  |  | Table / Postgres |   |
+|  | tools     |  | telemetry  |  +------------------+   |
+|  | foundry   |  | insights   |  | database/ (PG)   |   |
+|  +-----+-----+  +-----+------+  +------------------+   |
 +--------+---------------+-------------------------------+
          |               |
          |               v
          |      +-------------------+
          |      | Azure AI Foundry  |
-         |      | (LLM chat backend)|
+         |      | (LLM agent)       |
          |      +-------------------+
          |
          | HTTP (function key auth)
@@ -153,11 +162,10 @@ project_agentic_security/
 |   logging / administration / zone_protection / backup  |
 |   run_full_assessment / run_compliance_assessment      |
 |   executive_summary / generate_excel_report            |
-+--------+----------------------------------------------+
++-------------------------------------------------------+
 |   Azure Functions — cloudsec-agent (Azure/M365 IR)     |
 |   GetSentinelIncident / GetVMContext / RunSecurityScan |
 |   IsolateAzureVM / BlockMaliciousIP / PatchVM / etc.   |
-|   RunFullIncidentResponse / GenerateIncidentSummary    |
 +-------------------------------------------------------+
 ```
 
@@ -171,60 +179,63 @@ Entry point `ui/app.py` (run with `python3 app.py`, port `8003`).
 
 | Route | Template | Purpose |
 |-------|----------|---------|
-| `/` | redirect | Redirects to `/workspace` |
-| `/workspace` | `workspace.html` | AI Workspace (chat + conversation history) — landing page |
-| `/dashboard` | `dashboard.html` | Overview dashboard |
-| `/findings` | `findings.html` | Security Operations Center console |
+| `/` | `landing.html` | Public landing / marketing page |
+| `/login` | `login.html` | Demo login/register (any button -> dashboard) |
+| `/logout` | redirect | Clears session -> `/` |
+| `/dashboard` | `dashboard.html` | Security posture dashboard |
+| `/workspace` | `workspace.html` | AI Workspace (chat + conversation history) |
+| `/findings` | `findings.html` | Security Operations Center |
 | `/run-assessment` | `findings.html` | Force a fresh assessment then render findings |
 | `/telemetry-map` | `telemetry_map.html` | Telemetry graph |
 | `/insights` | `insights.html` | Agent insights |
 | `/reports` | `reports.html` | Report history |
-| `/executive-summary` | PDF | Executive summary PDF |
-| `/generate-excel` | — | Generate Excel workbook |
-| `/download-workbook` | file | Download generated workbook |
+| `/executive-summary` | PDF | Executive summary PDF (stores report history) |
+| `/generate-excel` | `reports.html` | Generate Excel workbook (stores report history) |
+| `/download-workbook` | file | Download generated workbook (stores report history) |
 | `/settings` | `settings.html` | Settings |
-| `/login` / `/signup` / `/logout` | `login.html` | Auth (present; enforcement removed) |
 
 ### API routes
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/api/findings` | GET | Posture + findings (`get_posture`) |
+| `/api/findings` | GET | Posture + findings (44 controls, 38 findings) |
 | `/api/compliance` | GET | Full compliance assessment |
 | `/api/firewall/*` | GET | Per-connector firewall data (inventory, health, ha, policy, services, status, routing, vpn, logging, administration, zone-protection, backup) |
 | `/api/summary` | GET | Aggregated summary |
-| `/api/excel` | GET | Generate Excel report |
+| `/api/excel` | GET | Generate Excel report (stores report history) |
 | `/api/agents` | GET/POST | List / add agents |
 | `/api/chat` | POST | AI chat (single turn) |
 | `/api/tools` | GET | Tool registry |
-| `/api/conversations` | GET | List all conversations (no user scoping) |
+| `/api/conversations` | GET | List all conversations |
 | `/api/conversations/<id>/messages` | GET/POST | Read / persist messages |
 | `/api/conversations/<id>/clear` | POST | Clear a conversation |
 | `/api/me` | GET | Current user profile |
 | `/api/insights` | GET | Insight summary |
 | `/api/insights/conversation/<id>` | GET | Per-conversation summary |
-| `/api/dashboard` | GET | Dashboard data |
+| `/api/dashboard` | GET | Dashboard metrics + history + recent findings |
 | `/api/reports` | GET | Report history |
 | `/api/system-status` | GET | Live/sample status |
 | `/api/telemetry-map` | GET | Telemetry graph |
 | `/api/telemetry-map/history` | GET | Telemetry history |
 
-### Storage (`config/storage.py`)
+### Storage (`config/storage.py` + `database/`)
 
 Documents map to local JSON files under `config/` and are transparently mirrored to
-Azure Table Storage when `AZURE_STORAGE_*` environment variables are present
-(base64-chunked entities). If Azure is unconfigured, JSON files are the source of truth.
+Azure Table Storage when `AZURE_STORAGE_*` is set, or PostgreSQL when `DATABASE_URL`
+is set (PostgreSQL is the preferred primary source). JSON files remain as backup.
 
-| Document | File | Notes |
-|----------|------|-------|
-| `agents` | `agents.json` | Live API key kept out of git |
-| `sessions` | `sessions.json` | Conversation history |
-| `users` | `users.json` | scrypt-hashed passwords |
-| `insights` | `insights.json` | Summaries |
-| `reports_history` | `reports_history.json` | Report ledger |
-| `assessment_history` | `assessment_history.json` | Posture snapshots |
-| `assessment_stats` | `assessment_stats.json` | Run counters |
-| `telemetry_history` / `telemetry_metrics` | `telemetry_*.json` | Telemetry |
+| Document | JSON file | PostgreSQL table(s) |
+|----------|-----------|---------------------|
+| `agents` | `agents.json` | `agents` |
+| `sessions` | `sessions.json` | `conversations` + `messages` |
+| `users` | `users.json` | `users` |
+| `insights` | `insights.json` | `insights` |
+| `reports_history` | `reports_history.json` | `reports_history` |
+| `assessment_history` | `assessment_history.json` | `assessment_history` |
+| `assessment_stats` | `assessment_stats.json` | `assessment_stats` |
+| `telemetry_metrics` | `telemetry_metrics.json` | `telemetry_metrics` |
+| `telemetry_history` | `telemetry_history.json` | `telemetry_history` |
+| — | (derived) | `findings` |
 
 ---
 
@@ -259,71 +270,48 @@ Azure / Microsoft 365 cloud security and incident response toolset
   `GenerateExecutiveReport`, `CloseIncident`
 - Orchestration: `RunFullIncidentResponse`
 
-Connectors: Sentinel, Defender, Compute, Network, Azure config. Services: incident
-analysis, action logger, report generator.
-
 ---
 
 ## 6. Deployment
 
 ### 6.1 UI — Azure Web App (`ui/`)
 
-Deployed via GitHub Actions workflow `.github/workflows/master_ltm-security-platform-ui.yml`.
+Deployed via GitHub Actions (`.github/workflows/master_ltm-security-platform-ui.yml`):
 
-**Trigger**: `push` to `master` or manual `workflow_dispatch`.
-
-**Build job** (`build`, `runs-on: ubuntu-latest`):
-
-1. `actions/checkout@v4` — clone repo.
-2. `actions/setup-python@v5` — Python `3.11`.
-3. Create virtualenv `antenv`, upgrade pip, `pip install -r ui/requirements.txt`.
-4. `actions/upload-artifact@v4` — upload `ui/` as artifact `python-app`.
-
-**Deploy job** (`deploy`, `needs: build`):
-
-1. `actions/download-artifact@v4` — fetch `python-app`.
-2. `azure/webapps-deploy@v3`:
-   - `app-name`: `ltm-security-platform-ui`
-   - `slot-name`: `Production`
-   - `publish-profile`: `secrets.AZUREAPPSERVICE_PUBLISHPROFILE_2FBCD47D129B42698B7CAF114C422529`
-
-**Live URL**:
-`https://ltm-security-platform-ui-c8fff7f9ghb0e6hg.southindia-01.azurewebsites.net`
-
-**Local run**: `cd ui && python3 app.py` (port `8003`).
+- **Trigger**: `push` to `master` or `workflow_dispatch`.
+- **Build job**: checkout -> setup-python 3.11 -> venv `antenv` -> `pip install -r ui/requirements.txt`
+  -> bundle `netsec-agent/functions/{compliance,reports,baseline}` into `ui/netsec_functions/`
+  -> upload `ui/` artifact.
+- **Deploy job**: `azure/webapps-deploy@v3` -> `ltm-security-platform-ui` (Production)
+  using the publish-profile secret.
+- **Live URL**: `https://ltm-security-platform-ui-c8fff7f9ghb0e6hg.southindia-01.azurewebsites.net`
+- **Local run**: `cd ui && python3 app.py` (port `8003`).
 
 ### 6.2 Azure Functions — `netsec-agent/` & `cloudsec-agent/`
 
-Deployed as Azure Function Apps (zip-deploy). Runtime configuration comes from
-`local.settings.json` locally and Application Settings on Azure. Function-key
-authentication is required by the UI (`services/function_client.py`) for live
-firewall calls; when keys are absent, the UI degrades to sample data.
+Deployed as Azure Function Apps (zip-deploy). Function-key auth is used by the UI
+(`services/function_client.py`) for live firewall calls; when keys are absent the UI
+degrades to sample data or the assessment snapshot.
 
 ### 6.3 Configuration & Secret Resolution
 
-`ui/config/settings.py` loads values through `ui/config/keyvault.py`, which resolves
-a secret by name in this order:
-
-1. Environment variable (name upper-cased, `-` → `_`).
-2. In-memory cache.
-3. Azure Key Vault via `DefaultAzureCredential` against `AZURE_KEY_VAULT_URL`
-   (default `https://netsec-agent-project-key.vault.azure.net/`).
-4. Fallback default baked into `settings.py`.
+`ui/config/settings.py` loads values through `ui/config/keyvault.py`, which resolves a
+secret in this order: env var -> in-memory cache -> Azure Key Vault (`DefaultAzureCredential`)
+-> baked-in default.
 
 | Setting | Secret / env | Default |
 |---------|--------------|---------|
 | `SECRET_KEY` | `SECRET_KEY` | dev-only placeholder |
 | `BASE_URL` | `firewall-function-url` | netsec-agent function URL |
-| `FUNCTION_KEY` | `firewall-function-key` | placeholder |
-| `FULL_ASSESSMENT_KEY` | `firewall-full-assessment-key` | placeholder |
-| `EXCEL_KEY` | `firewall-excel-key` | placeholder |
-| `EXECUTIVE_SUMMARY_KEY` | `firewall-executive-summary-key` | placeholder |
+| `FUNCTION_KEY` | `FIREWALL_FUNCTION_KEY` | placeholder |
+| `FULL_ASSESSMENT_KEY` | `FIREWALL_FULL_ASSESSMENT_KEY` | placeholder |
+| `EXCEL_KEY` | `FIREWALL_EXCEL_KEY` | placeholder |
+| `EXECUTIVE_SUMMARY_KEY` | `FIREWALL_EXECUTIVE_SUMMARY_KEY` | placeholder |
 | `APP_INSIGHTS_CONNECTION_STRING` | `app-insights-connection-string` | baked-in instrumentation key |
-| `AZURE_STORAGE_*` | env / Key Vault | JSON-file fallback in `config/storage.py` |
+| `DATABASE_URL` | `DATABASE_URL` | none (JSON fallback) |
 
-### 6.4 Credentials & Secrets (never committed to git)
+### 6.4 Credentials & Secrets (never committed)
 
-- GitHub Actions secret `AZUREAPPSERVICE_PUBLISHPROFILE_*` — Web App publish profile.
-- Azure Key Vault `netsec-agent-project-key` — function keys, AI Foundry keys,
-  storage keys, App Insights connection string.
+- GitHub Actions publish-profile secret.
+- Azure Key Vault `netsec-agent-project-key` — function keys, AI Foundry keys, storage keys.
 - `ui/config/agents.json` — live agent API key (left out of git).
