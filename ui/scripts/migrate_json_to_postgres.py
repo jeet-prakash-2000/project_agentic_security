@@ -1,20 +1,27 @@
-"""One-time migration of JSON documents into PostgreSQL.
+"""Production-grade one-time migration of JSON documents into PostgreSQL.
 
 Usage::
 
     export DATABASE_URL="postgresql://Jeet:<password>@ltm-security-postgres.postgres.database.azure.com:5432/ltm_security?sslmode=require"
     python scripts/migrate_json_to_postgres.py
 
-The script:
+Behaviour
+---------
+* Calls ``database.db.create_all()`` before migrating.
+* Reuses the SAVERS from ``database.storage_bridge`` (single source of truth for
+  document -> relational conversion).
+* Wraps each document in a SQLAlchemy transaction and rolls back on failure.
+* Skips documents whose destination tables are already populated (idempotent,
+  no duplicate records inserted).
+* Validates source JSON row counts against destination database counts.
+* Migrates findings when a historical ``findings.json`` exists.
+* Writes ``migration_report.json`` with per-document results, timings and errors.
 
-* reads every record from the JSON files under ``config/``,
-* inserts them into the corresponding PostgreSQL tables (deduplicating by
-  natural key and logging skipped duplicates),
-* verifies JSON record counts against database record counts,
-* writes ``migration_report.json`` with a full summary.
+The migration only moves data; application behaviour is unchanged.
 """
 
 import json
+import logging
 import os
 import sys
 import time
@@ -26,6 +33,12 @@ CONFIG_DIR = os.path.abspath(
 )
 REPORT_PATH = os.path.join(os.path.dirname(__file__), "migration_report.json")
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+log = logging.getLogger("migration")
+
 
 def load_json(name):
     path = os.path.join(CONFIG_DIR, name)
@@ -35,330 +48,223 @@ def load_json(name):
         return json.load(handle)
 
 
-def _exists(session, model, pk):
-    return session.get(model, pk) is not None
+def _count(session, model):
+    return session.query(model).count()
 
 
-def migrate_users(session):
-    from database.models import User
+def _documents():
+    """Document descriptors for the storage_bridge SAVERS.
 
-    data = load_json("users.json")
-    records = (data or {}).get("users", [])
-    migrated, skipped = 0, 0
-    for u in records:
-        if not u.get("id"):
-            skipped += 1
-            continue
-        if _exists(session, User, u["id"]):
-            skipped += 1
-            continue
-        session.add(
-            User(
-                id=u["id"],
-                name=u.get("name"),
-                email=u.get("email"),
-                password_hash=u.get("password_hash"),
-                role=u.get("role") or "Security Analyst",
-                created=u.get("created"),
-            )
-        )
-        migrated += 1
-    session.commit()
-    db_count = session.query(User).count()
-    return _result("users.json", len(records), migrated, skipped, db_count)
+    Each entry provides the storage document name, JSON file, a db-count
+    validator and a json-count reader so the migration can be validated.
+    """
+    from database import models
 
-
-def migrate_agents(session):
-    from database.models import Agent
-
-    data = load_json("agents.json")
-    records = (data or {}).get("agents", [])
-    migrated, skipped = 0, 0
-    for a in records:
-        if not a.get("id"):
-            skipped += 1
-            continue
-        if _exists(session, Agent, a["id"]):
-            skipped += 1
-            continue
-        session.add(
-            Agent(
-                id=a["id"],
-                name=a.get("name"),
-                type=a.get("type"),
-                model=a.get("model"),
-                agent_endpoint=a.get("agent_endpoint"),
-                api_key=a.get("api_key"),
-                connected=bool(a.get("connected", False)),
-                created_at=a.get("created_at"),
-                agent_id=a.get("agent_id"),
-            )
-        )
-        migrated += 1
-    session.commit()
-    db_count = session.query(Agent).count()
-    return _result("agents.json", len(records), migrated, skipped, db_count)
-
-
-def migrate_sessions(session):
-    from database.models import Conversation, Message
-
-    data = load_json("sessions.json")
-    conversations = (data or {}).get("conversations", [])
-    conv_migrated = conv_skipped = msg_migrated = msg_skipped = 0
-    for conv in conversations:
-        conv_id = conv.get("id")
-        if not conv_id:
-            conv_skipped += 1
-            msg_skipped += len(conv.get("messages", []))
-            continue
-        if _exists(session, Conversation, conv_id):
-            conv_skipped += 1
-            msg_skipped += len(conv.get("messages", []))
-            continue
-        session.add(
-            Conversation(
-                id=conv_id,
-                user_id=conv.get("user_id") or "anonymous",
-                title=conv.get("title") or "",
-                created=conv.get("created"),
-                updated=conv.get("updated"),
-            )
-        )
-        conv_migrated += 1
-        for msg in conv.get("messages", []):
-            session.add(
-                Message(
-                    conversation_id=conv_id,
-                    role=msg.get("role") or "user",
-                    content=msg.get("content") or "",
-                    tool=msg.get("tool"),
-                    ts=msg.get("ts"),
-                    meta={
-                        k: v
-                        for k, v in msg.items()
-                        if k not in ("role", "content", "tool", "ts")
-                    }
-                    or None,
-                )
-            )
-            msg_migrated += 1
-    session.commit()
-
-    conv_db = session.query(Conversation).count()
-    msg_db = session.query(Message).count()
     return [
-        _result(
-            "sessions.json (conversations)",
-            len(conversations),
-            conv_migrated,
-            conv_skipped,
-            conv_db,
-        ),
-        _result(
-            "sessions.json (messages)",
-            sum(len(c.get("messages", [])) for c in conversations),
-            msg_migrated,
-            msg_skipped,
-            msg_db,
-        ),
+        {
+            "name": "users",
+            "file": "users.json",
+            "db_count": lambda s: _count(s, models.User),
+            "json_count": lambda d: len((d or {}).get("users", [])),
+        },
+        {
+            "name": "agents",
+            "file": "agents.json",
+            "db_count": lambda s: _count(s, models.Agent),
+            "json_count": lambda d: len((d or {}).get("agents", [])),
+        },
+        {
+            "name": "sessions",
+            "file": "sessions.json",
+            "db_count": lambda s: _count(s, models.Conversation),
+            "db_count_secondary": lambda s: _count(s, models.Message),
+            "json_count": lambda d: len((d or {}).get("conversations", [])),
+            "json_count_secondary": lambda d: sum(
+                len(c.get("messages", [])) for c in (d or {}).get("conversations", [])
+            ),
+        },
+        {
+            "name": "insights",
+            "file": "insights.json",
+            "db_count": lambda s: _count(s, models.Insight),
+            "json_count": lambda d: len((d or {}).get("conversations", [])),
+        },
+        {
+            "name": "reports_history",
+            "file": "reports_history.json",
+            "db_count": lambda s: _count(s, models.ReportHistory),
+            "json_count": lambda d: len((d or {}).get("reports", [])),
+        },
+        {
+            "name": "assessment_history",
+            "file": "assessment_history.json",
+            "db_count": lambda s: _count(s, models.AssessmentHistory),
+            "json_count": lambda d: len((d or {}).get("snapshots", [])),
+        },
+        {
+            "name": "assessment_stats",
+            "file": "assessment_stats.json",
+            "db_count": lambda s: _count(s, models.AssessmentStats),
+            "json_count": lambda d: 1 if d else 0,
+        },
+        {
+            "name": "telemetry_metrics",
+            "file": "telemetry_metrics.json",
+            "db_count": lambda s: _count(s, models.TelemetryMetric),
+            "json_count": lambda d: len(((d or {}).get("agents") or {})),
+        },
+        {
+            "name": "telemetry_history",
+            "file": "telemetry_history.json",
+            "db_count": lambda s: _count(s, models.TelemetryHistory),
+            "json_count": lambda d: len((d or {}).get("snapshots", [])),
+        },
     ]
 
 
-def migrate_insights(session):
-    from database.models import Insight
+def _migrate_document(session, doc, saver, report):
+    name = doc["name"]
+    start = time.time()
+    data = load_json(doc["file"])
 
-    data = load_json("insights.json")
-    records = (data or {}).get("conversations", [])
-    migrated, skipped = 0, 0
-    for c in records:
-        if not c.get("id"):
-            skipped += 1
-            continue
-        if _exists(session, Insight, c["id"]):
-            skipped += 1
-            continue
-        base = {"id", "user_id", "agent_id", "agent_name", "agent_type", "model"}
-        session.add(
-            Insight(
-                id=c["id"],
-                user_id=c.get("user_id"),
-                agent_id=c.get("agent_id"),
-                agent_name=c.get("agent_name"),
-                agent_type=c.get("agent_type"),
-                model=c.get("model"),
-                data={k: v for k, v in c.items() if k not in base} or None,
-            )
-        )
-        migrated += 1
-    session.commit()
-    db_count = session.query(Insight).count()
-    return _result("insights.json", len(records), migrated, skipped, db_count)
+    if data is None:
+        log.info("Skip %s: %s not present.", name, doc["file"])
+        return {"file": doc["file"], "json_count": 0, "migrated": 0, "skipped": 0, "db_count": 0, "match": True, "note": "no source file"}
 
+    json_count = doc["json_count"](data)
+    existing = doc["db_count"](session)
 
-def migrate_reports_history(session):
-    from database.models import ReportHistory
+    if existing > 0:
+        log.info("Skip %s: destination already populated (%s rows) - no duplicates.", name, existing)
+        return {
+            "file": doc["file"],
+            "json_count": json_count,
+            "migrated": 0,
+            "skipped": json_count,
+            "db_count": existing,
+            "match": json_count == existing,
+            "note": "already migrated (duplicates skipped)",
+        }
 
-    data = load_json("reports_history.json")
-    records = (data or {}).get("reports", [])
-    existing = session.query(ReportHistory).count()
-    if existing:
-        return _result(
-            "reports_history.json",
-            len(records),
-            0,
-            len(records),
-            existing,
-        )
-    for r in records:
-        session.add(
-            ReportHistory(
-                name=r.get("name"),
-                type=r.get("type"),
-                generated_by=r.get("generated_by"),
-                ts=r.get("ts"),
-                status=r.get("status") or "Completed",
-                size=r.get("size"),
-                download_url=r.get("download_url"),
-            )
-        )
-    session.commit()
-    db_count = session.query(ReportHistory).count()
-    return _result("reports_history.json", len(records), len(records), 0, db_count)
+    try:
+        saver(session, data)  # storage_bridge SAVER commits on success
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        log.error("Rolled back %s: %s", name, exc)
+        report["errors"].append("{}: {}".format(name, exc))
+        return {
+            "file": doc["file"],
+            "json_count": json_count,
+            "migrated": 0,
+            "skipped": 0,
+            "db_count": doc["db_count"](session),
+            "match": False,
+            "note": "failed - rolled back",
+        }
 
+    after = doc["db_count"](session)
+    secondary = None
+    if "db_count_secondary" in doc:
+        secondary = {
+            "json": doc["json_count_secondary"](data),
+            "db": doc["db_count_secondary"](session),
+        }
+    match = json_count == after and (secondary is None or secondary["json"] == secondary["db"])
 
-def migrate_assessment_history(session):
-    from database.models import AssessmentHistory
-
-    data = load_json("assessment_history.json")
-    records = (data or {}).get("snapshots", [])
-    existing = session.query(AssessmentHistory).count()
-    if existing:
-        return _result(
-            "assessment_history.json",
-            len(records),
-            0,
-            len(records),
-            existing,
-        )
-    for s in records:
-        severity = s.get("severity") or {}
-        session.add(
-            AssessmentHistory(
-                assessment_id=s.get("run_id") or s.get("assessment_id"),
-                executed_at=s.get("ts") or s.get("executed_at"),
-                compliance_score=s.get("compliance_pct")
-                if s.get("compliance_pct") is not None
-                else s.get("compliance_score"),
-                security_score=s.get("security_score"),
-                critical_findings=severity.get("critical", 0),
-                high_findings=severity.get("high", 0),
-                medium_findings=severity.get("medium", 0),
-                low_findings=severity.get("low", 0),
-                total_findings=s.get("finding_count") or sum(severity.values()),
-            )
-        )
-    session.commit()
-    db_count = session.query(AssessmentHistory).count()
-    return _result(
-        "assessment_history.json", len(records), len(records), 0, db_count
+    log.info(
+        "Migrated %s: json=%s db=%s%s (%.2fs)",
+        name, json_count, after,
+        " msgs={}/{}".format(secondary["json"], secondary["db"]) if secondary else "",
+        time.time() - start,
     )
-
-
-def migrate_assessment_stats(session):
-    from database.models import AssessmentStats
-
-    data = load_json("assessment_stats.json")
-    if not data:
-        return _result("assessment_stats.json", 0, 0, 0, 0)
-    session.merge(
-        AssessmentStats(
-            id=1,
-            assessments_run=data.get("assessments_run") or 0,
-            last_assessment_ts=data.get("last_assessment_ts"),
-        )
-    )
-    session.commit()
-    db_count = session.query(AssessmentStats).count()
-    return _result("assessment_stats.json", 1, 1, 0, db_count)
-
-
-def migrate_telemetry_metrics(session):
-    from database.models import TelemetryMetric
-
-    data = load_json("telemetry_metrics.json")
-    agents = (data or {}).get("agents", {})
-    migrated, skipped = 0, 0
-    for agent_id, m in agents.items():
-        if _exists(session, TelemetryMetric, agent_id):
-            skipped += 1
-            continue
-        session.add(
-            TelemetryMetric(
-                agent_id=agent_id,
-                requests=m.get("requests") or 0,
-                errors=m.get("errors") or 0,
-                first_ts=m.get("first_ts"),
-                last_ts=m.get("last_ts"),
-            )
-        )
-        migrated += 1
-    session.commit()
-    db_count = session.query(TelemetryMetric).count()
-    return _result(
-        "telemetry_metrics.json", len(agents), migrated, skipped, db_count
-    )
-
-
-def migrate_telemetry_history(session):
-    from database.models import TelemetryHistory
-
-    data = load_json("telemetry_history.json")
-    records = (data or {}).get("snapshots", [])
-    existing = session.query(TelemetryHistory).count()
-    if existing:
-        return _result(
-            "telemetry_history.json",
-            len(records),
-            0,
-            len(records),
-            existing,
-        )
-    for s in records:
-        session.add(
-            TelemetryHistory(
-                agent_id=s.get("agent_id"),
-                agent_name=s.get("agent_name"),
-                label=s.get("label"),
-                ts=s.get("ts"),
-                nodes=s.get("nodes"),
-            )
-        )
-    session.commit()
-    db_count = session.query(TelemetryHistory).count()
-    return _result(
-        "telemetry_history.json", len(records), len(records), 0, db_count
-    )
-
-
-def _result(file, json_count, migrated, skipped, db_count):
     return {
-        "file": file,
+        "file": doc["file"],
         "json_count": json_count,
-        "migrated": migrated,
-        "skipped": skipped,
-        "db_count": db_count,
-        "match": (json_count == db_count),
+        "migrated": json_count,
+        "skipped": 0,
+        "db_count": after,
+        "secondary": secondary,
+        "match": match,
+        "note": "ok",
+    }
+
+
+def _migrate_findings(session, report):
+    """Migrate historical findings when a findings.json document exists.
+
+    There is normally no separate findings.json (findings are derived from the
+    assessment), so this is a no-op unless historical finding data is present.
+    """
+    from database import models
+
+    data = load_json("findings.json")
+    if data is None:
+        log.info("Skip findings: findings.json not present (no historical finding data).")
+        return {
+            "file": "findings.json",
+            "json_count": 0,
+            "migrated": 0,
+            "skipped": 0,
+            "db_count": _count(session, models.Finding),
+            "match": True,
+            "note": "no source file",
+        }
+
+    from database.repositories import FindingsRepository
+
+    json_count = len((data or {}).get("findings", []))
+    existing = _count(session, models.Finding)
+    if existing > 0:
+        return {
+            "file": "findings.json",
+            "json_count": json_count,
+            "migrated": 0,
+            "skipped": json_count,
+            "db_count": existing,
+            "match": json_count == existing,
+            "note": "already migrated (duplicates skipped)",
+        }
+
+    try:
+        FindingsRepository(session).replace_for_assessment(
+            assessment_id="historical",
+            findings=data.get("findings", []),
+        )
+        session.commit()
+    except Exception as exc:
+        session.rollback()
+        report["errors"].append("findings: {}".format(exc))
+        return {
+            "file": "findings.json",
+            "json_count": json_count,
+            "migrated": 0,
+            "skipped": 0,
+            "db_count": _count(session, models.Finding),
+            "match": False,
+            "note": "failed - rolled back",
+        }
+
+    after = _count(session, models.Finding)
+    log.info("Migrated findings: json=%s db=%s", json_count, after)
+    return {
+        "file": "findings.json",
+        "json_count": json_count,
+        "migrated": json_count,
+        "skipped": 0,
+        "db_count": after,
+        "match": json_count == after,
+        "note": "ok",
     }
 
 
 def main():
     from database.db import create_all, get_session
+    from database import storage_bridge
 
-    start = time.time()
     report = {
-        "start_time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(start)),
-        "files": [],
+        "start_time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "documents": [],
         "errors": [],
     }
 
@@ -367,66 +273,37 @@ def main():
         session = get_session()
     except Exception as exc:
         report["errors"].append(str(exc))
-        report["finish_time"] = time.strftime(
-            "%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time())
-        )
+        log.error("Migration aborted: %s", exc)
         _write_report(report)
-        print("Migration failed:", exc)
         return 1
 
-    results = []
-    for fn in (
-        migrate_users,
-        migrate_agents,
-        migrate_sessions,
-        migrate_insights,
-        migrate_reports_history,
-        migrate_assessment_history,
-        migrate_assessment_stats,
-        migrate_telemetry_metrics,
-        migrate_telemetry_history,
-    ):
-        try:
-            out = fn(session)
-            if isinstance(out, list):
-                results.extend(out)
-            else:
-                results.append(out)
-        except Exception as exc:
-            report["errors"].append(str(exc))
+    saver_map = storage_bridge.SAVERS
 
-    for r in results:
-        print(
-            "Migrated {migrated} / skipped {skipped} / json {json_count} "
-            "/ db {db_count}  <- {file}".format(**r)
-        )
+    for doc in _documents():
+        saver = saver_map.get(doc["name"])
+        if saver is None:
+            report["errors"].append("{}: no saver in storage_bridge".format(doc["name"]))
+            continue
+        result = _migrate_document(session, doc, saver, report)
+        report["documents"].append(result)
 
-    failures = [r for r in results if not r["match"]]
-    if failures:
-        print("\nVALIDATION FAILURES:")
-        for r in failures:
-            print(
-                "  {file}: json={json_count} db={db_count} (migrated "
-                "{migrated}, skipped {skipped})".format(**r)
-            )
+    report["documents"].append(_migrate_findings(session, report))
 
-    report["finish_time"] = time.strftime(
-        "%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time())
-    )
-    report["files"] = results
-    report["totals"] = {
-        "json_records": sum(r["json_count"] for r in results),
-        "migrated": sum(r["migrated"] for r in results),
-        "skipped": sum(r["skipped"] for r in results),
-    }
+    failures = [d for d in report["documents"] if not d["match"]]
+    report["finish_time"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     report["validation"] = {
         "passed": not failures,
-        "failures": [r["file"] for r in failures],
+        "failures": [d["file"] for d in failures],
+    }
+    report["totals"] = {
+        "json_records": sum(d["json_count"] for d in report["documents"]),
+        "migrated": sum(d["migrated"] for d in report["documents"]),
+        "skipped": sum(d["skipped"] for d in report["documents"]),
     }
 
     _write_report(report)
-    print("\nMigration report written to:", REPORT_PATH)
-    return 0 if not failures else 2
+    log.info("Migration complete. Report written to %s", REPORT_PATH)
+    return 0 if not failures and not report["errors"] else 2
 
 
 def _write_report(report):
