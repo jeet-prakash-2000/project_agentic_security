@@ -1,0 +1,12 @@
+{
+  "users": [
+    {
+      "id": "u-test",
+      "name": "Test",
+      "email": "t@x.com",
+      "password_hash": "h",
+      "role": "Security Analyst",
+      "created": 123.0
+    }
+  ]
+}

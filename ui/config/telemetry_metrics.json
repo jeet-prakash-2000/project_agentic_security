@@ -1,10 +1,10 @@
 {
   "agents": {
     "firewall-audit-agent": {
-      "requests": 66,
-      "errors": 8,
+      "requests": 82,
+      "errors": 11,
       "first_ts": 1786440143.6519313,
-      "last_ts": 1786659771.7698567
+      "last_ts": 1787188439.3462956
     }
   }
 }

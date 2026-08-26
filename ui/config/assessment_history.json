@@ -1,0 +1,445 @@
+{
+  "snapshots": [
+    {
+      "ts": 1785624583.9243064,
+      "compliance_pct": 37.0,
+      "severity": {
+        "critical": 13,
+        "high": 13,
+        "medium": 2,
+        "low": 2
+      }
+    },
+    {
+      "ts": 1785710983.9243064,
+      "compliance_pct": 37.8,
+      "severity": {
+        "critical": 14,
+        "high": 13,
+        "medium": 2,
+        "low": 3
+      }
+    },
+    {
+      "ts": 1785797383.9243064,
+      "compliance_pct": 36.7,
+      "severity": {
+        "critical": 9,
+        "high": 9,
+        "medium": 3,
+        "low": 2
+      }
+    },
+    {
+      "ts": 1785883783.9243064,
+      "compliance_pct": 39.0,
+      "severity": {
+        "critical": 10,
+        "high": 10,
+        "medium": 2,
+        "low": 1
+      }
+    },
+    {
+      "ts": 1785970183.9243064,
+      "compliance_pct": 32.8,
+      "severity": {
+        "critical": 14,
+        "high": 14,
+        "medium": 6,
+        "low": 1
+      }
+    },
+    {
+      "ts": 1786056583.9243064,
+      "compliance_pct": 35.0,
+      "severity": {
+        "critical": 12,
+        "high": 13,
+        "medium": 6,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1786142983.9243064,
+      "compliance_pct": 38.8,
+      "severity": {
+        "critical": 13,
+        "high": 11,
+        "medium": 4,
+        "low": 1
+      }
+    },
+    {
+      "ts": 1786229383.9243064,
+      "compliance_pct": 32.0,
+      "severity": {
+        "critical": 12,
+        "high": 9,
+        "medium": 4,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1786315783.9243064,
+      "compliance_pct": 31.8,
+      "severity": {
+        "critical": 9,
+        "high": 13,
+        "medium": 2,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1786402183.9243064,
+      "compliance_pct": 31.7,
+      "severity": {
+        "critical": 12,
+        "high": 12,
+        "medium": 4,
+        "low": 2
+      }
+    },
+    {
+      "ts": 1786488583.9243064,
+      "compliance_pct": 33.9,
+      "severity": {
+        "critical": 11,
+        "high": 9,
+        "medium": 2,
+        "low": 3
+      }
+    },
+    {
+      "ts": 1786574983.9243064,
+      "compliance_pct": 33.2,
+      "severity": {
+        "critical": 9,
+        "high": 9,
+        "medium": 2,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1786662104.9072406,
+      "compliance_pct": 36.4,
+      "severity": {
+        "critical": 12,
+        "high": 12,
+        "medium": 4,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1786662704.5310373,
+      "compliance_pct": 36.4,
+      "severity": {
+        "critical": 12,
+        "high": 12,
+        "medium": 4,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1786664431.296133,
+      "compliance_pct": 36.4,
+      "severity": {
+        "critical": 12,
+        "high": 12,
+        "medium": 4,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1786667300.3064187,
+      "compliance_pct": 36.4,
+      "severity": {
+        "critical": 12,
+        "high": 12,
+        "medium": 4,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1786671977.9702256,
+      "compliance_pct": 36.4,
+      "severity": {
+        "critical": 12,
+        "high": 12,
+        "medium": 4,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1786676022.1552136,
+      "compliance_pct": 36.4,
+      "severity": {
+        "critical": 12,
+        "high": 12,
+        "medium": 4,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1786676616.476792,
+      "compliance_pct": 36.4,
+      "severity": {
+        "critical": 12,
+        "high": 12,
+        "medium": 4,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1787167009.9067566,
+      "compliance_pct": 36.4,
+      "severity": {
+        "critical": 12,
+        "high": 12,
+        "medium": 4,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1787167397.6139934,
+      "compliance_pct": 36.4,
+      "severity": {
+        "critical": 12,
+        "high": 12,
+        "medium": 4,
+        "low": 0
+      }
+    },
+    {
+      "ts": 1787174046.5878856,
+      "compliance_pct": 13.6,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      }
+    },
+    {
+      "run_id": "ASM-000187",
+      "ts": 1787176295.2161245,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000188",
+      "ts": 1787176670.335595,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-999999",
+      "ts": 1787180000.0,
+      "compliance_pct": 45.5,
+      "security_score": 72.0,
+      "severity": {
+        "critical": 3,
+        "high": 8,
+        "medium": 5,
+        "low": 1
+      },
+      "finding_count": 17
+    },
+    {
+      "run_id": "ASM-000189",
+      "ts": 1787180570.4306452,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000191",
+      "ts": 1787188316.621289,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000195",
+      "ts": 1787190996.707993,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000197",
+      "ts": 1787192060.7379072,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000198",
+      "ts": 1787192610.2410824,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000205",
+      "ts": 1787262573.163038,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000208",
+      "ts": 1787264000.2869194,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000209",
+      "ts": 1787264533.3210337,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000213",
+      "ts": 1787265730.5592072,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000214",
+      "ts": 1787266603.217203,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000215",
+      "ts": 1787266924.8203642,
+      "compliance_pct": 18.2,
+      "security_score": 53.4,
+      "severity": {
+        "critical": 9,
+        "high": 19,
+        "medium": 8,
+        "low": 0
+      },
+      "finding_count": 36
+    },
+    {
+      "run_id": "ASM-000218",
+      "ts": 1787268230.0456276,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000225",
+      "ts": 1787270149.473935,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    },
+    {
+      "run_id": "ASM-000226",
+      "ts": 1787270466.0503004,
+      "compliance_pct": 13.6,
+      "security_score": 51.1,
+      "severity": {
+        "critical": 10,
+        "high": 18,
+        "medium": 10,
+        "low": 0
+      },
+      "finding_count": 38
+    }
+  ]
+}
