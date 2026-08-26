@@ -17,8 +17,11 @@ If none of the Azure settings are present, local JSON files are used.
 
 import base64
 import json
+import logging
 import os
 import threading
+
+log = logging.getLogger("storage")
 
 CONFIG_DIR = os.path.abspath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "config")
@@ -278,16 +281,16 @@ def load_document(document_name, default):
             data = storage_bridge.load(document_name)
             if data is not None:
                 return data
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("PostgreSQL load failed for %s: %s", document_name, exc)
 
     if enabled():
         try:
             data = _table_load(document_name)
             if data is not None:
                 return data
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("Azure Table load failed for %s: %s", document_name, exc)
 
     # Fall back to the local file (also seeds on first run after enabling
     # a remote backend: the next save will write the remote store).
@@ -295,8 +298,8 @@ def load_document(document_name, default):
     if enabled() and data is not None and data != default:
         try:
             _table_save(document_name, data)
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("Azure Table seed failed for %s: %s", document_name, exc)
     return data
 
 
@@ -312,11 +315,14 @@ def save_document(document_name, data):
             from database import storage_bridge
 
             storage_bridge.save(document_name, data)
-        except Exception:
-            pass
+        except Exception as exc:
+            log.error(
+                "PostgreSQL write FAILED for %s - data only stored in JSON: %s",
+                document_name, exc,
+            )
 
     if enabled():
         try:
             _table_save(document_name, data)
-        except Exception:
-            pass
+        except Exception as exc:
+            log.warning("Azure Table write failed for %s: %s", document_name, exc)

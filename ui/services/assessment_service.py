@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import random
 import sys
@@ -9,6 +10,8 @@ import requests
 from config import settings
 from config import storage
 from services import timeutil
+
+log = logging.getLogger("assessment")
 
 UI_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -154,8 +157,11 @@ def _record_history_db(snapshot):
         from database.repositories import AssessmentsRepository
 
         AssessmentsRepository(get_session()).record(snapshot)
-    except Exception:
-        pass
+    except Exception as exc:
+        log.warning(
+            "Assessment history write to PostgreSQL failed (trend may be empty): %s",
+            exc,
+        )
 
 
 def _severity_breakdown(findings):
