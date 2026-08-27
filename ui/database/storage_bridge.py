@@ -323,6 +323,7 @@ def _load_assessment_history(session):
             {
                 "run_id": a.assessment_id,
                 "ts": a.executed_at,
+                "firewall_name": a.firewall_name or "vmpafw01",
                 "compliance_pct": a.compliance_score,
                 "security_score": a.security_score,
                 "severity": {
@@ -346,6 +347,7 @@ def _save_assessment_history(session, data):
         severity = s.get("severity") or {}
         session.add(
             AssessmentHistory(
+                firewall_name=s.get("firewall_name", "vmpafw01"),
                 assessment_id=s.get("run_id") or s.get("assessment_id"),
                 executed_at=s.get("ts") or s.get("executed_at"),
                 compliance_score=s.get("compliance_pct")

@@ -7,6 +7,11 @@
 {% block content %}
 
 <div class="dash-meta">
+    <select class="fw-select" id="firewallSelect" title="Select firewall">
+        {% for fw in firewalls or ['vmpafw01', 'vmpafw02'] %}
+        <option value="{{ fw }}" {{ 'selected' if fw == firewall_id else '' }}>{{ fw }}</option>
+        {% endfor %}
+    </select>
     <span class="hero-chip" id="dataSourceBadge">Connecting…</span>
     <button class="hero-chip hero-chip-btn" id="refreshBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 102.6-8L1 10"/></svg>
@@ -97,5 +102,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=7"></script>
-<script src="{{ url_for('static', filename='js/dashboard.js') }}?v=7"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}?v=8"></script>
 {% endblock %}

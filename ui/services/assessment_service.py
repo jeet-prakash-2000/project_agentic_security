@@ -54,10 +54,25 @@ SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
 if SERVICE_DIR not in sys.path:
     sys.path.insert(0, SERVICE_DIR)
 
+FIREWALLS = ["vmpafw01", "vmpafw02"]
+
 _cache = {
-    "assessment": None,
-    "ts": 0.0
+    "assessment": {},
+    "ts": {}
 }
+
+
+def _apply_firewall(data, firewall_id):
+    """Label an assessment snapshot with the selected firewall name.
+
+    Both firewalls point at the same underlying firewall system; only the
+    logical device name differs (vmpafw01 / vmpafw02).
+    """
+    inventory = dict(data.get("inventory") or {})
+    inventory["hostname"] = firewall_id
+    data["inventory"] = inventory
+    data["_firewall_id"] = firewall_id
+    return data
 
 
 def _load_stats():
@@ -283,20 +298,31 @@ def _stamp(data, source):
     return data
 
 
-def get_full_assessment(force=False):
+def get_full_assessment(firewall_id="vmpafw01", force=False):
 
+    firewall_id = firewall_id or "vmpafw01"
     now = time.time()
 
-    cached = _cache["assessment"]
+    cached = _cache["assessment"].get(firewall_id)
 
     if (
         not force
         and cached
-        and now - _cache["ts"]
+        and now - _cache["ts"].get(firewall_id, 0)
         < settings.CACHE_TTL
     ):
 
         return cached
+
+    # vmpafw02 mirrors vmpafw01 (same system, different logical name).
+    if firewall_id != "vmpafw01" and "vmpafw01" in _cache["assessment"]:
+        import copy
+
+        data = copy.deepcopy(_cache["assessment"]["vmpafw01"])
+        data = _apply_firewall(data, firewall_id)
+        _cache["assessment"][firewall_id] = data
+        _cache["ts"][firewall_id] = now
+        return data
 
     data = _live_assessment()
 
@@ -316,17 +342,19 @@ def get_full_assessment(force=False):
             "live"
         )
 
+    data = _apply_firewall(data, firewall_id)
+
     _record_assessment()
 
-    _cache["assessment"] = data
-    _cache["ts"] = now
+    _cache["assessment"][firewall_id] = data
+    _cache["ts"][firewall_id] = now
 
     return data
 
 
-def get_summary(force=False):
+def get_summary(firewall_id="vmpafw01", force=False):
 
-    data = get_full_assessment(force)
+    data = get_full_assessment(firewall_id, force)
 
     summary = dict(
         data.get(
@@ -346,9 +374,9 @@ def get_summary(force=False):
     return summary
 
 
-def get_findings(force=False):
+def get_findings(firewall_id="vmpafw01", force=False):
 
-    data = get_full_assessment(force)
+    data = get_full_assessment(firewall_id, force)
 
     return {
         "findings":
@@ -368,8 +396,8 @@ def get_findings(force=False):
     }
 
 
-def get_posture(force=False):
-    data = get_full_assessment(force)
+def get_posture(firewall_id="vmpafw01", force=False):
+    data = get_full_assessment(firewall_id, force)
 
     summary = data.get("summary", {})
     findings = data.get("findings", [])
@@ -402,11 +430,16 @@ def get_posture(force=False):
     run_id = "ASM-{0:06d}".format(int(stats.get("assessments_run", 0)))
 
     prev_snapshots = _load_history()
-    prev = prev_snapshots[-1] if prev_snapshots else None
+    prev = None
+    for s in reversed(prev_snapshots):
+        if s.get("firewall_name", "vmpafw01") == firewall_id:
+            prev = s
+            break
 
     snapshot = {
         "run_id": run_id,
         "ts": time.time(),
+        "firewall_name": firewall_id,
         "compliance_pct": compliance_pct,
         "security_score": security_score,
         "severity": severity,
@@ -439,10 +472,11 @@ def get_posture(force=False):
         "last_assessment_ts": stats.get("last_assessment_ts"),
         "collected_at": collected_at,
         "_source": data.get("_source", "sample"),
+        "firewall_id": firewall_id,
     }
 
     firewall = {
-        "hostname": inventory.get("hostname", "edge-fw-01"),
+        "hostname": inventory.get("hostname", firewall_id),
         "model": inventory.get("model", ""),
         "version": inventory.get("version", ""),
         "serial": inventory.get("serial", ""),
@@ -457,16 +491,17 @@ def get_posture(force=False):
         "history": history,
         "_source": data.get("_source", "sample"),
         "_collected_at": collected_at,
+        "_firewall_id": firewall_id,
     }
 
 
-def get_executive_summary(force=False):
+def get_executive_summary(firewall_id="vmpafw01", force=False):
 
     from reports.executive_summary import (
         ExecutiveSummary
     )
 
-    data = get_full_assessment(force)
+    data = get_full_assessment(firewall_id, force)
 
     summary = (
         ExecutiveSummary()
@@ -481,19 +516,22 @@ def get_executive_summary(force=False):
         data.get("_collected_at")
     )
 
+    summary["_firewall_id"] = firewall_id
+
     return summary
 
 
-def get_executive_summary_pdf(force=False):
+def get_executive_summary_pdf(firewall_id="vmpafw01", force=False):
 
     from reports.executive_summary_pdf import (
         generate as generate_pdf
     )
 
-    summary = get_executive_summary(force)
+    firewall_id = firewall_id or "vmpafw01"
+    summary = get_executive_summary(firewall_id, force)
 
     month = timeutil.ist_now().strftime("%b_%Y")
-    filename = "Executive_Summary_{0}.pdf".format(month)
+    filename = "Executive_Summary_{0}_{1}.pdf".format(firewall_id, month)
 
     os.makedirs(
         EXCEL_DIR,
@@ -518,24 +556,31 @@ def get_executive_summary_pdf(force=False):
     }
 
 
-def get_excel_report(force=False):
+def get_excel_report(firewall_id="vmpafw01", force=False):
 
     from reports.excel_report import (
         ExcelReport
     )
 
-    data = get_full_assessment(force)
+    firewall_id = firewall_id or "vmpafw01"
+    data = get_full_assessment(firewall_id, force)
 
     os.makedirs(
         EXCEL_DIR,
         exist_ok=True
     )
 
+    filename = "{0}_Assessment_Workbook.xlsx".format(firewall_id)
+    output_file = os.path.join(
+        EXCEL_DIR,
+        filename
+    )
+
     (
         ExcelReport()
         .generate(
             data,
-            output_file=EXCEL_FILE
+            output_file=output_file
         )
     )
 
@@ -550,12 +595,13 @@ def get_excel_report(force=False):
                 {}
             ),
         "local_file":
-            EXCEL_FILE,
+            output_file,
         "download_url":
-            "reports/PaloAlto_Assessment.xlsx",
+            "reports/{0}".format(filename),
         "_source":
             data.get(
                 "_source",
                 "live"
-            )
+            ),
+        "firewall_id": firewall_id,
     }

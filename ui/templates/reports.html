@@ -27,6 +27,15 @@
 </div>
 {% endif %}
 
+<section class="reports-fw-row">
+    <label for="reportsFirewall">Firewall</label>
+    <select id="reportsFirewall" class="fw-select">
+        {% for fw in firewalls or ['vmpafw01', 'vmpafw02'] %}
+        <option value="{{ fw }}" {{ 'selected' if fw == firewall_id else '' }}>{{ fw }}</option>
+        {% endfor %}
+    </select>
+</section>
+
 <section class="gen-grid">
     <div class="gen-card card">
         <span class="gen-icon gen-icon-purple">
@@ -39,7 +48,7 @@
             <li>Compliance score</li>
             <li>Executive recommendations</li>
         </ul>
-        <a href="{{ url_for('executive_report') }}" class="btn btn-primary btn-block">Generate Summary</a>
+        <a href="{{ url_for('executive_report', firewall=firewall_id) }}" class="btn btn-primary btn-block" data-report-link>Generate Summary</a>
     </div>
 
     <div class="gen-card card">
@@ -53,7 +62,7 @@
             <li>Risk and impact mapping</li>
             <li>Excel-formatted export</li>
         </ul>
-        <a href="{{ url_for('generate_excel') }}" class="btn btn-primary btn-block">Generate Excel Report</a>
+        <a href="{{ url_for('generate_excel', firewall=firewall_id) }}" class="btn btn-primary btn-block" data-report-link>Generate Excel Report</a>
     </div>
 </section>
 
@@ -194,4 +203,18 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+<script>
+    (function () {
+        var sel = document.getElementById("reportsFirewall");
+        if (!sel) return;
+        sel.addEventListener("change", function () {
+            var fw = sel.value;
+            document.querySelectorAll("[data-report-link]").forEach(function (a) {
+                var url = new URL(a.href, window.location.origin);
+                url.searchParams.set("firewall", fw);
+                a.href = url.pathname + url.search;
+            });
+        });
+    })();
+</script>
 {% endblock %}

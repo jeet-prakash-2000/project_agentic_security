@@ -491,7 +491,7 @@
 
     function runAction(action) {
         if (action === "assess") {
-            showMcqCard();
+            showFirewallSelection();
             return;
         }
         var a = ACTIONS[action];
@@ -503,13 +503,35 @@
     // COMPLIANCE ASSESSMENT MCQ
     // ============================================================
 
-    var assessmentCache = null;
+    var selectedFirewall = "vmpafw01";
+    var assessmentCache = {};
+
+    function showFirewallSelection() {
+        ensureActiveId();
+        appendMessage({ role: "user", content: "Compliance Assessment", ts: now() });
+        renderConversationList();
+
+        var buttons = ["vmpafw01", "vmpafw02"].map(function (fw) {
+            return '<button class="mcq-option fw-select-btn" type="button" data-firewall="' + fw + '">' +
+                '<span class="mcq-option-label">' + escapeHtml(fw) + '</span>' +
+                '<span class="mcq-option-arrow">' + ARROW_ICON + '</span>' +
+                '</button>';
+        }).join("");
+
+        var html = '<div class="ws-mcq-card">' +
+            '<div class="ws-mcq-head"><strong>Select Firewall</strong><span>Choose a firewall to assess</span></div>' +
+            '<div class="ws-mcq-options">' + buttons + '</div>' +
+            '</div>';
+
+        appendMessage({ role: "assistant", content: "", html: html, cardTitle: "Select Firewall", agentName: "Firewall Auditor", ts: now() });
+        renderConversationList();
+    }
 
     function loadAssessmentData() {
-        if (assessmentCache) return Promise.resolve(assessmentCache);
-        return fetch("/api/findings")
+        if (assessmentCache[selectedFirewall]) return Promise.resolve(assessmentCache[selectedFirewall]);
+        return fetch("/api/findings?firewall=" + encodeURIComponent(selectedFirewall))
             .then(function (r) { return r.json(); })
-            .then(function (data) { assessmentCache = data; return data; })
+            .then(function (data) { assessmentCache[selectedFirewall] = data; return data; })
             .catch(function () { return null; });
     }
 
@@ -520,7 +542,7 @@
     }
 
     function loadKpiCards() {
-        return fetch("/api/dashboard")
+        return fetch("/api/dashboard?firewall=" + encodeURIComponent(selectedFirewall))
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 var c = data.compliance || {};
@@ -535,9 +557,10 @@
             .catch(function () { return '<div class="ws-kpi-row"></div>'; });
     }
 
-    function showMcqCard() {
+    function showMcqCard(firewall) {
+        if (firewall) selectedFirewall = firewall;
         ensureActiveId();
-        appendMessage({ role: "user", content: "Compliance Assessment", ts: now() });
+        appendMessage({ role: "user", content: "Compliance Assessment \u2014 " + selectedFirewall, ts: now() });
         renderConversationList();
 
         loadKpiCards().then(function (kpiHtml) {
@@ -577,7 +600,7 @@
         renderConversationList();
         var typing = appendTyping();
         sendBtn.disabled = true;
-        fetch("/api/excel")
+        fetch("/api/excel?firewall=" + encodeURIComponent(selectedFirewall))
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 removeTyping(typing);
@@ -598,7 +621,7 @@
         renderConversationList();
         var typing = appendTyping();
         sendBtn.disabled = true;
-        fetch("/executive-summary")
+        fetch("/executive-summary?firewall=" + encodeURIComponent(selectedFirewall))
             .then(function (r) { return r.ok; })
             .then(function (ok) {
                 removeTyping(typing);
@@ -621,7 +644,7 @@
         sendBtn.disabled = true;
 
         var dataPromise = section.endpoint
-            ? fetch(section.endpoint).then(function (r) { return r.json(); }).catch(function () { return null; })
+            ? fetch(section.endpoint + "?firewall=" + encodeURIComponent(selectedFirewall)).then(function (r) { return r.json(); }).catch(function () { return null; })
             : Promise.resolve(null);
         var assessPromise = loadAssessmentData();
 
@@ -1110,6 +1133,12 @@
 
     if (chatWindow) {
         chatWindow.addEventListener("click", function (e) {
+            var fwBtn = e.target.closest(".fw-select-btn");
+            if (fwBtn) {
+                var fw = fwBtn.getAttribute("data-firewall");
+                if (fw) showMcqCard(fw);
+                return;
+            }
             var option = e.target.closest(".mcq-option");
             if (!option) return;
             var sectionId = option.getAttribute("data-section");

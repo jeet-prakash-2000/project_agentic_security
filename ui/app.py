@@ -90,6 +90,25 @@ def render_with_css(template_name, **context):
 # HELPERS
 # --------------------------------------------------
 
+def _firewall_param():
+    """Read the selected firewall from the query string (validated)."""
+    fw = (request.args.get("firewall") or "").strip()
+    if fw not in assessment_service.FIREWALLS:
+        return "vmpafw01"
+    return fw
+
+
+def _relabel_firewall(data, firewall_id):
+    """Relabel the firewall hostname to the selected logical name."""
+    if isinstance(data, dict):
+        if "hostname" in data:
+            data["hostname"] = firewall_id
+        inventory = data.get("inventory")
+        if isinstance(inventory, dict) and "hostname" in inventory:
+            inventory["hostname"] = firewall_id
+    return data
+
+
 def file_size_label(path):
     try:
         size_bytes = (
@@ -127,6 +146,8 @@ app.add_template_filter(initials, "initials")
 
 def render_reports(**context):
     context["reports"] = report_history_service.list_reports()
+    context["firewalls"] = assessment_service.FIREWALLS
+    context.setdefault("firewall_id", _firewall_param())
     return render_with_css("reports.html", **context)
 
 # --------------------------------------------------
@@ -194,7 +215,9 @@ def dashboard():
         compliant="-",
         non_compliant="-",
         not_assessed="-",
-        base_model=(connected or {}).get("model", "gpt-5.1")
+        base_model=(connected or {}).get("model", "gpt-5.1"),
+        firewalls=assessment_service.FIREWALLS,
+        firewall_id=_firewall_param()
     )
 
 # --------------------------------------------------
@@ -216,7 +239,8 @@ def workspace():
 def findings():
 
     return render_with_css(
-        "findings.html"
+        "findings.html",
+        firewall_id=_firewall_param()
     )
 
 # --------------------------------------------------
@@ -231,6 +255,7 @@ def run_assessment():
         data = (
             assessment_service
             .get_full_assessment(
+                firewall_id=_firewall_param(),
                 force=True
             )
         )
@@ -240,7 +265,8 @@ def run_assessment():
 
             assessment_source=(
                 data.get("_source", "live")
-            )
+            ),
+            firewall_id=_firewall_param()
         )
 
     except Exception as e:
@@ -273,6 +299,7 @@ def executive_report():
         result = (
             assessment_service
             .get_executive_summary_pdf(
+                firewall_id=_firewall_param(),
                 force=True
             )
         )
@@ -322,6 +349,7 @@ def generate_excel():
         result = (
             assessment_service
             .get_excel_report(
+                firewall_id=_firewall_param(),
                 force=True
             )
         )
@@ -430,6 +458,7 @@ def api_compliance():
         return jsonify(
             assessment_service
             .get_full_assessment(
+                firewall_id=_firewall_param(),
                 force=force
             )
         )
@@ -457,6 +486,7 @@ def api_findings():
         return jsonify(
             assessment_service
             .get_posture(
+                firewall_id=_firewall_param(),
                 force=force
             )
         )
@@ -473,7 +503,7 @@ def api_findings():
 @app.route("/api/firewall/inventory")
 def api_firewall_inventory():
     try:
-        return jsonify(firewall_data_service.get_inventory() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_inventory() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -481,7 +511,7 @@ def api_firewall_inventory():
 @app.route("/api/firewall/health")
 def api_firewall_health():
     try:
-        return jsonify(firewall_data_service.get_health_status() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_health_status() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -489,7 +519,7 @@ def api_firewall_health():
 @app.route("/api/firewall/ha")
 def api_firewall_ha():
     try:
-        return jsonify(firewall_data_service.get_ha_configuration() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_ha_configuration() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -497,7 +527,7 @@ def api_firewall_ha():
 @app.route("/api/firewall/policy")
 def api_firewall_policy():
     try:
-        return jsonify(firewall_data_service.get_policy_configuration() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_policy_configuration() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -505,7 +535,7 @@ def api_firewall_policy():
 @app.route("/api/firewall/services")
 def api_firewall_services():
     try:
-        return jsonify(firewall_data_service.get_security_services() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_security_services() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -513,7 +543,7 @@ def api_firewall_services():
 @app.route("/api/firewall/status")
 def api_firewall_status():
     try:
-        return jsonify(firewall_data_service.get_full_status())
+        return jsonify(_relabel_firewall(firewall_data_service.get_full_status(), _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -521,7 +551,7 @@ def api_firewall_status():
 @app.route("/api/firewall/routing")
 def api_firewall_routing():
     try:
-        return jsonify(firewall_data_service.get_routing_configuration() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_routing_configuration() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -529,7 +559,7 @@ def api_firewall_routing():
 @app.route("/api/firewall/vpn")
 def api_firewall_vpn():
     try:
-        return jsonify(firewall_data_service.get_vpn_configuration() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_vpn_configuration() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -537,7 +567,7 @@ def api_firewall_vpn():
 @app.route("/api/firewall/logging")
 def api_firewall_logging():
     try:
-        return jsonify(firewall_data_service.get_logging_configuration() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_logging_configuration() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -545,7 +575,7 @@ def api_firewall_logging():
 @app.route("/api/firewall/administration")
 def api_firewall_administration():
     try:
-        return jsonify(firewall_data_service.get_administration_configuration() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_administration_configuration() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -553,7 +583,7 @@ def api_firewall_administration():
 @app.route("/api/firewall/zone-protection")
 def api_firewall_zone_protection():
     try:
-        return jsonify(firewall_data_service.get_zone_protection_configuration() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_zone_protection_configuration() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -561,7 +591,7 @@ def api_firewall_zone_protection():
 @app.route("/api/firewall/backup")
 def api_firewall_backup():
     try:
-        return jsonify(firewall_data_service.get_backup_configuration() or {"error": "No data from firewall"})
+        return jsonify(_relabel_firewall(firewall_data_service.get_backup_configuration() or {"error": "No data from firewall"}, _firewall_param()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -574,6 +604,7 @@ def api_summary():
         result = (
             assessment_service
             .get_executive_summary_pdf(
+                firewall_id=_firewall_param(),
                 force=True
             )
         )
@@ -614,6 +645,7 @@ def api_excel():
         result = (
             assessment_service
             .get_excel_report(
+                firewall_id=_firewall_param(),
                 force=True
             )
         )
@@ -655,6 +687,7 @@ def download_workbook():
         result = (
             assessment_service
             .get_excel_report(
+                firewall_id=_firewall_param(),
                 force=True
             )
         )
@@ -833,7 +866,7 @@ def api_dashboard():
     try:
 
         return jsonify(
-            dashboard_service.get_dashboard()
+            dashboard_service.get_dashboard(firewall_id=_firewall_param())
         )
 
     except Exception as e:

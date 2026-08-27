@@ -1076,7 +1076,9 @@
     // ============================================================
 
     function load() {
-        fetch("/api/findings")
+        var params = new URLSearchParams(window.location.search);
+        var fw = params.get("firewall") || "vmpafw01";
+        fetch("/api/findings?firewall=" + encodeURIComponent(fw))
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 if (!data || data.error) {

@@ -229,11 +229,12 @@
     // COMPLIANCE TREND
     // ============================================================
 
-    function renderTrendStats(history) {
+    function renderTrendStats(history, firewallId) {
         var el = document.getElementById("trendStats");
         if (!el) return;
+        var target = firewallId || "vmpafw01";
         var snapshots = (history || []).filter(function (s) {
-            return s && typeof s.compliance_pct === "number";
+            return s && typeof s.compliance_pct === "number" && (s.firewall_name || "vmpafw01") === target;
         });
         if (!snapshots.length) return;
         var latest = snapshots[snapshots.length - 1];
@@ -261,32 +262,44 @@
             el.innerHTML = '<p class="trend-summary">No history yet. Run an assessment to start tracking compliance.</p>';
             return;
         }
-        if (snapshots.length > 12) snapshots = snapshots.slice(-12);
+
+        var groups = {};
+        snapshots.forEach(function (s) {
+            var fw = s.firewall_name || "vmpafw01";
+            if (!groups[fw]) groups[fw] = [];
+            groups[fw].push(s);
+        });
+        var firewalls = Object.keys(groups).sort();
+
+        var times = [];
+        var seen = {};
+        snapshots.forEach(function (s) {
+            if (s.ts != null && !seen[s.ts]) { seen[s.ts] = true; times.push(s.ts); }
+        });
+        times.sort(function (a, b) { return a - b; });
+        if (times.length > 12) {
+            var cut = times.length - 12;
+            times = times.slice(cut);
+        }
+        var n = times.length;
 
         var W = 900, H = 160;
         var PAD_LEFT = 36, PAD_RIGHT = 12, PAD_TOP = 12, PAD_BOTTOM = 22;
         var min = 0, max = 100;
-        var n = snapshots.length;
 
-        function x(i) {
+        function x(ts) {
+            var idx = times.indexOf(ts);
             if (n === 1) return PAD_LEFT + (W - PAD_LEFT - PAD_RIGHT) / 2;
-            return PAD_LEFT + (i / (n - 1)) * (W - PAD_LEFT - PAD_RIGHT);
+            return PAD_LEFT + (idx / (n - 1)) * (W - PAD_LEFT - PAD_RIGHT);
         }
         function y(v) {
             return PAD_TOP + (1 - (v - min) / (max - min)) * (H - PAD_TOP - PAD_BOTTOM);
         }
 
-        var avg = snapshots.reduce(function (s, a) { return s + a.compliance_pct; }, 0) / n;
-        var points = snapshots.map(function (s, i) { return [x(i), y(s.compliance_pct)]; });
-        var linePath = "M" + points.map(function (p) { return p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" L");
-        var areaPath = linePath + " L" + points[points.length - 1][0].toFixed(1) + " " + (H - PAD_BOTTOM) + " L" + points[0][0].toFixed(1) + " " + (H - PAD_BOTTOM) + " Z";
-        var avgY = y(avg);
+        var COLORS = { vmpafw01: "#E4002B", vmpafw02: "#2563EB" };
+        var used = {};
 
         var html = '<svg class="trend-line-svg" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" role="img" aria-label="Compliance score over time">';
-        html += '<defs><linearGradient id="trendAreaFill" x1="0" y1="0" x2="0" y2="1">' +
-            '<stop offset="0%" stop-color="#E4002B" stop-opacity="0.18"/>' +
-            '<stop offset="100%" stop-color="#E4002B" stop-opacity="0"/>' +
-            "</linearGradient></defs>";
 
         for (var g = 0; g <= 4; g++) {
             var gv = g * 25;
@@ -295,27 +308,40 @@
             html += '<text x="' + (PAD_LEFT - 8) + '" y="' + (gy + 3).toFixed(1) + '" class="trend-axis-label" text-anchor="end">' + gv + "</text>";
         }
 
-        html += '<path d="' + areaPath + '" fill="url(#trendAreaFill)"/>';
-        html += '<line x1="' + PAD_LEFT + '" y1="' + avgY.toFixed(1) + '" x2="' + (W - PAD_RIGHT) + '" y2="' + avgY.toFixed(1) + '" class="trend-avg" vector-effect="non-scaling-stroke"/>';
-        html += '<path d="' + linePath + '" class="trend-line" fill="none" vector-effect="non-scaling-stroke"/>';
-
-        points.forEach(function (p, i) {
-            var s = snapshots[i];
-            var latest = i === n - 1;
-            var label = formatShortTs(s.ts) + " \u00b7 " + s.compliance_pct + "%";
-            html += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="' + (latest ? 4 : 2.6) + '" class="trend-dot' + (latest ? " latest" : "") + '" vector-effect="non-scaling-stroke"><title>' + escapeHtml(label) + "</title></circle>";
+        firewalls.forEach(function (fw) {
+            var color = COLORS[fw] || "#111827";
+            used[fw] = color;
+            var pts = (groups[fw] || []).filter(function (s) { return times.indexOf(s.ts) !== -1; })
+                .sort(function (a, b) { return a.ts - b.ts; });
+            if (pts.length === 0) return;
+            if (pts.length === 1) {
+                var p = pts[0];
+                html += '<circle cx="' + x(p.ts).toFixed(1) + '" cy="' + y(p.compliance_pct).toFixed(1) + '" r="4" fill="' + color + '"><title>' + escapeHtml((p.firewall_name || fw) + ": " + p.compliance_pct + "%") + "</title></circle>";
+                return;
+            }
+            var line = "M" + pts.map(function (s) { return x(s.ts).toFixed(1) + " " + y(s.compliance_pct).toFixed(1); }).join(" L");
+            html += '<path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+            pts.forEach(function (s) {
+                html += '<circle cx="' + x(s.ts).toFixed(1) + '" cy="' + y(s.compliance_pct).toFixed(1) + '" r="2.6" fill="' + color + '" vector-effect="non-scaling-stroke"><title>' + escapeHtml((s.firewall_name || fw) + ": " + s.compliance_pct + "%") + "</title></circle>";
+            });
         });
 
         html += "</svg>";
         html += '<div class="trend-labels">';
-        snapshots.forEach(function (s, i) {
+        times.forEach(function (ts, i) {
             if (i === 0 || i === n - 1 || i === Math.floor((n - 1) / 2)) {
-                html += '<span class="trend-label">' + escapeHtml(formatShortTs(s.ts)) + "</span>";
+                html += '<span class="trend-label">' + escapeHtml(formatShortTs(ts)) + "</span>";
             } else {
                 html += '<span class="trend-label"></span>';
             }
         });
         html += "</div>";
+
+        var legend = "";
+        firewalls.forEach(function (fw) {
+            legend += '<span class="trend-legend-item"><i style="background:' + used[fw] + '"></i>' + escapeHtml(fw) + "</span>";
+        });
+        if (legend) html += '<div class="trend-legend">' + legend + "</div>";
 
         el.innerHTML = html;
     }
@@ -326,20 +352,28 @@
 
     function applyNetsecData(data) {
         var c = data.compliance || {};
+        var fw = data.firewall_id || "vmpafw01";
         setSource(c.source);
         renderCompliancePie(c);
         renderSeverityGrid(data.findings || {});
         renderRecentFindings(data.recent_findings || []);
         renderVerticalBars(data.findings_list || []);
-        renderTrendStats(data.history || []);
+        renderTrendStats(data.history || [], fw);
         renderComplianceTrend(data.history || []);
     }
 
     function load() {
-        fetch("/api/dashboard")
+        var sel = document.getElementById("firewallSelect");
+        var fw = sel ? sel.value : "vmpafw01";
+        fetch("/api/dashboard?firewall=" + encodeURIComponent(fw))
             .then(function (r) { return r.json(); })
             .then(function (data) { applyNetsecData(data); })
             .catch(function () { window.showToast("Dashboard data unavailable.", "error"); });
+    }
+
+    var firewallSelect = document.getElementById("firewallSelect");
+    if (firewallSelect) {
+        firewallSelect.addEventListener("change", function () { load(); });
     }
 
     if (window.showToast) {

@@ -65,12 +65,30 @@ def _agent_health_card(agent, stats):
     }
 
 
-def get_dashboard():
+def _trend_history(history):
+    """Ensure the trend has snapshots for both firewalls.
+
+    vmpafw02 mirrors vmpafw01, so when no dedicated vmpafw02 snapshots exist
+    yet, synthesize them from the vmpafw01 series (relabelled).
+    """
+    history = list(history or [])
+    has_fw02 = any((s.get("firewall_name") or "vmpafw01") == "vmpafw02" for s in history)
+    if not has_fw02:
+        history += [
+            dict(s, firewall_name="vmpafw02")
+            for s in history
+            if (s.get("firewall_name") or "vmpafw01") == "vmpafw01"
+        ]
+    return history
+
+
+def get_dashboard(firewall_id="vmpafw01"):
+    firewall_id = firewall_id or "vmpafw01"
     connected = agents_service.get_connected_agent()
     stats = assessment_service.get_assessment_stats()
 
     try:
-        assessment = assessment_service.get_full_assessment()
+        assessment = assessment_service.get_full_assessment(firewall_id)
     except Exception:
         assessment = {}
 
@@ -168,6 +186,8 @@ def get_dashboard():
         "assessments_run": int((stats or {}).get("assessments_run", 0)),
         "avg_health": avg_health,
         "agents": health_cards,
-        "history": assessment_service.get_history(),
+        "history": _trend_history(assessment_service.get_history()),
+        "firewalls": list(assessment_service.FIREWALLS),
+        "firewall_id": firewall_id,
         "generated_at": time.time(),
     }

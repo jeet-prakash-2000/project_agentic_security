@@ -109,6 +109,7 @@ class AssessmentHistory(Base):
     __tablename__ = "assessment_history"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    firewall_name = Column(String(64), index=True, default="vmpafw01")
     assessment_id = Column(String(64), index=True)
     executed_at = Column(Float, index=True)
     compliance_score = Column(Float)
