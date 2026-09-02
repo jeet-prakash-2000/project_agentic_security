@@ -109,20 +109,20 @@ project_agentic_security/
 │       └── applogs/                 # Azure runtime logs (tracked legacy, not source)
 │
 └── cloudsec-agent/                  # Azure / M365 cloud security & incident response
-    └── functions/
-        ├── function_app_cloudsec.py # IR tool endpoints
-        ├── host.json / requirements.txt / incident_response_schema.json
-        ├── connectors/
-        │   ├── azure_config_cloudsec.py
-        │   ├── compute_connector_cloudsec.py
-        │   ├── defender_connector_cloudsec.py
-        │   ├── network_connector_cloudsec.py
-        │   ├── sentinel_connector_cloudsec.py
-        │   └── utils/
-        └── services/
-            ├── incident_analysis_cloudsec.py
-            ├── action_logger_cloudsec.py
-            └── report_generator_cloudsec.py
+    ├── function_app.py              # IR tool endpoints (function_app.py at root)
+    ├── host.json / requirements.txt / incident_response_schema.json
+    ├── connectors/
+    │   ├── auth.py
+    │   ├── network_connector.py
+    │   ├── sentinel_connector.py
+    │   └── vm_connector.py
+    └── services/
+        ├── common.py
+        ├── get_incidents_service.py / get_incident_service.py
+        ├── generate_summary_service.py
+        ├── get_vm_context_service.py / get_vm_instance_view_service.py
+        └── start_vm_service.py / stop_vm_service.py / restart_vm_service.py /
+            isolate_vm_service.py / reconnect_vm_service.py
 ```
 
 ---
@@ -259,16 +259,11 @@ Supporting modules: `connectors/paloalto/*` (device collectors), `compliance/*`
 ## 5. Azure Functions — `cloudsec-agent/`
 
 Azure / Microsoft 365 cloud security and incident response toolset
-(`function_app_cloudsec.py`), all POST triggers:
+(`function_app.py`), all POST triggers:
 
-- Detection: `GetSentinelIncident`, `GetIncidentEntities`, `GetVMContext`,
-  `GetDefenderAlertDetails`, `GetSecurityRecommendations`, `CollectVMEvidence`,
-  `BuildIncidentTimeline`, `AnalyzeRisk`
-- Response: `IsolateAzureVM`, `StopAzureVM`, `BlockMaliciousIP`, `RunSecurityScan`,
-  `RemovePersistence`, `PatchVM`, `RestoreVMConnectivity`, `ValidateVMHealth`
-- Reporting: `GenerateIncidentSummary`, `GenerateTechnicalReport`,
-  `GenerateExecutiveReport`, `CloseIncident`
-- Orchestration: `RunFullIncidentResponse`
+- Detection: `GetSentinelIncidents`, `GetSentinelIncident`, `GenerateIncidentSummary`
+- Compute: `GetVMContext`, `GetVMInstanceView`
+- Response: `StartVM`, `StopVM`, `RestartVM`, `IsolateAzureVM`, `RestoreVMConnectivity`
 
 ---
 

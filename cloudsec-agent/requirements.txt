@@ -1,0 +1,9 @@
+azure-functions
+
+azure-identity
+azure-core
+
+azure-mgmt-compute
+azure-mgmt-network
+
+requests

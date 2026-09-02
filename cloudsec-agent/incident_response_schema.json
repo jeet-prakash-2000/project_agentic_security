@@ -1,0 +1,364 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CloudSec Incident Response API",
+    "version": "2.0.0",
+    "description": "Agentic Incident Response API for Microsoft Sentinel and Azure Virtual Machines."
+  },
+  "servers": [
+    {
+      "url": "https://cloudsec-containment-agent-hook-etdrenhhghcncebe.centralindia-01.azurewebsites.net/api"
+    }
+  ],
+  "security": [
+    {
+      "FunctionKey": []
+    }
+  ],
+  "paths": {
+    "/GetSentinelIncidents": {
+      "post": {
+        "operationId": "GetSentinelIncidents",
+        "summary": "Get Sentinel incidents",
+        "description": "Returns incidents from the selected time period.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["period"],
+                "properties": {
+                  "period": {
+                    "type": "string",
+                    "enum": [
+                      "daily",
+                      "weekly",
+                      "monthly"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Incidents retrieved successfully."
+          }
+        }
+      }
+    },
+
+    "/GetSentinelIncident": {
+      "post": {
+        "operationId": "GetSentinelIncident",
+        "summary": "Get Sentinel Incident",
+        "description": "Retrieve details of a Sentinel incident.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Incident details returned."
+          }
+        }
+      }
+    },
+
+    "/GenerateIncidentSummary": {
+      "post": {
+        "operationId": "GenerateIncidentSummary",
+        "summary": "Generate Incident Summary",
+        "description": "Generate an investigation summary for a Sentinel incident.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["incident_id"],
+                "properties": {
+                  "incident_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Summary generated successfully."
+          }
+        }
+      }
+    },
+
+    "/GetVMContext": {
+      "post": {
+        "operationId": "GetVMContext",
+        "summary": "Get VM Context",
+        "description": "Retrieve VM configuration and power state.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vm_name",
+                  "resource_group"
+                ],
+                "properties": {
+                  "vm_name": {
+                    "type": "string"
+                  },
+                  "resource_group": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "VM details retrieved."
+          }
+        }
+      }
+    },
+
+    "/GetVMInstanceView": {
+      "post": {
+        "operationId": "GetVMInstanceView",
+        "summary": "Get VM Instance View",
+        "description": "Returns detailed VM runtime status information.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vm_name",
+                  "resource_group"
+                ],
+                "properties": {
+                  "vm_name": {
+                    "type": "string"
+                  },
+                  "resource_group": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Instance view retrieved."
+          }
+        }
+      }
+    },
+
+    "/StartVM": {
+      "post": {
+        "operationId": "StartVM",
+        "summary": "Start Azure VM",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vm_name",
+                  "resource_group"
+                ],
+                "properties": {
+                  "vm_name": {
+                    "type": "string"
+                  },
+                  "resource_group": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "VM started successfully."
+          }
+        }
+      }
+    },
+
+    "/StopVM": {
+      "post": {
+        "operationId": "StopVM",
+        "summary": "Stop Azure VM",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vm_name",
+                  "resource_group"
+                ],
+                "properties": {
+                  "vm_name": {
+                    "type": "string"
+                  },
+                  "resource_group": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "VM stopped successfully."
+          }
+        }
+      }
+    },
+
+    "/RestartVM": {
+      "post": {
+        "operationId": "RestartVM",
+        "summary": "Restart Azure VM",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vm_name",
+                  "resource_group"
+                ],
+                "properties": {
+                  "vm_name": {
+                    "type": "string"
+                  },
+                  "resource_group": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "VM restarted successfully."
+          }
+        }
+      }
+    },
+
+    "/IsolateAzureVM": {
+      "post": {
+        "operationId": "IsolateAzureVM",
+        "summary": "Isolate VM",
+        "description": "Blocks inbound and outbound traffic to a VM.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vm_name",
+                  "resource_group"
+                ],
+                "properties": {
+                  "vm_name": {
+                    "type": "string"
+                  },
+                  "resource_group": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "VM isolated successfully."
+          }
+        }
+      }
+    },
+
+    "/RestoreVMConnectivity": {
+      "post": {
+        "operationId": "RestoreVMConnectivity",
+        "summary": "Restore VM Connectivity",
+        "description": "Removes isolation controls from a VM.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "vm_name",
+                  "resource_group"
+                ],
+                "properties": {
+                  "vm_name": {
+                    "type": "string"
+                  },
+                  "resource_group": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Connectivity restored successfully."
+          }
+        }
+      }
+    }
+  },
+
+  "components": {
+    "securitySchemes": {
+      "FunctionKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-functions-key",
+        "description": "Azure Function Key"
+      }
+    }
+  }
+}
