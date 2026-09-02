@@ -1,3 +1,11 @@
+"""Live firewall function client.
+
+Calls the Azure Functions endpoints; when the live key is missing or the
+endpoint rejects the call it falls back to the local assessment engines. Full
+payloads returned by the live function are ingested into PostgreSQL
+(``assessment_service.ingest_live_payload``) so runs are never lost.
+"""
+
 import time
 
 import requests
@@ -42,13 +50,12 @@ def _get(endpoint, key=None):
 
 
 def _refresh_cache(data):
-    """Update assessment_service cache so Security Ops page shows latest results."""
+    """Persist + cache the live assessment payload for the Security Ops pages."""
     import services.assessment_service as a
+
     data["_source"] = "live"
     data["_collected_at"] = timeutil.ist_now().isoformat()
-    a._cache["assessment"] = data
-    a._cache["ts"] = time.time()
-    a._record_assessment()
+    return a.ingest_live_payload(data)
 
 
 def _local_assessment():
@@ -78,9 +85,12 @@ def run_compliance_assessment():
 
 def run_full_assessment():
     try:
-        return _get("run_full_assessment", key=settings.FULL_ASSESSMENT_KEY)
+        data = _get("run_full_assessment", key=settings.FULL_ASSESSMENT_KEY)
     except LiveFunctionUnavailable:
         return _local_assessment()
+    if isinstance(data, dict) and "findings" in data:
+        _refresh_cache(data)
+    return data
 
 
 def executive_summary():

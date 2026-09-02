@@ -4,7 +4,6 @@ import time
 import requests
 
 from config import settings
-from config import keyvault
 from services import agents_service
 
 CACHE_TTL = 30
@@ -58,6 +57,20 @@ def _probe_agent_connection():
     return True, connected
 
 
+def _probe_database():
+    """Probe PostgreSQL connectivity via the database layer.
+
+    Returns ``(reachable, detail)``.
+    """
+    try:
+        from database.db import check_connection
+
+        ok, message = check_connection()
+        return ok, message
+    except Exception as exc:
+        return False, "PostgreSQL probe failed: {0}".format(str(exc)[:120])
+
+
 def get_system_status(force=False):
     now = time.time()
     with _lock:
@@ -70,6 +83,7 @@ def get_system_status(force=False):
 
     functions = _probe_functions()
     agent_connected, agent = _probe_agent_connection()
+    db_ok, db_message = _probe_database()
 
     components = []
 
@@ -161,20 +175,20 @@ def get_system_status(force=False):
         }
     )
 
-    kv_configured = bool(keyvault.VAULT_URL)
+    db_configured = bool(getattr(settings, "DATABASE_URL", ""))
     components.append(
         {
-            "id": "keyvault",
-            "label": "Key Vault",
+            "id": "postgres",
+            "label": "PostgreSQL",
             "status": (
                 STATUS_OPERATIONAL
-                if kv_configured
-                else STATUS_DEGRADED
+                if db_configured and db_ok
+                else STATUS_OFFLINE
             ),
             "detail": (
-                "Secrets vault configured"
-                if kv_configured
-                else "Key Vault not provisioned"
+                db_message or "PostgreSQL configured"
+                if db_configured
+                else "DATABASE_URL not configured"
             ),
         }
     )

@@ -1,4 +1,8 @@
-"""Production-grade one-time migration of JSON documents into PostgreSQL.
+"""Production-grade migration of JSON documents into PostgreSQL.
+
+The application is now PostgreSQL-only: these JSON documents under
+``ui/config/`` were the pre-migration storage layer and this script moves them
+into their relational tables via the repository layer.
 
 Usage::
 
@@ -8,16 +12,10 @@ Usage::
 Behaviour
 ---------
 * Calls ``database.db.create_all()`` before migrating.
-* Reuses the SAVERS from ``database.storage_bridge`` (single source of truth for
-  document -> relational conversion).
-* Wraps each document in a SQLAlchemy transaction and rolls back on failure.
-* Skips documents whose destination tables are already populated (idempotent,
-  no duplicate records inserted).
+* Migrates each document through the corresponding repository (no JSON bridge).
+* Idempotent: skips documents whose destination tables already hold rows.
 * Validates source JSON row counts against destination database counts.
-* Migrates findings when a historical ``findings.json`` exists.
-* Writes ``migration_report.json`` with per-document results, timings and errors.
-
-The migration only moves data; application behaviour is unchanged.
+* Writes ``migration_report.json`` with per-document results, timings, errors.
 """
 
 import json
@@ -48,36 +46,189 @@ def load_json(name):
         return json.load(handle)
 
 
-def _count(session, model):
-    return session.query(model).count()
+def _count(model):
+    from database.db import get_session
+
+    return get_session().query(model).count()
+
+
+# ------------------------------------------------------------
+# Repository-backed savers (each is idempotent by design)
+# ------------------------------------------------------------
+
+def _save_users(session, data):
+    from database.models import User
+    from database.repositories import UsersRepository
+
+    repo = UsersRepository(session)
+    for item in data.get("users", []):
+        repo.create(
+            {
+                "id": item.get("id"),
+                "name": item.get("name"),
+                "email": item.get("email"),
+                "password_hash": item.get("password_hash"),
+                "role": item.get("role") or "Security Analyst",
+                "created": item.get("created"),
+            }
+        )
+
+
+def _save_agents(session, data):
+    from database.repositories import AgentsRepository
+
+    repo = AgentsRepository(session)
+    for item in data.get("agents", []):
+        repo.create(item)
+
+
+def _save_sessions(session, data):
+    from database.repositories import ConversationsRepository
+
+    repo = ConversationsRepository(session)
+    for conv in data.get("conversations", []):
+        conv_id = conv.get("id")
+        existing = repo.get(conv_id)
+        if existing is None:
+            repo.create_conversation(
+                conv_id,
+                user_id=conv.get("user_id") or "anonymous",
+                created=conv.get("created") or conv.get("updated"),
+            )
+            if conv.get("title"):
+                repo.touch(conv_id, title=conv.get("title"))
+        for msg in conv.get("messages", []):
+            if not isinstance(msg, dict):
+                continue
+            repo.add_message(
+                conv_id,
+                {
+                    "role": msg.get("role") or "user",
+                    "content": msg.get("content") or "",
+                    "ts": msg.get("ts") or conv.get("updated"),
+                    "tool": msg.get("tool"),
+                    **{
+                        k: v
+                        for k, v in msg.items()
+                        if k not in ("role", "content", "ts", "tool")
+                    },
+                },
+            )
+
+
+def _save_insights(session, data):
+    from database.models import Insight
+    from database.repositories import InsightsRepository
+
+    repo = InsightsRepository(session)
+    for conv in data.get("conversations", []):
+        payload = {
+            "created": conv.get("created"),
+            "updated": conv.get("updated"),
+            "turns": conv.get("turns") or [],
+        }
+        row = Insight(
+            id=conv.get("id"),
+            user_id=conv.get("user_id"),
+            agent_id=conv.get("agent_id"),
+            agent_name=conv.get("agent_name"),
+            agent_type=conv.get("agent_type"),
+            model=conv.get("model"),
+            data=payload,
+        )
+        session.add(row)
+    session.commit()
+
+
+def _save_reports(session, data):
+    from database.repositories import ReportsRepository
+
+    repo = ReportsRepository(session)
+    for report in data.get("reports", []):
+        repo.append_report(report)
+
+
+def _save_assessment_history(session, data):
+    from database.repositories import AssessmentsRepository
+
+    repo = AssessmentsRepository(session)
+    for snapshot in data.get("snapshots", []):
+        repo.record(snapshot, replace_recent=False)
+
+
+def _save_assessment_stats(session, data):
+    from database.models import AssessmentStats
+
+    session.merge(
+        AssessmentStats(
+            id=1,
+            assessments_run=int((data or {}).get("assessments_run", 0) or 0),
+            last_assessment_ts=(data or {}).get("last_assessment_ts"),
+        )
+    )
+    session.commit()
+
+
+def _save_telemetry_metrics(session, data):
+    from database.models import TelemetryMetric
+
+    agents = ((data or {}).get("agents") or {})
+    for agent_id, entry in agents.items():
+        session.merge(
+            TelemetryMetric(
+                agent_id=agent_id,
+                requests=int(entry.get("requests", 0) or 0),
+                errors=int(entry.get("errors", 0) or 0),
+                first_ts=entry.get("first_ts"),
+                last_ts=entry.get("last_ts"),
+            )
+        )
+    session.commit()
+
+
+def _save_telemetry_history(session, data):
+    from database.repositories import TelemetryRepository
+
+    repo = TelemetryRepository(session)
+    for snapshot in data.get("snapshots", []):
+        repo.add_history(snapshot)
+
+
+SAVERS = {
+    "users": _save_users,
+    "agents": _save_agents,
+    "sessions": _save_sessions,
+    "insights": _save_insights,
+    "reports_history": _save_reports,
+    "assessment_history": _save_assessment_history,
+    "assessment_stats": _save_assessment_stats,
+    "telemetry_metrics": _save_telemetry_metrics,
+    "telemetry_history": _save_telemetry_history,
+}
 
 
 def _documents():
-    """Document descriptors for the storage_bridge SAVERS.
-
-    Each entry provides the storage document name, JSON file, a db-count
-    validator and a json-count reader so the migration can be validated.
-    """
+    """Document descriptors: JSON file, db count validator, json reader."""
     from database import models
 
     return [
         {
             "name": "users",
             "file": "users.json",
-            "db_count": lambda s: _count(s, models.User),
+            "db_count": lambda: _count(models.User),
             "json_count": lambda d: len((d or {}).get("users", [])),
         },
         {
             "name": "agents",
             "file": "agents.json",
-            "db_count": lambda s: _count(s, models.Agent),
+            "db_count": lambda: _count(models.Agent),
             "json_count": lambda d: len((d or {}).get("agents", [])),
         },
         {
             "name": "sessions",
             "file": "sessions.json",
-            "db_count": lambda s: _count(s, models.Conversation),
-            "db_count_secondary": lambda s: _count(s, models.Message),
+            "db_count": lambda: _count(models.Conversation),
+            "db_count_secondary": lambda: _count(models.Message),
             "json_count": lambda d: len((d or {}).get("conversations", [])),
             "json_count_secondary": lambda d: sum(
                 len(c.get("messages", [])) for c in (d or {}).get("conversations", [])
@@ -86,37 +237,37 @@ def _documents():
         {
             "name": "insights",
             "file": "insights.json",
-            "db_count": lambda s: _count(s, models.Insight),
+            "db_count": lambda: _count(models.Insight),
             "json_count": lambda d: len((d or {}).get("conversations", [])),
         },
         {
             "name": "reports_history",
             "file": "reports_history.json",
-            "db_count": lambda s: _count(s, models.ReportHistory),
+            "db_count": lambda: _count(models.ReportHistory),
             "json_count": lambda d: len((d or {}).get("reports", [])),
         },
         {
             "name": "assessment_history",
             "file": "assessment_history.json",
-            "db_count": lambda s: _count(s, models.AssessmentHistory),
+            "db_count": lambda: _count(models.AssessmentHistory),
             "json_count": lambda d: len((d or {}).get("snapshots", [])),
         },
         {
             "name": "assessment_stats",
             "file": "assessment_stats.json",
-            "db_count": lambda s: _count(s, models.AssessmentStats),
+            "db_count": lambda: _count(models.AssessmentStats),
             "json_count": lambda d: 1 if d else 0,
         },
         {
             "name": "telemetry_metrics",
             "file": "telemetry_metrics.json",
-            "db_count": lambda s: _count(s, models.TelemetryMetric),
+            "db_count": lambda: _count(models.TelemetryMetric),
             "json_count": lambda d: len(((d or {}).get("agents") or {})),
         },
         {
             "name": "telemetry_history",
             "file": "telemetry_history.json",
-            "db_count": lambda s: _count(s, models.TelemetryHistory),
+            "db_count": lambda: _count(models.TelemetryHistory),
             "json_count": lambda d: len((d or {}).get("snapshots", [])),
         },
     ]
@@ -132,7 +283,7 @@ def _migrate_document(session, doc, saver, report):
         return {"file": doc["file"], "json_count": 0, "migrated": 0, "skipped": 0, "db_count": 0, "match": True, "note": "no source file"}
 
     json_count = doc["json_count"](data)
-    existing = doc["db_count"](session)
+    existing = doc["db_count"]()
 
     if existing > 0:
         log.info("Skip %s: destination already populated (%s rows) - no duplicates.", name, existing)
@@ -147,7 +298,7 @@ def _migrate_document(session, doc, saver, report):
         }
 
     try:
-        saver(session, data)  # storage_bridge SAVER commits on success
+        saver(session, data)
         session.commit()
     except Exception as exc:
         session.rollback()
@@ -158,17 +309,17 @@ def _migrate_document(session, doc, saver, report):
             "json_count": json_count,
             "migrated": 0,
             "skipped": 0,
-            "db_count": doc["db_count"](session),
+            "db_count": doc["db_count"](),
             "match": False,
             "note": "failed - rolled back",
         }
 
-    after = doc["db_count"](session)
+    after = doc["db_count"]()
     secondary = None
     if "db_count_secondary" in doc:
         secondary = {
             "json": doc["json_count_secondary"](data),
-            "db": doc["db_count_secondary"](session),
+            "db": doc["db_count_secondary"](),
         }
     match = json_count == after and (secondary is None or secondary["json"] == secondary["db"])
 
@@ -215,10 +366,7 @@ def _validate_source_data():
     if sessions is not None:
         convs = sessions.get("conversations", [])
         _check_pks(issues, "conversations", [c.get("id") for c in convs])
-        conv_ids = {c.get("id") for c in convs}
         for conv in convs:
-            if conv.get("id") not in conv_ids and conv.get("id") is not None:
-                issues.append({"type": "self-reference", "detail": "conversation list anomaly"})
             for field in ("created", "updated"):
                 value = conv.get(field)
                 if value is not None and not isinstance(value, (int, float)):
@@ -240,12 +388,9 @@ def _validate_source_data():
 
 
 def _migrate_findings(session, report):
-    """Migrate historical findings when a findings.json document exists.
-
-    There is normally no separate findings.json (findings are derived from the
-    assessment), so this is a no-op unless historical finding data is present.
-    """
+    """Migrate historical findings when a findings.json document exists."""
     from database import models
+    from database.repositories import FindingsRepository
 
     data = load_json("findings.json")
     if data is None:
@@ -255,15 +400,13 @@ def _migrate_findings(session, report):
             "json_count": 0,
             "migrated": 0,
             "skipped": 0,
-            "db_count": _count(session, models.Finding),
+            "db_count": _count(models.Finding),
             "match": True,
             "note": "no source file",
         }
 
-    from database.repositories import FindingsRepository
-
     json_count = len((data or {}).get("findings", []))
-    existing = _count(session, models.Finding)
+    existing = _count(models.Finding)
     if existing > 0:
         return {
             "file": "findings.json",
@@ -289,12 +432,12 @@ def _migrate_findings(session, report):
             "json_count": json_count,
             "migrated": 0,
             "skipped": 0,
-            "db_count": _count(session, models.Finding),
+            "db_count": _count(models.Finding),
             "match": False,
             "note": "failed - rolled back",
         }
 
-    after = _count(session, models.Finding)
+    after = _count(models.Finding)
     log.info("Migrated findings: json=%s db=%s", json_count, after)
     return {
         "file": "findings.json",
@@ -319,7 +462,6 @@ def main():
     args = parser.parse_args()
 
     from database.db import create_all, get_session
-    from database import storage_bridge
     from database.schema_validation import alter_statements, compare_schema
 
     report = {
@@ -360,6 +502,7 @@ def main():
             log.info("--sync: applying %s repair statement(s).", len(repair))
             try:
                 from sqlalchemy import text
+
                 with engine.begin() as conn:
                     for statement in repair:
                         conn.execute(text(statement))
@@ -387,12 +530,10 @@ def main():
         _write_report(report)
         return 1
 
-    saver_map = storage_bridge.SAVERS
-
     for doc in _documents():
-        saver = saver_map.get(doc["name"])
+        saver = SAVERS.get(doc["name"])
         if saver is None:
-            report["errors"].append("{}: no saver in storage_bridge".format(doc["name"]))
+            report["errors"].append("{}: no saver registered".format(doc["name"]))
             continue
         result = _migrate_document(session, doc, saver, report)
         report["documents"].append(result)

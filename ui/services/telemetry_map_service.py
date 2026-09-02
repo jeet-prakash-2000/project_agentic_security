@@ -1,25 +1,21 @@
-import os
-import threading
+"""Telemetry map service.
+
+Backs the telemetry map page. Live per-agent request/error counters live in
+``telemetry_metrics`` and dated map snapshots (slider) live in
+``telemetry_history`` — both PostgreSQL tables, replacing the JSON documents.
+"""
+
 import time
 
-from config import settings as platform_settings
-from config import keyvault
-from config import storage
+from database.db import get_session
+from database.repositories import TelemetryRepository
 from services import agents_service
 from services import insights_service
 from services import system_status_service
 from services import timeutil
 
-SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
-METRICS_DOC = "telemetry_metrics"
-HISTORY_DOC = "telemetry_history"
-
-_lock = threading.Lock()
-
 MAX_SNAPSHOTS = 200
 
-# Approximate model pricing used for cost estimation (USD per 1M tokens).
 INPUT_PRICE_PER_M = 1.25
 OUTPUT_PRICE_PER_M = 10.0
 
@@ -29,65 +25,53 @@ STATUS_REMOVED = "removed"
 STATUS_STOPPED = "stopped"
 
 
-def _load_doc(document_name, default):
-    data = storage.load_document(document_name, default)
-    if not isinstance(data, dict):
-        return default
-    return data
-
-
-def _save_doc(document_name, data):
-    storage.save_document(document_name, data)
-
-
-# ------------------------------------------------------------
-# METRICS (requests, errors) tracked live by the gateway
-# ------------------------------------------------------------
-
-def _load_metrics():
-    return _load_doc(METRICS_DOC, {"agents": {}})
-
-
-def record_request(agent_id, error=False):
-    now = time.time()
-    with _lock:
-        data = _load_metrics()
-        agents = data.setdefault("agents", {})
-        entry = agents.setdefault(
-            agent_id,
-            {"requests": 0, "errors": 0, "first_ts": now, "last_ts": now},
-        )
-        entry["requests"] = int(entry.get("requests", 0)) + 1
-        if error:
-            entry["errors"] = int(entry.get("errors", 0)) + 1
-        entry["last_ts"] = now
-        _save_doc(METRICS_DOC, data)
-
-
-def get_metrics(agent_id):
-    data = _load_metrics()
-    return data.get("agents", {}).get(agent_id, {})
-
-
-# ------------------------------------------------------------
-# HISTORY SNAPSHOTS (datewise changes for the slider)
-# ------------------------------------------------------------
-
-def _load_history():
-    return _load_doc(HISTORY_DOC, {"snapshots": []})
+def _repo():
+    return TelemetryRepository(get_session())
 
 
 def _format_ts(ts):
     return timeutil.format_ist(ts, "%b %d, %H:%M")
 
 
+# ------------------------------------------------------------
+# METRICS (requests, errors) tracked live by the gateway
+# ------------------------------------------------------------
+
+def record_request(agent_id, error=False):
+    _repo().record_request(agent_id, error=error)
+
+
+def get_metrics(agent_id):
+    row = _repo().metric(agent_id)
+    if row is None:
+        return {}
+    return {
+        "requests": int(row.requests or 0),
+        "errors": int(row.errors or 0),
+        "first_ts": row.first_ts,
+        "last_ts": row.last_ts,
+    }
+
+
+# ------------------------------------------------------------
+# HISTORY SNAPSHOTS (datewise changes for the slider)
+# ------------------------------------------------------------
+
+def _snapshot_to_dict(entry):
+    return {
+        "ts": entry.ts,
+        "label": entry.label or _format_ts(entry.ts),
+        "agent_id": entry.agent_id,
+        "agent_name": entry.agent_name,
+        "nodes": entry.nodes or [],
+    }
+
+
 def append_snapshot(agent, nodes):
     now = time.time()
-    with _lock:
-        data = _load_history()
-        snapshots = data.get("snapshots", [])
-
-        snapshot = {
+    repo = _repo()
+    repo.add_history(
+        {
             "ts": now,
             "label": _format_ts(now),
             "agent_id": agent.get("id", ""),
@@ -102,13 +86,8 @@ def append_snapshot(agent, nodes):
                 for node in nodes
             ],
         }
-        snapshots.append(snapshot)
-
-        if len(snapshots) > MAX_SNAPSHOTS:
-            snapshots = snapshots[-MAX_SNAPSHOTS:]
-            data["snapshots"] = snapshots
-
-        _save_doc(HISTORY_DOC, data)
+    )
+    repo.truncate_history(agent.get("id", ""), keep=MAX_SNAPSHOTS)
 
 
 # ------------------------------------------------------------
@@ -200,9 +179,8 @@ def _group_for(node_id, node_type):
         "functions": "azure",
         "appinsights": "azure",
         "model": "model",
-        "sessions": "storage",
+        "postgres": "storage",
         "storage": "storage",
-        "keyvault": "security",
         "firewall": "device",
     }
     if node_id in groups:
@@ -296,17 +274,6 @@ def _platform_nodes(agent, status_lookup):
         }
     )
 
-    nodes.append(
-        {
-            "id": "sessions",
-            "label": "Session Store",
-            "type": "storage",
-            "status": STATUS_HEALTHY,
-            "description": "Server-side conversation history store.",
-            "telemetry": _derive_node_telemetry("sessions", agent_telemetry, 0.5),
-        }
-    )
-
     insights_comp = status_lookup.get("appinsights") or {}
     insights_status = _component_status(insights_comp)
     nodes.append(
@@ -320,16 +287,19 @@ def _platform_nodes(agent, status_lookup):
         }
     )
 
-    kv_comp = status_lookup.get("keyvault") or {}
-    kv_status = _component_status(kv_comp)
+    postgres_comp = status_lookup.get("postgres") or {}
+    postgres_status = _component_status(postgres_comp)
     nodes.append(
         {
-            "id": "keyvault",
-            "label": "Key Vault",
-            "type": "security",
-            "status": kv_status,
-            "description": "Azure Key Vault storing platform secrets.",
-            "telemetry": _derive_node_telemetry("keyvault", agent_telemetry, 0.1),
+            "id": "postgres",
+            "label": "PostgreSQL",
+            "type": "storage",
+            "status": postgres_status,
+            "description": (
+                "PostgreSQL store: conversations, chat insights, findings, "
+                "assessment history and reports."
+            ),
+            "telemetry": _derive_node_telemetry("postgres", agent_telemetry, 0.5),
         }
     )
 
@@ -390,7 +360,7 @@ def _firewall_nodes(agent, status_lookup):
             "label": "Report Storage",
             "type": "storage",
             "status": STATUS_HEALTHY,
-            "description": "Excel report artifacts generated by assessments.",
+            "description": "Excel/PDF report artifacts generated by assessments.",
             "telemetry": _derive_node_telemetry("storage", agent_telemetry, 0.05),
         }
     )
@@ -419,9 +389,8 @@ def _build_edges(agent, nodes):
         {"source": "agent", "target": "foundry", "label": "hosted by"},
         {"source": "gateway", "target": "foundry", "label": "invokes"},
         {"source": "foundry", "target": "model", "label": "served by"},
-        {"source": "gateway", "target": "sessions", "label": "persists"},
+        {"source": "gateway", "target": "postgres", "label": "persists"},
         {"source": "agent", "target": "appinsights", "label": "emits"},
-        {"source": "gateway", "target": "keyvault", "label": "reads"},
     ]
 
     if "firewall" in agent_type or agent.get("id") == "firewall-audit-agent":
@@ -456,14 +425,14 @@ def _snapshot_signature(nodes):
 
 
 def _last_snapshot_signature(agent_id):
-    data = _load_history()
-    for snapshot in reversed(data.get("snapshots", [])):
-        if snapshot.get("agent_id") == agent_id:
-            return [
-                (node["id"], node["status"])
-                for node in snapshot.get("nodes", [])
-            ]
-    return None
+    repo = _repo()
+    entries = repo.latest_history(agent_id, limit=1)
+    if not entries:
+        return None
+    return [
+        (node["id"], node["status"])
+        for node in (entries[0].nodes or [])
+    ]
 
 
 def _seed_baseline(agent):
@@ -471,62 +440,51 @@ def _seed_baseline(agent):
     baseline_ts = now - 6 * 86400
     day1_ts = now - 4 * 86400
 
-    with _lock:
-        data = _load_history()
-        snapshots = data.get("snapshots", [])
-        if any(s.get("agent_id") == agent.get("id", "") for s in snapshots):
-            return
+    repo = _repo()
+    if repo.has_history(agent.get("id", "")):
+        return
 
-        base_nodes = [
-            {"id": "agent", "label": agent.get("name", "Agent"), "type": "agent", "status": STATUS_HEALTHY},
-            {"id": "legacy-llm", "label": "Direct LLM Endpoint", "type": "model", "status": STATUS_HEALTHY},
-            {"id": "foundry", "label": "Azure AI Foundry", "type": "platform", "status": STATUS_HEALTHY},
-            {"id": "model", "label": agent.get("model", "gpt-5.1"), "type": "model", "status": STATUS_HEALTHY},
-            {"id": "appinsights", "label": "Application Insights", "type": "service", "status": STATUS_HEALTHY},
-            {"id": "sessions", "label": "Session Store", "type": "storage", "status": STATUS_HEALTHY},
-            {"id": "firewall", "label": "Palo Alto Firewall", "type": "device", "status": STATUS_HEALTHY},
+    base_nodes = [
+        {"id": "agent", "label": agent.get("name", "Agent"), "type": "agent", "status": STATUS_HEALTHY},
+        {"id": "foundry", "label": "Azure AI Foundry", "type": "platform", "status": STATUS_HEALTHY},
+        {"id": "model", "label": agent.get("model", "gpt-5.1"), "type": "model", "status": STATUS_HEALTHY},
+        {"id": "gateway", "label": "Agent Gateway", "type": "service", "status": STATUS_HEALTHY},
+        {"id": "postgres", "label": "PostgreSQL", "type": "storage", "status": STATUS_HEALTHY},
+        {"id": "appinsights", "label": "Application Insights", "type": "service", "status": STATUS_HEALTHY},
+        {"id": "firewall", "label": "Palo Alto Firewall", "type": "device", "status": STATUS_HEALTHY},
+    ]
+
+    agent_type = (agent.get("type") or "").lower()
+    if "firewall" in agent_type or agent.get("id") == "firewall-audit-agent":
+        base_nodes += [
+            {"id": "functions", "label": "Azure Functions", "type": "platform", "status": STATUS_HEALTHY},
+            {"id": "fn-compliance", "label": "run_compliance_assessment", "type": "function", "status": STATUS_HEALTHY},
+            {"id": "fn-summary", "label": "executive_summary", "type": "function", "status": STATUS_HEALTHY},
+            {"id": "fn-assessment", "label": "run_full_assessment", "type": "function", "status": STATUS_HEALTHY},
+            {"id": "fn-excel", "label": "generate_excel_report", "type": "function", "status": STATUS_HEALTHY},
+            {"id": "storage", "label": "Report Storage", "type": "storage", "status": STATUS_HEALTHY},
         ]
 
-        agent_type = (agent.get("type") or "").lower()
-        if "firewall" in agent_type or agent.get("id") == "firewall-audit-agent":
-            base_nodes += [
-                {"id": "functions", "label": "Azure Functions", "type": "platform", "status": STATUS_HEALTHY},
-                {"id": "fn-compliance", "label": "run_compliance_assessment", "type": "function", "status": STATUS_HEALTHY},
-                {"id": "fn-summary", "label": "executive_summary", "type": "function", "status": STATUS_HEALTHY},
-                {"id": "fn-assessment", "label": "run_full_assessment", "type": "function", "status": STATUS_HEALTHY},
-                {"id": "fn-excel", "label": "generate_excel_report", "type": "function", "status": STATUS_HEALTHY},
-                {"id": "storage", "label": "Report Storage", "type": "storage", "status": STATUS_HEALTHY},
-            ]
-
-        snapshots.extend(
-            [
-                {
-                    "ts": baseline_ts,
-                    "label": _format_ts(baseline_ts),
-                    "agent_id": agent.get("id", ""),
-                    "agent_name": agent.get("name", ""),
-                    "nodes": [dict(n) for n in base_nodes],
-                },
-                {
-                    "ts": day1_ts,
-                    "label": _format_ts(day1_ts),
-                    "agent_id": agent.get("id", ""),
-                    "agent_name": agent.get("name", ""),
-                    "nodes": [
-                        dict(n) for n in base_nodes
-                        if n["id"] != "legacy-llm"
-                    ]
-                    + [
-                        {"id": "gateway", "label": "Agent Gateway", "type": "service", "status": STATUS_HEALTHY},
-                        {"id": "keyvault", "label": "Key Vault", "type": "security", "status": STATUS_ERROR},
-                    ],
-                },
-            ]
-        )
-        if len(snapshots) > MAX_SNAPSHOTS:
-            snapshots = snapshots[-MAX_SNAPSHOTS:]
-            data["snapshots"] = snapshots
-        _save_doc(HISTORY_DOC, data)
+    repo.add_history(
+        {
+            "ts": baseline_ts,
+            "label": _format_ts(baseline_ts),
+            "agent_id": agent.get("id", ""),
+            "agent_name": agent.get("name", ""),
+            "nodes": [dict(n) for n in base_nodes],
+        }
+    )
+    repo.add_history(
+        {
+            "ts": day1_ts,
+            "label": _format_ts(day1_ts),
+            "agent_id": agent.get("id", ""),
+            "agent_name": agent.get("name", ""),
+            "nodes": [
+                dict(n) for n in base_nodes
+            ],
+        }
+    )
 
 
 def _enrich_nodes(nodes):
@@ -615,11 +573,9 @@ def get_history(agent_id=None):
     agent = agents_service.get_agent(agent_id) if agent_id else agents_service.get_connected_agent()
     if not agent:
         return {"snapshots": []}
-    data = _load_history()
     return {
         "snapshots": [
-            s
-            for s in data.get("snapshots", [])
-            if s.get("agent_id") == agent.get("id", "")
+            _snapshot_to_dict(entry)
+            for entry in _repo().list_history(agent.get("id", ""))
         ]
     }

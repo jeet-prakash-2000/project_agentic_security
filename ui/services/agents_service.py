@@ -1,46 +1,51 @@
-import os
+"""Agent registry backed by the ``agents`` table (formerly ``agents.json``).
+
+Only the repository layer touches PostgreSQL; this service provides the same
+API the routes/UI expect (list/add/update/remove agents, connected agent).
+"""
+
 import re
-import uuid
 
-from config import storage
-
-SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
-AGENTS_DOC = "agents"
+from database.db import get_session
+from database.repositories import AgentsRepository
 
 
-def _load():
-    data = storage.load_document(AGENTS_DOC, {"agents": []})
-    return (data or {}).get("agents", []) or []
+def _as_dict(agent):
+    if agent is None:
+        return None
+    return {
+        "id": agent.id,
+        "name": agent.name,
+        "type": agent.type,
+        "model": agent.model,
+        "agent_endpoint": agent.agent_endpoint,
+        "api_key": agent.api_key or "",
+        "connected": bool(agent.connected),
+        "created_at": agent.created_at,
+        "agent_id": agent.agent_id,
+    }
 
 
-def _save(agents):
-    storage.save_document(AGENTS_DOC, {"agents": agents})
+def _repo():
+    return AgentsRepository(get_session())
 
 
 def list_agents(include_key=False):
-    agents = _load()
     result = []
-    for agent in agents:
-        item = dict(agent)
+    for agent in _repo().list_agents():
+        item = _as_dict(agent)
         if not include_key:
-            item["api_key"] = mask_key(agent.get("api_key", ""))
+            item["api_key"] = mask_key(agent.api_key or "")
         result.append(item)
     return result
 
 
 def get_agent(agent_id):
-    for agent in _load():
-        if agent.get("id") == agent_id:
-            return agent
-    return None
+    return _as_dict(_repo().get(agent_id))
 
 
 def get_connected_agent():
-    for agent in _load():
-        if agent.get("connected"):
-            return agent
-    return None
+    return _as_dict(_repo().get_connected())
 
 
 def mask_key(key):
@@ -57,57 +62,54 @@ def slugify(name):
 
 
 def add_agent(name, type_name, endpoint, api_key, model="gpt-5.1", connected=True):
-    agents = _load()
+    repo = _repo()
     agent_id = slugify(name)
+    existing = repo.get(agent_id)
 
-    if any(a.get("id") == agent_id for a in agents):
-        for agent in agents:
-            if agent.get("id") == agent_id:
-                agent.update(
-                    {
-                        "name": name,
-                        "type": type_name,
-                        "model": model,
-                        "agent_endpoint": endpoint,
-                        "api_key": api_key,
-                        "connected": connected,
-                    }
-                )
-        _save(agents)
-        return get_agent(agent_id)
-
-    agent = {
-        "id": agent_id,
-        "name": name,
-        "type": type_name,
-        "model": model,
-        "agent_endpoint": endpoint,
-        "api_key": api_key,
-        "connected": connected,
-        "created_at": _now(),
-    }
+    if existing is not None:
+        repo.update(
+            agent_id,
+            name=name,
+            type=type_name,
+            model=model,
+            agent_endpoint=endpoint,
+            api_key=api_key,
+        )
+        if connected:
+            repo.set_connected(agent_id, True)
+        return _as_dict(repo.get(agent_id))
 
     if connected:
-        for existing in agents:
-            existing["connected"] = False
+        repo.set_connected(None, False)
 
-    agents.insert(0, agent)
-    _save(agents)
-    return agent
+    repo.create(
+        {
+            "id": agent_id,
+            "name": name,
+            "type": type_name,
+            "model": model,
+            "agent_endpoint": endpoint,
+            "api_key": api_key,
+            "connected": connected,
+            "created_at": _now(),
+            "agent_id": name,
+        }
+    )
+    return _as_dict(repo.get(agent_id))
 
 
 def set_connected(agent_id, connected=True):
-    agents = _load()
-    for agent in agents:
-        agent["connected"] = agent.get("id") == agent_id and connected
-    _save(agents)
+    _repo().set_connected(agent_id, connected)
+    return get_agent(agent_id)
 
 
 def remove_agent(agent_id):
-    agents = _load()
-    remaining = [a for a in agents if a.get("id") != agent_id]
-    _save(remaining)
-    return len(remaining) != len(agents)
+    repo = _repo()
+    agent = repo.get(agent_id)
+    if agent is None:
+        return False
+    repo.delete(agent)
+    return True
 
 
 def _now():

@@ -916,20 +916,48 @@ def api_telemetry_map_history():
 # STARTUP VALIDATION
 # --------------------------------------------------
 
-def log_database_status():
+@app.teardown_appcontext
+def _teardown_session(exception):
+    """Return every scoped session to the pool after the request completes."""
     try:
-        from database.db import check_connection
+        from database.db import remove_session
 
-        ok, message = check_connection()
-        if ok:
-            app.logger.info("Database: %s", message)
-        else:
-            app.logger.warning("Database: %s", message)
+        remove_session()
+    except Exception:
+        pass
+
+
+def run_startup_validation():
+    """Fail fast when PostgreSQL is unavailable.
+
+    PostgreSQL is the single source of truth - there is no JSON fallback.
+    The reconciliation is additive only (creates missing tables/columns/
+    indexes) and never drops data.
+    """
+    from database.startup import validate_runtime
+
+    try:
+        report = validate_runtime()
     except Exception as exc:
-        app.logger.warning("Database startup check failed: %s", exc)
+        app.logger.error("%s", exc)
+        raise
+
+    app.logger.info(
+        "Startup validation passed: %s | schema drift=%s | applied=%s",
+        report.get("database"),
+        report.get("schema_drift"),
+        report.get("schema_applied"),
+    )
+    return report
 
 
-log_database_status()
+try:
+    run_startup_validation()
+except Exception as exc:  # noqa: BLE001 - intentional fail-fast boot
+    import sys
+
+    app.logger.error("FATAL: %s", exc)
+    sys.exit("FATAL: PostgreSQL unavailable - refusing to start without a database. {0}".format(exc))
 
 
 # --------------------------------------------------

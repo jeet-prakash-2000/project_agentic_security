@@ -1,3 +1,15 @@
+"""Firewall assessment service.
+
+Assessment results are produced either by the live Azure Functions (netsec)
+or by the local compliance engine (sample fallback) and cached in memory for
+``CACHE_TTL``. Everything that used to be persisted in JSON documents is now
+persisted through repositories:
+
+* ``assessment_stats``       - run counter + last run timestamp
+* ``assessment_history``     - compliance trend snapshots
+* ``findings``               - per-run finding rows (audit / netsec writes)
+"""
+
 import json
 import logging
 import os
@@ -8,7 +20,9 @@ import time
 import requests
 
 from config import settings
-from config import storage
+from database.db import get_session
+from database.repositories import AssessmentsRepository
+from database.repositories import FindingsRepository
 from services import timeutil
 
 log = logging.getLogger("assessment")
@@ -42,9 +56,6 @@ EXCEL_FILE = os.path.join(
     "PaloAlto_Assessment.xlsx"
 )
 
-STATS_DOC = "assessment_stats"
-HISTORY_DOC = "assessment_history"
-
 SEVERITY_KEYS = ("critical", "high", "medium", "low")
 
 if FUNCTIONS_ROOT not in sys.path:
@@ -62,51 +73,55 @@ _cache = {
 }
 
 
-def _apply_firewall(data, firewall_id):
-    """Label an assessment snapshot with the selected firewall name.
-
-    Both firewalls point at the same underlying firewall system; only the
-    logical device name differs (vmpafw01 / vmpafw02).
-    """
-    inventory = dict(data.get("inventory") or {})
-    inventory["hostname"] = firewall_id
-    data["inventory"] = inventory
-    data["_firewall_id"] = firewall_id
-    return data
+def _assessments_repo():
+    return AssessmentsRepository(get_session())
 
 
-def _load_stats():
-    data = storage.load_document(
-        STATS_DOC,
-        {"assessments_run": 0, "last_assessment_ts": None},
-    )
-    return data if isinstance(data, dict) else {"assessments_run": 0, "last_assessment_ts": None}
-
-
-def _save_stats(stats):
-    storage.save_document(STATS_DOC, stats)
-
+# ------------------------------------------------------------
+# PERSISTENCE (PostgreSQL via repositories)
+# ------------------------------------------------------------
 
 def get_assessment_stats():
-    return _load_stats()
+    """Return ``{assessments_run, last_assessment_ts}`` from assessment_stats."""
+    return _assessments_repo().stats_as_dict()
 
 
 def get_history():
-    """Return the stored assessment history snapshots (read-only)."""
+    """Return stored assessment history snapshots (ascending by time)."""
     return _load_history()
 
 
-def _record_assessment():
-    stats = _load_stats()
-    stats["assessments_run"] = int(stats.get("assessments_run", 0)) + 1
-    stats["last_assessment_ts"] = time.time()
-    _save_stats(stats)
+def _snapshot_from_row(row):
+    return {
+        "run_id": row.assessment_id,
+        "ts": row.executed_at,
+        "firewall_name": row.firewall_name,
+        "compliance_pct": row.compliance_score,
+        "security_score": row.security_score,
+        "severity": {
+            "critical": int(row.critical_findings or 0),
+            "high": int(row.high_findings or 0),
+            "medium": int(row.medium_findings or 0),
+            "low": int(row.low_findings or 0),
+        },
+        "finding_count": int(row.total_findings or 0),
+    }
+
+
+def _load_history():
+    rows = _assessments_repo().list_history()
+    snapshots = [_snapshot_from_row(row) for row in rows]
+    if not snapshots:
+        _seed_history()
+        rows = _assessments_repo().list_history()
+        snapshots = [_snapshot_from_row(row) for row in rows]
+    return snapshots
 
 
 def _seed_history():
     rng = random.Random(20260814)
     now = time.time()
-    snapshots = []
+    rows = []
     base = 36.0
     for i in range(12):
         pct = round(base + rng.uniform(-4.5, 3.0), 1)
@@ -122,7 +137,7 @@ def _seed_history():
             + severity["medium"] * 1.0
             + severity["low"] * 0.5
         )
-        snapshots.append({
+        rows.append({
             "run_id": "ASM-{0:06d}".format(i + 1),
             "ts": now - (12 - i) * 86400,
             "compliance_pct": pct,
@@ -133,50 +148,54 @@ def _seed_history():
             "severity": severity,
             "finding_count": sum(severity.values()),
         })
-    storage.save_document(HISTORY_DOC, {"snapshots": snapshots})
-
-
-def _load_history():
-    data = storage.load_document(HISTORY_DOC, None)
-    if not isinstance(data, dict) or not data.get("snapshots"):
-        _seed_history()
-        data = storage.load_document(HISTORY_DOC, {"snapshots": []})
-    snapshots = data.get("snapshots", []) if isinstance(data, dict) else []
-    return [s for s in snapshots if isinstance(s, dict)]
+    _assessments_repo().seed_history(rows)
 
 
 def _record_history(snapshot):
-    snapshots = _load_history()
-    if snapshots and abs(snapshots[-1].get("ts", 0) - snapshot["ts"]) < 300:
-        snapshots[-1] = snapshot
-    else:
-        snapshots.append(snapshot)
-        snapshots = snapshots[-60:]
-    storage.save_document(HISTORY_DOC, {"snapshots": snapshots})
-    _record_history_db(snapshot)
-
-
-def _record_history_db(snapshot):
-    """Also write the assessment snapshot to PostgreSQL when configured.
-
-    This powers the Compliance Trend chart directly from the
-    ``assessment_history`` table. Failures are ignored so JSON storage remains
-    the source of truth when the database is unreachable.
-    """
+    """Persist one trend snapshot (dedupes snapshots < 300s apart)."""
     try:
-        from database.db import get_session, is_configured
-
-        if not is_configured():
-            return
-
-        from database.repositories import AssessmentsRepository
-
-        AssessmentsRepository(get_session()).record(snapshot)
+        _assessments_repo().record(snapshot)
     except Exception as exc:
-        log.warning(
-            "Assessment history write to PostgreSQL failed (trend may be empty): %s",
-            exc,
+        log.warning("Assessment history write failed: %s", exc)
+
+
+def _record_assessment(data=None):
+    """Increment the assessment run counter for a fresh run."""
+    try:
+        stats = _assessments_repo().increment_run()
+        return "ASM-{0:06d}".format(int(stats.assessments_run or 0))
+    except Exception as exc:
+        log.warning("Assessment stats write failed: %s", exc)
+        return None
+
+
+def _persist_findings(run_id, findings, firewall_id):
+    """Store the per-run findings rows (audit + netsec-style persistence)."""
+    try:
+        FindingsRepository(get_session()).replace_for_assessment(
+            run_id,
+            findings,
+            firewall_name=firewall_id or "vmpafw01",
         )
+    except Exception as exc:
+        log.warning("Findings write failed: %s", exc)
+
+
+# ------------------------------------------------------------
+# DATA PRODUCERS
+# ------------------------------------------------------------
+
+def _apply_firewall(data, firewall_id):
+    """Label an assessment snapshot with the selected firewall name.
+
+    Both firewalls point at the same underlying firewall system; only the
+    logical device name differs (vmpafw01 / vmpafw02).
+    """
+    inventory = dict(data.get("inventory") or {})
+    inventory["hostname"] = firewall_id
+    data["inventory"] = inventory
+    data["_firewall_id"] = firewall_id
+    return data
 
 
 def _severity_breakdown(findings):
@@ -344,11 +363,30 @@ def get_full_assessment(firewall_id="vmpafw01", force=False):
 
     data = _apply_firewall(data, firewall_id)
 
-    _record_assessment()
+    run_id = _record_assessment()
+    data["_run_id"] = run_id
+
+    _persist_findings(run_id, data.get("findings") or [], firewall_id)
 
     _cache["assessment"][firewall_id] = data
     _cache["ts"][firewall_id] = now
 
+    return data
+
+
+def ingest_live_payload(data):
+    """Persist a full assessment payload produced outside this process
+    (live function call). Refreshes the memory cache and records the run."""
+    firewall_id = data.get("_firewall_id") or "vmpafw01"
+    data = _apply_firewall(data, firewall_id)
+
+    run_id = _record_assessment()
+    data["_run_id"] = run_id
+
+    _persist_findings(run_id, data.get("findings") or [], firewall_id)
+
+    _cache["assessment"][firewall_id] = data
+    _cache["ts"][firewall_id] = time.time()
     return data
 
 
@@ -427,7 +465,7 @@ def get_posture(firewall_id="vmpafw01", force=False):
 
     collected_at = data.get("_collected_at")
     stats = get_assessment_stats()
-    run_id = "ASM-{0:06d}".format(int(stats.get("assessments_run", 0)))
+    run_id = data.get("_run_id") or "ASM-{0:06d}".format(int(stats.get("assessments_run", 0)))
 
     prev_snapshots = _load_history()
     prev = None
@@ -435,6 +473,14 @@ def get_posture(firewall_id="vmpafw01", force=False):
         if s.get("firewall_name", "vmpafw01") == firewall_id:
             prev = s
             break
+
+    trend_pct = 0.0
+    severity_change = {k: 0 for k in SEVERITY_KEYS}
+    if prev and isinstance(prev.get("compliance_pct"), (int, float)):
+        trend_pct = round(compliance_pct - prev["compliance_pct"], 1)
+        prev_sev = prev.get("severity") or {}
+        for k in SEVERITY_KEYS:
+            severity_change[k] = int(severity.get(k, 0)) - int(prev_sev.get(k, 0))
 
     snapshot = {
         "run_id": run_id,
@@ -446,14 +492,6 @@ def get_posture(firewall_id="vmpafw01", force=False):
         "finding_count": len(findings),
     }
     _record_history(snapshot)
-
-    trend_pct = 0.0
-    severity_change = {k: 0 for k in SEVERITY_KEYS}
-    if prev and isinstance(prev.get("compliance_pct"), (int, float)):
-        trend_pct = round(compliance_pct - prev["compliance_pct"], 1)
-        prev_sev = prev.get("severity") or {}
-        for k in SEVERITY_KEYS:
-            severity_change[k] = int(severity.get(k, 0)) - int(prev_sev.get(k, 0))
 
     history = _load_history()
 

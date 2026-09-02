@@ -1,75 +1,80 @@
-import os
-import threading
+"""Report history service backed by ``reports_history`` (formerly reports_history.json)."""
+
 import time
 
-from config import storage
+from database.db import get_session
+from database.repositories import ReportsRepository
 
-SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
-REPORTS_DOC = "reports_history"
+DEMO_REPORTS = [
+    {
+        "name": "Assessment_Workbook_Aug_2026",
+        "type": "Workbook",
+        "generated_by": "Firewall Auditor",
+        "ts": None,
+        "status": "Completed",
+        "size": "2.4 MB",
+        "download_url": "reports/PaloAlto_Assessment.xlsx",
+    },
+    {
+        "name": "Executive_Summary_Aug_2026",
+        "type": "Executive Summary",
+        "generated_by": "Firewall Auditor",
+        "ts": None,
+        "status": "Completed",
+        "size": "184 KB",
+        "download_url": None,
+    },
+    {
+        "name": "Executive_Summary_Jul_2026",
+        "type": "Executive Summary",
+        "generated_by": "Firewall Auditor",
+        "ts": None,
+        "status": "Failed",
+        "size": None,
+        "download_url": None,
+    },
+]
 
-_lock = threading.Lock()
 
-
-def _load():
-    data = storage.load_document(REPORTS_DOC, {"reports": []})
-    if not isinstance(data, dict):
-        return {"reports": []}
-    return data
-
-
-def _save(data):
-    storage.save_document(REPORTS_DOC, data)
+def _repo():
+    return ReportsRepository(get_session())
 
 
 def append_report(report):
-    with _lock:
-        data = _load()
-        reports = data.setdefault("reports", [])
-        reports.insert(0, report)
-        _save(data)
+    _repo().append_report(report)
 
 
 def _seed_demo():
-    with _lock:
-        data = _load()
-        reports = data.get("reports", [])
-        if reports:
-            return
-
-        demo = [
+    if _repo().count() > 0:
+        return
+    now = time.time()
+    offsets = (5 * 86400, 6 * 86400, 30 * 86400)
+    for index, report in enumerate(DEMO_REPORTS):
+        _repo().append_report(
             {
-                "name": "Assessment_Workbook_Aug_2026",
-                "type": "Workbook",
-                "generated_by": "Firewall Auditor",
-                "ts": time.time() - 5 * 86400,
-                "status": "Completed",
-                "size": "2.4 MB",
-                "download_url": "reports/PaloAlto_Assessment.xlsx",
-            },
-            {
-                "name": "Executive_Summary_Aug_2026",
-                "type": "Executive Summary",
-                "generated_by": "Firewall Auditor",
-                "ts": time.time() - 6 * 86400,
-                "status": "Completed",
-                "size": "184 KB",
-                "download_url": None,
-            },
-            {
-                "name": "Executive_Summary_Jul_2026",
-                "type": "Executive Summary",
-                "generated_by": "Firewall Auditor",
-                "ts": time.time() - 30 * 86400,
-                "status": "Failed",
-                "size": None,
-                "download_url": None,
-            },
-        ]
-        data["reports"] = demo
-        _save(data)
+                "name": report["name"],
+                "type": report["type"],
+                "generated_by": report["generated_by"],
+                "ts": now - offsets[index],
+                "status": report["status"],
+                "size": report["size"],
+                "download_url": report["download_url"],
+            }
+        )
 
 
 def list_reports():
     _seed_demo()
-    return _load().get("reports", [])
+    reports = _repo().list_reports()
+    return [
+        {
+            "name": report.name,
+            "type": report.type,
+            "generated_by": report.generated_by,
+            "ts": report.ts,
+            "status": report.status,
+            "size": report.size,
+            "download_url": report.download_url,
+        }
+        for report in reports
+    ]

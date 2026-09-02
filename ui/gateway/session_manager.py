@@ -1,13 +1,19 @@
-import os
+"""Conversation session manager backed by PostgreSQL.
+
+Tables ``conversations`` + ``messages`` replace ``sessions.json``. The public
+API is unchanged so routes and the UI behave exactly as before:
+
+* get_or_create / get_conversation return a conversation dict
+* messages keep their rich per-message payload (tool/usage/html/cardTitle ...)
+  preserved in the ``meta`` JSONB column
+"""
+
 import threading
 import time
 import uuid
 
-from config import storage
-
-SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
-SESSIONS_DOC = "sessions"
+from database.db import get_session
+from database.repositories import ConversationsRepository
 
 _lock = threading.Lock()
 
@@ -15,79 +21,71 @@ MAX_CONVERSATIONS = 100
 MAX_MESSAGES = 50
 
 
-def _load():
-    data = storage.load_document(SESSIONS_DOC, {"conversations": []})
-    if not isinstance(data, dict):
-        return {"conversations": []}
-    return data
-
-
-def _save(data):
-    storage.save_document(SESSIONS_DOC, data)
+def _repo():
+    return ConversationsRepository(get_session())
 
 
 def _now():
     return time.time()
 
 
+def _conversation_dict(repo, conversation):
+    return {
+        "id": conversation.id,
+        "user_id": conversation.user_id,
+        "title": conversation.title or "",
+        "created": conversation.created,
+        "updated": conversation.updated,
+        "messages": [
+            _message_dict(message)
+            for message in repo.messages(conversation.id)
+        ],
+    }
+
+
+def _message_dict(message):
+    meta = dict(message.meta or {})
+    if message.tool:
+        meta["tool"] = message.tool
+    meta["role"] = message.role
+    meta["content"] = message.content or ""
+    meta["ts"] = message.ts
+    return meta
+
+
 def get_or_create(conversation_id, user_id="anonymous"):
-    now = _now()
     conversation_id = conversation_id or "conv-" + uuid.uuid4().hex[:12]
 
     with _lock:
-        data = _load()
-        conversations = data.get("conversations", [])
+        repo = _repo()
+        conversation = repo.get(conversation_id)
+        if conversation is None:
+            conversation = repo.create_conversation(conversation_id, user_id)
 
-        existing = None
-        for conversation in conversations:
-            if conversation.get("id") == conversation_id:
-                existing = conversation
-                break
-
-        if existing is None:
-            existing = {
-                "id": conversation_id,
-                "user_id": user_id,
-                "title": "",
-                "created": now,
-                "updated": now,
-                "messages": [],
-            }
-            conversations.insert(0, existing)
-            data["conversations"] = conversations
-            _save(data)
-
-    return existing
+    return _conversation_dict(repo, conversation)
 
 
-def _ensure_conversation(data, conversations, conversation_id, user_id, now):
-    conversation = None
-    for item in conversations:
-        if item.get("id") == conversation_id:
-            conversation = item
-            break
-
+def _ensure_conversation(repo, conversation_id, user_id, now):
+    conversation = repo.get(conversation_id)
     if conversation is None:
-        conversation = {
-            "id": conversation_id,
-            "user_id": user_id,
-            "title": "",
-            "created": now,
-            "updated": now,
-            "messages": [],
-        }
-        conversations.insert(0, conversation)
-        data["conversations"] = conversations
-
+        conversation = repo.create_conversation(
+            conversation_id, user_id or "anonymous", created=now
+        )
     return conversation
 
 
-def _normalize_message(role, content, meta):
-    message = dict(meta or {})
-    message["role"] = role
-    message["content"] = content or ""
-    message["ts"] = message.get("ts") or _now()
-    return message
+def _trim_messages(repo, conversation_id, keep=MAX_MESSAGES):
+    messages = repo.messages(conversation_id)
+    if len(messages) > keep:
+        for stale in messages[:-keep]:
+            repo.delete(stale)
+
+
+def _set_title(repo, conversation, role, content):
+    if role == "user" and not (conversation.title or "").strip():
+        repo.touch(conversation.id, title=(content or "").strip()[:60])
+    else:
+        repo.touch(conversation.id)
 
 
 def add_message(conversation_id, role, content, user_id="anonymous", meta=None):
@@ -95,31 +93,17 @@ def add_message(conversation_id, role, content, user_id="anonymous", meta=None):
     conversation_id = conversation_id or "conv-" + uuid.uuid4().hex[:12]
 
     with _lock:
-        data = _load()
-        conversations = data.get("conversations", [])
+        repo = _repo()
+        conversation = _ensure_conversation(repo, conversation_id, user_id, now)
 
-        conversation = _ensure_conversation(
-            data, conversations, conversation_id, user_id, now
-        )
+        message = dict(meta or {})
+        message["role"] = role
+        message["content"] = content or ""
+        message["ts"] = message.get("ts") or now
 
-        message = _normalize_message(role, content, meta)
-
-        conversation["updated"] = now
-        conversation.setdefault("messages", []).append(message)
-
-        if (
-            role == "user"
-            and not (conversation.get("title") or "").strip()
-        ):
-            conversation["title"] = (content or "").strip()[:60]
-
-        if len(conversation["messages"]) > MAX_MESSAGES:
-            conversation["messages"] = conversation["messages"][-MAX_MESSAGES:]
-
-        if len(conversations) > MAX_CONVERSATIONS:
-            data["conversations"] = conversations[:MAX_CONVERSATIONS]
-
-        _save(data)
+        repo.add_message(conversation_id, message)
+        _set_title(repo, conversation, role, content)
+        _trim_messages(repo, conversation_id)
 
     return conversation_id
 
@@ -131,44 +115,37 @@ def add_messages(conversation_id, messages, user_id="anonymous"):
     messages = messages or []
 
     with _lock:
-        data = _load()
-        conversations = data.get("conversations", [])
-
-        conversation = _ensure_conversation(
-            data, conversations, conversation_id, user_id, now
-        )
+        repo = _repo()
+        conversation = _ensure_conversation(repo, conversation_id, user_id, now)
 
         for item in messages:
             if not isinstance(item, dict):
                 continue
             role = item.get("role") or "user"
-            message = _normalize_message(
-                role, item.get("content"), {k: v for k, v in item.items() if k not in ("role", "content")}
-            )
-            conversation.setdefault("messages", []).append(message)
-            if role == "user" and not (conversation.get("title") or "").strip():
-                conversation["title"] = (item.get("content") or "").strip()[:60]
+            message = {
+                k: v
+                for k, v in item.items()
+                if k not in ("role", "content")
+            }
+            message["role"] = role
+            message["content"] = item.get("content") or ""
+            message["ts"] = message.get("ts") or now
+            repo.add_message(conversation_id, message)
+            _set_title(repo, conversation, role, item.get("content"))
 
-        conversation["updated"] = now
-
-        if len(conversation["messages"]) > MAX_MESSAGES:
-            conversation["messages"] = conversation["messages"][-MAX_MESSAGES:]
-
-        _save(data)
+        _trim_messages(repo, conversation_id)
 
     return conversation_id
 
 
 def get_conversation(conversation_id, user_id=None):
-    with _lock:
-        data = _load()
-        for conversation in data.get("conversations", []):
-            if conversation.get("id") != conversation_id:
-                continue
-            if user_id and conversation.get("user_id") != user_id:
-                return None
-            return conversation
-    return None
+    repo = _repo()
+    conversation = repo.get(conversation_id)
+    if conversation is None:
+        return None
+    if user_id and conversation.user_id != user_id:
+        return None
+    return _conversation_dict(repo, conversation)
 
 
 def get_messages(conversation_id, limit=None, user_id=None):
@@ -181,58 +158,42 @@ def get_messages(conversation_id, limit=None, user_id=None):
     return list(messages)
 
 
-def _conversation_title(conversation):
-    title = (conversation.get("title") or "").strip()
-    if title:
-        return title
-    for message in conversation.get("messages", []):
-        if message.get("role") == "user" and (message.get("content") or "").strip():
-            return message["content"].strip()[:60]
-    return "New chat"
-
-
 def list_conversations(user_id=None):
-    with _lock:
-        data = _load()
-        conversations = data.get("conversations", [])
-        result = []
-        for conversation in conversations:
-            if user_id and conversation.get("user_id") != user_id:
-                continue
-            result.append(
-                {
-                    "id": conversation.get("id", ""),
-                    "user_id": conversation.get("user_id", ""),
-                    "title": _conversation_title(conversation),
-                    "created": conversation.get("created"),
-                    "updated": conversation.get("updated"),
-                    "message_count": len(conversation.get("messages", [])),
-                }
-            )
+    repo = _repo()
+    conversations = repo.list_recent(user_id=user_id)
+    ids = [conversation.id for conversation in conversations]
+    counts = repo.message_counts(ids)
 
-        result.sort(
-            key=lambda c: c.get("updated") or 0,
-            reverse=True
+    result = []
+    for conversation in conversations:
+        result.append(
+            {
+                "id": conversation.id,
+                "user_id": conversation.user_id,
+                "title": repo.infer_title(conversation),
+                "created": conversation.created,
+                "updated": conversation.updated,
+                "message_count": int(counts.get(conversation.id, 0) or 0),
+            }
         )
 
-        return result
+    result.sort(
+        key=lambda c: c.get("updated") or 0,
+        reverse=True,
+    )
+    return result[:MAX_CONVERSATIONS]
 
 
 def clear_conversation(conversation_id, user_id=None):
     with _lock:
-        data = _load()
-        conversations = data.get("conversations", [])
-        for conversation in conversations:
-            if conversation.get("id") != conversation_id:
-                continue
-            if user_id and conversation.get("user_id") != user_id:
-                return False
-            conversation["messages"] = []
-            conversation["title"] = ""
-            conversation["updated"] = _now()
-            _save(data)
-            return True
-    return False
+        repo = _repo()
+        conversation = repo.get(conversation_id)
+        if conversation is None:
+            return False
+        if user_id and conversation.user_id != user_id:
+            return False
+        repo.clear_messages(conversation_id)
+        return True
 
 
 def claim_anonymous_conversations(user_id):
@@ -244,15 +205,4 @@ def claim_anonymous_conversations(user_id):
     """
     if not user_id:
         return 0
-
-    claimed = 0
-    with _lock:
-        data = _load()
-        for conversation in data.get("conversations", []):
-            if not conversation.get("user_id") or conversation.get("user_id") == "anonymous":
-                conversation["user_id"] = user_id
-                claimed += 1
-        if claimed:
-            _save(data)
-
-    return claimed
+    return _repo().claim_anonymous(user_id)

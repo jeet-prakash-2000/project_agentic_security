@@ -354,7 +354,7 @@ def RunFullIncidentResponse(req: func.HttpRequest):
     vm_name = body.get("vm_name", "agentic-vm-01")
     resource_group = body.get("resource_group", "LTIM-CLOUDSEC-AGENTIC-RG01")
 
-    logger = ActionLogger()
+    logger = ActionLogger(run_id=incident_id)
     response_stages = {}
     errors = []
 
@@ -413,6 +413,23 @@ def RunFullIncidentResponse(req: func.HttpRequest):
     else:
         response_stages["Decision_Note"] = "Risk below containment threshold. Monitoring only."
         response_stages["Reporting_Summary"] = report_generator.generate_summary(incident_id, incident_data, logger.to_summary(), "Monitoring")
+
+    try:
+        from dbwriter import record_incident_run
+
+        record_incident_run(
+            incident_id=incident_id,
+            vm_name=vm_name,
+            risk_score=risk["risk_score"],
+            risk_level=risk["risk_level"],
+            recommended_action=risk["recommended_action"],
+            status="Contained" if should_contain else "Monitoring",
+            stages=response_stages,
+            action_log=logger.to_dict(),
+            errors=errors,
+        )
+    except Exception as exc:
+        logging.warning("Incident run persistence failed (ignored): %s", exc)
 
     return func.HttpResponse(json.dumps(dict(
         incident_id=incident_id, vm_name=vm_name,

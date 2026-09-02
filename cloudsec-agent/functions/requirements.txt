@@ -7,3 +7,4 @@ azure-mgmt-resource
 azure-mgmt-security
 azure-monitor-query
 requests
+psycopg2-binary

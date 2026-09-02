@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 import azure.functions as func
 
@@ -24,6 +25,23 @@ from reports.excel_report import (
 )
 
 app = func.FunctionApp()
+
+
+def _db_log(run_id, activity, function_name, status, message=None):
+    """Best-effort PostgreSQL audit logging (never raises)."""
+    try:
+        from dbwriter import log_activity
+
+        log_activity(
+            agent_id="firewall-audit-agent",
+            run_id=run_id,
+            activity=activity,
+            function_name=function_name,
+            status=status,
+            message=message,
+        )
+    except Exception:
+        pass
 
 
 FIREWALL_IP = os.environ.get("PA_FIREWALL_HOST", "10.1.0.5")
@@ -447,12 +465,32 @@ def run_full_assessment(
             connector.run_full_assessment()
         )
 
+        _db_log(
+            "ns-full-" + str(int(time.time())),
+            "assessment",
+            "run_full_assessment",
+            "Completed",
+        )
+        try:
+            from dbwriter import persist_assessment
+
+            persist_assessment("vmpafw01", result, "run_full_assessment")
+        except Exception:
+            pass
+
         return success_response(
             result
         )
 
     except Exception as e:
 
+        _db_log(
+            "ns-full-" + str(int(time.time())),
+            "assessment",
+            "run_full_assessment",
+            "Failed",
+            str(e),
+        )
         return error_response(e)
 
 
@@ -470,12 +508,32 @@ def run_compliance_assessment(
             build_compliance_assessment()
         )
 
+        _db_log(
+            "ns-compliance-" + str(int(time.time())),
+            "assessment",
+            "run_compliance_assessment",
+            "Completed",
+        )
+        try:
+            from dbwriter import persist_assessment
+
+            persist_assessment("vmpafw01", result, "run_compliance_assessment")
+        except Exception:
+            pass
+
         return success_response(
             result
         )
 
     except Exception as e:
 
+        _db_log(
+            "ns-compliance-" + str(int(time.time())),
+            "assessment",
+            "run_compliance_assessment",
+            "Failed",
+            str(e),
+        )
         return error_response(e)
 
 
@@ -500,12 +558,25 @@ def executive_summary(
             )
         )
 
+        _db_log(
+            "ns-summary-" + str(int(time.time())),
+            "report",
+            "executive_summary",
+            "Completed",
+        )
         return success_response(
             summary
         )
 
     except Exception as e:
 
+        _db_log(
+            "ns-summary-" + str(int(time.time())),
+            "report",
+            "executive_summary",
+            "Failed",
+            str(e),
+        )
         return error_response(e)
 
 
@@ -535,6 +606,12 @@ def generate_excel_report(
             )
         )
 
+        _db_log(
+            "ns-excel-" + str(int(time.time())),
+            "report",
+            "generate_excel_report",
+            "Completed",
+        )
         return success_response({
 
             "status":
@@ -555,6 +632,13 @@ def generate_excel_report(
 
     except Exception as e:
 
+        _db_log(
+            "ns-excel-" + str(int(time.time())),
+            "report",
+            "generate_excel_report",
+            "Failed",
+            str(e),
+        )
         return error_response(
             e
         )

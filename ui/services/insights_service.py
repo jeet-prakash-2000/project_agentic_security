@@ -1,19 +1,25 @@
-import os
+"""Insights service backed by the ``insights`` table.
+
+Each row is one chat conversation; the ``data`` JSONB payload holds
+``created``/``updated`` and the ordered ``turns`` list. Output shapes match
+the previous ``insights.json`` documents so the Insights UI contract is
+unchanged.
+"""
+
 import threading
 import time
 import uuid
 
-from config import storage
-
-SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_DIR = os.path.abspath(os.path.join(SERVICE_DIR, "..", "config"))
-INSIGHTS_DOC = "insights"
+from database.db import get_session
+from database.repositories import InsightsRepository
 
 _lock = threading.Lock()
 
-# Approximate model pricing used for cost estimation (USD per 1M tokens).
 INPUT_PRICE_PER_M = 1.25
 OUTPUT_PRICE_PER_M = 10.0
+
+MAX_TURNS = 500
+MAX_CONVERSATIONS = 200
 
 
 def _estimate_cost(input_tokens, output_tokens):
@@ -24,15 +30,27 @@ def _estimate_cost(input_tokens, output_tokens):
     )
 
 
-def _load():
-    data = storage.load_document(INSIGHTS_DOC, {"conversations": []})
-    if not isinstance(data, dict):
-        return {"conversations": []}
-    return data
+def _repo():
+    return InsightsRepository(get_session())
 
 
-def _save(data):
-    storage.save_document(INSIGHTS_DOC, data)
+def _to_dict(row):
+    data = row.data or {}
+    return {
+        "id": row.id,
+        "agent_id": row.agent_id or "",
+        "agent_name": row.agent_name or "",
+        "agent_type": row.agent_type or "",
+        "model": row.model or "",
+        "user_id": row.user_id,
+        "created": data.get("created"),
+        "updated": data.get("updated"),
+        "turns": data.get("turns") or [],
+    }
+
+
+def _all_conversations():
+    return [_to_dict(row) for row in _repo().list_conversations()]
 
 
 def record_turn(agent, messages, usage, latency_ms, reply="", conversation_id=None, user_id=None):
@@ -57,15 +75,14 @@ def record_turn(agent, messages, usage, latency_ms, reply="", conversation_id=No
     }
 
     with _lock:
-        data = _load()
-        conversations = data.get("conversations", [])
-        existing = None
-        for conversation in conversations:
-            if conversation.get("id") == conversation_id:
-                existing = conversation
-                break
-
-        if existing is None:
+        repo = _repo()
+        existing_row = repo.get(conversation_id)
+        if existing_row is not None:
+            existing = _to_dict(existing_row)
+            existing["updated"] = now
+            existing["turns"] = (existing.get("turns") or []) + [turn]
+            existing["turns"] = existing["turns"][-MAX_TURNS:]
+        else:
             existing = {
                 "id": conversation_id,
                 "agent_id": agent.get("id", ""),
@@ -75,28 +92,19 @@ def record_turn(agent, messages, usage, latency_ms, reply="", conversation_id=No
                 "user_id": user_id,
                 "created": now,
                 "updated": now,
-                "turns": [],
+                "turns": [turn],
             }
-            conversations.insert(0, existing)
-            data["conversations"] = conversations
-
-        existing["updated"] = now
-        existing["turns"].append(turn)
-
-        if len(existing["turns"]) > 500:
-            existing["turns"] = existing["turns"][-500:]
-
-        if len(conversations) > 200:
-            data["conversations"] = conversations[:200]
-
-        _save(data)
+        repo.record(existing)
 
     return conversation_id
 
 
 def summarize():
-    data = _load()
-    conversations = data.get("conversations", [])
+    conversations = sorted(
+        _all_conversations(),
+        key=lambda c: (c.get("updated") or 0),
+        reverse=True,
+    )
 
     by_agent = {}
     total = {
@@ -206,37 +214,33 @@ def summarize():
 
 
 def summarize_conversation(conversation_id):
-    data = _load()
-    conversations = data.get("conversations", [])
+    row = _repo().get(conversation_id)
+    conversation = _to_dict(row) if row is not None else None
+    if conversation is None:
+        return None
 
-    for conversation in conversations:
-        if conversation.get("id") != conversation_id:
-            continue
+    turns = conversation.get("turns", [])
+    input_tokens = sum(t.get("input_tokens", 0) for t in turns)
+    output_tokens = sum(t.get("output_tokens", 0) for t in turns)
+    total_tokens = sum(t.get("total_tokens", 0) for t in turns)
+    cached_tokens = sum(t.get("cached_tokens", 0) for t in turns)
+    reasoning_tokens = sum(t.get("reasoning_tokens", 0) for t in turns)
+    total_latency_ms = sum(t.get("latency_ms", 0) for t in turns)
 
-        turns = conversation.get("turns", [])
-        input_tokens = sum(t.get("input_tokens", 0) for t in turns)
-        output_tokens = sum(t.get("output_tokens", 0) for t in turns)
-        total_tokens = sum(t.get("total_tokens", 0) for t in turns)
-        cached_tokens = sum(t.get("cached_tokens", 0) for t in turns)
-        reasoning_tokens = sum(t.get("reasoning_tokens", 0) for t in turns)
-        total_latency_ms = sum(t.get("latency_ms", 0) for t in turns)
-
-        return {
-            "id": conversation_id,
-            "agent_id": conversation.get("agent_id", ""),
-            "agent_name": conversation.get("agent_name", ""),
-            "agent_type": conversation.get("agent_type", ""),
-            "model": conversation.get("model", ""),
-            "created": conversation.get("created"),
-            "updated": conversation.get("updated"),
-            "turns": len(turns),
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "total_tokens": total_tokens,
-            "cached_tokens": cached_tokens,
-            "reasoning_tokens": reasoning_tokens,
-            "avg_latency_ms": int(total_latency_ms / len(turns)) if turns else 0,
-            "cost": _estimate_cost(input_tokens, output_tokens),
-        }
-
-    return None
+    return {
+        "id": conversation_id,
+        "agent_id": conversation.get("agent_id", ""),
+        "agent_name": conversation.get("agent_name", ""),
+        "agent_type": conversation.get("agent_type", ""),
+        "model": conversation.get("model", ""),
+        "created": conversation.get("created"),
+        "updated": conversation.get("updated"),
+        "turns": len(turns),
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": total_tokens,
+        "cached_tokens": cached_tokens,
+        "reasoning_tokens": reasoning_tokens,
+        "avg_latency_ms": int(total_latency_ms / len(turns)) if turns else 0,
+        "cost": _estimate_cost(input_tokens, output_tokens),
+    }

@@ -1,17 +1,24 @@
 """SQLAlchemy ORM models for the LTM Security Platform.
 
-Each model maps a JSON document (previously stored under ``config/``) to a
-PostgreSQL table. JSON documents and their tables:
+PostgreSQL is the single source of truth. Each table is owned by the
+repository layer (``database/repositories/``); services never touch raw
+sessions or JSON documents.
 
-* ``users.json``                  -> ``users``
-* ``agents.json``                 -> ``agents``
-* ``sessions.json``               -> ``conversations`` + ``messages``
-* ``insights.json``               -> ``insights``
-* ``reports_history.json``        -> ``reports_history``
-* ``assessment_history.json``     -> ``assessment_history``
-* ``assessment_stats.json``       -> ``assessment_stats``
-* ``telemetry_metrics.json``      -> ``telemetry_metrics``
-* ``telemetry_history.json``      -> ``telemetry_history``
+Tables map to the pre-migration JSON documents as follows:
+
+* ``users.json``              -> ``users``
+* ``agents.json``             -> ``agents``
+* ``sessions.json``           -> ``conversations`` + ``messages``
+* ``insights.json``           -> ``insights`` (rich ``data`` JSONB payload)
+* ``reports_history.json``    -> ``reports_history``
+* ``assessment_history.json`` -> ``assessment_history``
+* ``assessment_stats.json``   -> ``assessment_stats``
+* ``telemetry_metrics.json``  -> ``telemetry_metrics``
+* ``telemetry_history.json``  -> ``telemetry_history``
+
+Additional tables:
+* ``findings``             - per-assessment finding rows
+* ``agent_activity_logs``  - audit trail for agent/function actions
 """
 
 from sqlalchemy import (
@@ -57,7 +64,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(String(64), primary_key=True)
-    user_id = Column(String(64), default="anonymous")
+    user_id = Column(String(64), default="anonymous", index=True)
     title = Column(String(255), default="")
     created = Column(Float)
     updated = Column(Float)
@@ -76,16 +83,22 @@ class Message(Base):
     role = Column(String(16), nullable=False)
     content = Column(Text, default="")
     tool = Column(String(64))
-    ts = Column(Float)
+    ts = Column(Float, index=True)
     meta = Column(JSON)
 
 
 class Insight(Base):
+    """One row per chat conversation with aggregate usage telemetry.
+
+    ``data`` carries the JSONB payload with ``created``, ``updated`` and the
+    ``turns`` list (token usage per assistant turn).
+    """
+
     __tablename__ = "insights"
 
     id = Column(String(64), primary_key=True)
-    user_id = Column(String(64))
-    agent_id = Column(String(64))
+    user_id = Column(String(64), default="anonymous")
+    agent_id = Column(String(64), index=True)
     agent_name = Column(String(255))
     agent_type = Column(String(64))
     model = Column(String(64))
@@ -99,13 +112,20 @@ class ReportHistory(Base):
     name = Column(String(255))
     type = Column(String(64))
     generated_by = Column(String(255))
-    ts = Column(Float)
+    ts = Column(Float, index=True)
     status = Column(String(32))
     size = Column(String(32))
     download_url = Column(String(512))
 
 
 class AssessmentHistory(Base):
+    """One row per assessment run.
+
+    Metadata columns power the Compliance Trend chart and the assessment
+    summary. ``payload`` carries the full run output (sections + findings) so
+    the dashboard and findings pages can be served purely from PostgreSQL.
+    """
+
     __tablename__ = "assessment_history"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -114,11 +134,14 @@ class AssessmentHistory(Base):
     executed_at = Column(Float, index=True)
     compliance_score = Column(Float)
     security_score = Column(Float)
+    control_count = Column(Integer, default=0)
+    status = Column(String(32), default="Completed")
     critical_findings = Column(Integer, default=0)
     high_findings = Column(Integer, default=0)
     medium_findings = Column(Integer, default=0)
     low_findings = Column(Integer, default=0)
     total_findings = Column(Integer, default=0)
+    payload = Column(JSON)
 
 
 class AssessmentStats(Base):
@@ -143,10 +166,10 @@ class TelemetryHistory(Base):
     __tablename__ = "telemetry_history"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    agent_id = Column(String(64))
+    agent_id = Column(String(64), index=True)
     agent_name = Column(String(255))
     label = Column(String(255))
-    ts = Column(Float)
+    ts = Column(Float, index=True)
     nodes = Column(JSON)
 
 
@@ -155,6 +178,7 @@ class Finding(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     assessment_id = Column(String(64), index=True)
+    firewall_name = Column(String(64), index=True, default="vmpafw01")
     control = Column(String(255), index=True)
     status = Column(String(32))
     risk = Column(String(32))
@@ -164,3 +188,19 @@ class Finding(Base):
     finding = Column(Text)
     remediation = Column(Text)
     risk_score = Column(Float)
+
+
+class AgentActivityLog(Base):
+    """Audit trail of agent/function actions (assessments, incident actions)."""
+
+    __tablename__ = "agent_activity_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    agent_id = Column(String(64), index=True)
+    run_id = Column(String(64), index=True)
+    activity = Column(String(128), index=True)
+    function_name = Column(String(255))
+    status = Column(String(32), default="Completed")
+    message = Column(Text)
+    ts = Column(Float, index=True)
+    meta = Column(JSON)
