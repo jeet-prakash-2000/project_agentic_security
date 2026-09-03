@@ -49,6 +49,23 @@
         { label: "Run Compliance Assessment", action: "assess" }
     ];
 
+    // Cloud Incident Response agent entries (Incidents + Virtual Machine).
+    var CLOUD_CHIPS = [
+        { id: "incidents", label: "Incidents", icon: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><circle cx="12" cy="17" r="1"/>' },
+        { id: "vm", label: "Virtual Machine", icon: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3"/>' }
+    ];
+
+    var CLOUD_SUGGESTIONS = [
+        { label: "Incidents", action: "incidents" },
+        { label: "Virtual Machine", action: "vm" }
+    ];
+
+    var CLOUD_KPI_PERIODS = [
+        { id: "daily", label: "Daily", sub: "Today" },
+        { id: "weekly", label: "Weekly", sub: "Last 7 days" },
+        { id: "monthly", label: "Monthly", sub: "Last 30 days" }
+    ];
+
     var ASSESSMENT_SECTIONS = [
         { id: "inventory", label: "Inventory", endpoint: "/api/firewall/inventory", domains: ["Software & Platform Currency", "Hardware & Capacity"] },
         { id: "health", label: "Health Status", endpoint: "/api/firewall/health", domains: ["Hardware & Capacity"] },
@@ -86,6 +103,34 @@
             name: "Compliance Findings",
             link: { label: "View findings", href: "/findings" },
             icon: '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><circle cx="12" cy="17" r="1"/>'
+        },
+        incident_list: {
+            name: "Sentinel Incidents",
+            icon: '<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/>'
+        },
+        investigate: {
+            name: "Incident Investigation",
+            icon: '<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><circle cx="12" cy="12" r="9"/>'
+        },
+        isolate: {
+            name: "VM Isolation",
+            icon: '<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><path d="M5 21h14"/>'
+        },
+        start_vm: {
+            name: "Start VM",
+            icon: '<path d="M12 3v18M5 12h14"/>'
+        },
+        stop_vm: {
+            name: "Stop VM",
+            icon: '<path d="M6 4h12v16H6z"/>'
+        },
+        restart_vm: {
+            name: "Restart VM",
+            icon: '<path d="M12 3a9 9 0 109 9M21 3v6h-6"/>'
+        },
+        reconnect_vm: {
+            name: "Restore VM Connectivity",
+            icon: '<path d="M8 12h8M12 8l4 4-4 4"/>'
         }
     };
 
@@ -195,7 +240,7 @@
                 agentName: m.agentName
             };
         });
-        fetch("/api/conversations/" + encodeURIComponent(state.activeId) + "/messages", {
+        return fetch("/api/conversations/" + encodeURIComponent(state.activeId) + "/messages", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ messages: payload })
@@ -475,6 +520,14 @@
                 b.addEventListener("click", function () { runAction(s.action); });
                 sug.appendChild(b);
             });
+        } else if (isCloudAgent(state.activeAgent)) {
+            CLOUD_SUGGESTIONS.forEach(function (s) {
+                var b = document.createElement("button");
+                b.className = "ws-suggestion";
+                b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' + escapeHtml(s.label);
+                b.addEventListener("click", function () { runAction(s.action); });
+                sug.appendChild(b);
+            });
         }
     }
 
@@ -485,14 +538,17 @@
     function renderPromptChips() {
         if (!promptChips) return;
         promptChips.innerHTML = "";
-        if (!isFirewallAgent(state.activeAgent)) return;
-        COMPOSER_CHIPS.forEach(function (id) {
-            var a = ACTIONS[id];
-            if (!a) return;
+        var entries = [];
+        if (isFirewallAgent(state.activeAgent)) {
+            entries = COMPOSER_CHIPS.map(function (id) { return ACTIONS[id]; }).filter(Boolean);
+        } else if (isCloudAgent(state.activeAgent)) {
+            entries = CLOUD_CHIPS;
+        }
+        entries.forEach(function (a) {
             var b = document.createElement("button");
             b.className = "ws-chip";
-            b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' + escapeHtml(a.label);
-            b.addEventListener("click", function () { runAction(id); });
+            b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (a.icon || '<path d="M12 5v14M5 12h14"/>') + "</svg>" + escapeHtml(a.label);
+            b.addEventListener("click", function () { runAction(a.id || a.action); });
             promptChips.appendChild(b);
         });
     }
@@ -500,6 +556,14 @@
     function runAction(action) {
         if (action === "assess") {
             showFirewallSelection();
+            return;
+        }
+        if (action === "incidents") {
+            showCloudIncidentsPanel();
+            return;
+        }
+        if (action === "vm") {
+            showCloudVmPanel();
             return;
         }
         var a = ACTIONS[action];
@@ -740,6 +804,241 @@
     }
 
     // ============================================================
+    // CLOUD INCIDENT RESPONSE — INCIDENTS + VIRTUAL MACHINE
+    // ============================================================
+
+    function cloudAgentLabel() {
+        if (state.activeAgent) return state.activeAgent.name;
+        return "Incident-Response-Agent-Cloud-Security";
+    }
+
+    function cloudAssistMessage(content, tool, usage) {
+        return {
+            role: "assistant",
+            content: content || "",
+            tool: tool || null,
+            usage: usage || null,
+            agentName: cloudAgentLabel(),
+            ts: now()
+        };
+    }
+
+    function runCloudAction(userLabel, action, params, tool, opts) {
+        opts = opts || {};
+        ensureActiveId();
+        var userMsg = { role: "user", content: userLabel, ts: now() };
+        appendMessage(userMsg);
+        renderConversationList();
+        var typing = appendTyping(cloudAgentLabel());
+        sendBtn.disabled = true;
+
+        fetch("/api/cloudsec/action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: action,
+                params: params || {},
+                agent_id: state.activeAgentId,
+                conversation_id: state.activeId
+            })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                removeTyping(typing);
+                if (data && data.error) throw new Error(data.error);
+                var asstMsg = cloudAssistMessage(data.reply, action, data.usage);
+                appendMessage(asstMsg);
+                if (opts.persist !== false) {
+                    persistMessages([userMsg, asstMsg]).then(function () {
+                        loadConversations();
+                        loadConversationInsights();
+                    });
+                } else {
+                    loadConversations();
+                }
+            })
+            .catch(function (error) {
+                removeTyping(typing);
+                var message = (error && error.message) || "Cloud operation failed.";
+                var asstMsg = cloudAssistMessage("The cloud operation could not be completed. " + message, action, null);
+                appendMessage(asstMsg);
+                if (opts.persist !== false) {
+                    persistMessages([userMsg, asstMsg]).then(function () {
+                        loadConversations();
+                    });
+                }
+                window.showToast("Cloud operation failed.", "error");
+            })
+            .finally(function () {
+                sendBtn.disabled = false;
+                if (promptInput) promptInput.focus();
+            });
+    }
+
+    function cloudKpiHtml(period, count) {
+        var icon = period.id === "daily"
+            ? '<path d="M12 3v3M12 21v-3M3 12h3M21 12h-3M5.6 5.6l2.1 2.1M18.4 5.6l-2.1 2.1M5.6 18.4l2.1-2.1M18.4 18.4l-2.1-2.1"/><circle cx="12" cy="12" r="3.2"/>'
+            : period.id === "weekly"
+                ? '<path d="M6 3v2M18 3v2M3 8h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z"/>'
+                : '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>';
+        return '<button class="ws-kpi ws-cloud-kpi" type="button" data-cloud-period="' + period.id + '">' +
+            '<span class="ws-kpi-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + icon + "</svg>" + escapeHtml(period.label) + "</span>" +
+            '<strong class="ws-kpi-value" data-cloud-count="' + period.id + '">' + (count == null ? "\u2014" : String(count)) + "</strong>" +
+            '<span class="ws-kpi-sub">' + escapeHtml(period.sub) + " \u00b7 click to view</span>" +
+            "</button>";
+    }
+
+    function cloudPanelMsg(html, cardTitle) {
+        return { role: "assistant", content: "", html: html, cardTitle: cardTitle, agentName: cloudAgentLabel(), ts: now() };
+    }
+
+    function cloudIncidentsPanelHtml(counts) {
+        counts = counts || {};
+        var kpis = CLOUD_KPI_PERIODS.map(function (p) { return cloudKpiHtml(p, counts[p.id]); }).join("");
+        return '<div class="ws-cloud-card ws-mcq-card">' +
+            '<div class="ws-mcq-head"><strong>Incident Response</strong><span>Daily, weekly, and monthly Sentinel incident counts. Open a period to view the latest five incidents.</span></div>' +
+            '<div class="ws-kpi-row ws-cloud-kpi-row">' + kpis + "</div>" +
+            '<div class="ws-mcq-head"><strong>Investigate Incident</strong><span>Enter a Sentinel incident ID to investigate.</span></div>' +
+            '<div class="ws-cloud-block">' +
+            '<div class="ws-cloud-fields">' +
+            '<input class="ws-cloud-input" type="text" data-cloud-param="incident_id" placeholder="Sentinel incident ID" autocomplete="off">' +
+            "</div>" +
+            '<button class="ws-cloud-run" type="button" data-cloud-action="investigate">' + ARROW_ICON + "Investigate</button>" +
+            "</div>" +
+            '<div class="ws-mcq-head"><strong>Take Action \u2014 Isolate VM</strong><span>Contain a compromised virtual machine.</span></div>' +
+            '<div class="ws-cloud-block">' +
+            '<div class="ws-cloud-fields ws-cloud-fields-duo">' +
+            '<input class="ws-cloud-input" type="text" data-cloud-param="vm_name" placeholder="VM name" autocomplete="off">' +
+            '<input class="ws-cloud-input" type="text" data-cloud-param="resource_group" placeholder="Resource group" autocomplete="off">' +
+            "</div>" +
+            '<button class="ws-cloud-run ws-cloud-run-danger" type="button" data-cloud-action="isolate">' + ARROW_ICON + "Isolate VM</button>" +
+            "</div>" +
+            "</div>";
+    }
+
+    function showCloudIncidentsPanel() {
+        ensureActiveId();
+        var userMsg = { role: "user", content: "Incidents", ts: now() };
+        appendMessage(userMsg);
+        renderConversationList();
+
+        var typing = appendTyping(cloudAgentLabel());
+        sendBtn.disabled = true;
+
+        fetch("/api/cloudsec/action", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "incident_counts",
+                params: {},
+                agent_id: state.activeAgentId,
+                conversation_id: state.activeId
+            })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                removeTyping(typing);
+                if (data && data.error) throw new Error(data.error);
+                var counts = (data && data.counts) || {};
+                appendIncidentPanel(userMsg, counts);
+            })
+            .catch(function () {
+                removeTyping(typing);
+                appendIncidentPanel(userMsg, {});
+                window.showToast("Incident counts are unavailable right now.", "error");
+            })
+            .finally(function () {
+                sendBtn.disabled = false;
+                if (promptInput) promptInput.focus();
+            });
+    }
+
+    function appendIncidentPanel(userMsg, counts) {
+        var panelMsg = cloudPanelMsg(cloudIncidentsPanelHtml(counts), "Incident Response");
+        appendMessage(panelMsg);
+        persistMessages([userMsg, panelMsg]).then(function () {
+            loadConversations();
+            loadConversationInsights();
+        });
+        if (chatWindow) chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
+
+    function showCloudVmPanel() {
+        ensureActiveId();
+        var userMsg = { role: "user", content: "Virtual Machine", ts: now() };
+        appendMessage(userMsg);
+        renderConversationList();
+
+        var vmBtns = [
+            { action: "start_vm", label: "Start", cls: "ws-cloud-run-ok" },
+            { action: "restart_vm", label: "Restart", cls: "" },
+            { action: "stop_vm", label: "Stop", cls: "ws-cloud-run-warn" },
+            { action: "reconnect_vm", label: "Reconnect", cls: "" }
+        ].map(function (b) {
+            return '<button class="ws-cloud-run ' + b.cls + '" type="button" data-cloud-action="' + b.action + '">' + escapeHtml(b.label) + "</button>";
+        }).join("");
+
+        var html = '<div class="ws-cloud-card ws-mcq-card">' +
+            '<div class="ws-mcq-head"><strong>Virtual Machine</strong><span>Start, restart, stop, or restore connectivity for an Azure VM.</span></div>' +
+            '<div class="ws-cloud-block">' +
+            '<div class="ws-cloud-fields ws-cloud-fields-duo">' +
+            '<input class="ws-cloud-input" type="text" data-cloud-param="vm_name" placeholder="VM name" autocomplete="off">' +
+            '<input class="ws-cloud-input" type="text" data-cloud-param="resource_group" placeholder="Resource group" autocomplete="off">' +
+            "</div>" +
+            '<div class="ws-cloud-actions">' + vmBtns + "</div>" +
+            "</div>" +
+            "</div>";
+
+        var panelMsg = cloudPanelMsg(html, "Virtual Machine");
+        appendMessage(panelMsg);
+        persistMessages([userMsg, panelMsg]).then(function () {
+            loadConversations();
+            loadConversationInsights();
+        });
+        if (promptInput) promptInput.focus();
+    }
+
+    function cloudPanelParams(panel) {
+        var params = {};
+        if (!panel) return params;
+        panel.querySelectorAll("input[data-cloud-param]").forEach(function (input) {
+            var key = input.getAttribute("data-cloud-param");
+            params[key] = (input.value || "").trim();
+        });
+        return params;
+    }
+
+    function cloudRequiresParams(action) {
+        if (action === "investigate") return ["incident_id"];
+        if (action === "isolate") return ["vm_name", "resource_group"];
+        if (action === "start_vm" || action === "stop_vm" || action === "restart_vm" || action === "reconnect_vm") {
+            return ["vm_name", "resource_group"];
+        }
+        return [];
+    }
+
+    function cloudUserLabel(action, params) {
+        if (action === "investigate") return "Investigate incident " + (params.incident_id || "");
+        if (action === "isolate") return "Isolate VM " + (params.vm_name || "") + " in " + (params.resource_group || "");
+        var names = { start_vm: "Start", restart_vm: "Restart", stop_vm: "Stop", reconnect_vm: "Reconnect" };
+        return (names[action] || action) + " VM " + (params.vm_name || "");
+    }
+
+    function handleCloudActionButton(btn) {
+        var action = btn.getAttribute("data-cloud-action");
+        if (!action) return;
+        var panel = btn.closest(".ws-cloud-card");
+        var params = cloudPanelParams(panel);
+        var required = cloudRequiresParams(action);
+        var missing = required.filter(function (k) { return !params[k]; });
+        if (missing.length) {
+            window.showToast("Please fill in the required field" + (missing.length > 1 ? "s" : "") + " first.", "error");
+            return;
+        }
+        runCloudAction(cloudUserLabel(action, params), action, params, action);
+    }
+
+    // ============================================================
     // CHAT / SEND
     // ============================================================
 
@@ -798,6 +1097,15 @@
         var type = String(agent.type || "").toLowerCase();
         var name = String(agent.name || "").toLowerCase();
         return type.indexOf("firewall") !== -1 || name.indexOf("firewall") !== -1;
+    }
+
+    function isCloudAgent(agent) {
+        if (!agent) return false;
+        var type = String(agent.type || "").toLowerCase();
+        var name = String(agent.name || "").toLowerCase();
+        var id = String(agent.id || "").toLowerCase();
+        return type.indexOf("cloud") !== -1 || name.indexOf("cloud") !== -1 ||
+            name.indexOf("incident") !== -1 || id.indexOf("cloud") !== -1;
     }
 
     function agentFromMessages(msgs) {
@@ -1173,6 +1481,19 @@
 
     if (chatWindow) {
         chatWindow.addEventListener("click", function (e) {
+            var cloudBtn = e.target.closest(".ws-cloud-run");
+            if (cloudBtn) {
+                handleCloudActionButton(cloudBtn);
+                return;
+            }
+            var cloudKpi = e.target.closest(".ws-cloud-kpi");
+            if (cloudKpi) {
+                var period = cloudKpi.getAttribute("data-cloud-period");
+                if (period) {
+                    runCloudAction("View " + period + " incidents", "incident_list", { period: period }, "incident_list");
+                }
+                return;
+            }
             var fwBtn = e.target.closest(".fw-select-btn");
             if (fwBtn) {
                 var fw = fwBtn.getAttribute("data-firewall");

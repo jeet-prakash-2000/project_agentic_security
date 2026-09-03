@@ -1584,3 +1584,162 @@
 @media (max-width: 640px) {
     .ws-kpi-row { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ============================================================
+   CLOUD INCIDENT RESPONSE CARDS (Incidents + Virtual Machine)
+   ============================================================ */
+
+.ws-cloud-kpi-row {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.ws-cloud-kpi {
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.35;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.ws-cloud-kpi:hover {
+    border-color: var(--red);
+    box-shadow: var(--shadow-soft);
+    transform: translateY(-1px);
+}
+
+.ws-cloud-kpi .ws-kpi-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 4px;
+}
+
+.ws-cloud-kpi .ws-kpi-label svg {
+    width: 12px;
+    height: 12px;
+    color: var(--red);
+}
+
+.ws-cloud-block {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.ws-cloud-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.ws-cloud-fields-duo {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.ws-cloud-fields-duo .ws-cloud-input {
+    flex: 1;
+    min-width: 140px;
+}
+
+.ws-cloud-input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--surface);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ws-cloud-input:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(228, 0, 43, 0.08);
+}
+
+.ws-cloud-input::placeholder {
+    color: var(--text-muted);
+}
+
+.ws-cloud-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.ws-cloud-run {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--glass-soft);
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: inherit;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ws-cloud-run svg {
+    width: 13px;
+    height: 13px;
+}
+
+.ws-cloud-run:hover {
+    border-color: var(--red);
+    color: var(--red);
+    background: var(--rose);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-soft);
+}
+
+.ws-cloud-run-danger {
+    border-color: rgba(220, 38, 38, 0.35);
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.ws-cloud-run-danger:hover {
+    border-color: var(--danger);
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.ws-cloud-run-ok {
+    border-color: rgba(22, 163, 74, 0.35);
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+.ws-cloud-run-ok:hover {
+    border-color: var(--success);
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+.ws-cloud-run-warn {
+    border-color: rgba(217, 119, 6, 0.4);
+    background: var(--warning-soft);
+    color: #D97706;
+}
+
+.ws-cloud-run-warn:hover {
+    border-color: #D97706;
+    background: var(--warning-soft);
+    color: #D97706;
+}
+
+@media (max-width: 640px) {
+    .ws-cloud-kpi-row { grid-template-columns: 1fr; }
+    .ws-cloud-fields-duo { flex-direction: column; }
+}
+

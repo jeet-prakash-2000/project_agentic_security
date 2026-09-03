@@ -20,6 +20,7 @@ from services import report_history_service
 from services import system_status_service
 from services import telemetry_map_service
 from services import firewall_data_service
+from services import foundry_incidents
 from services import timeutil
 from services import users_service
 from gateway.agent_gateway import gateway
@@ -784,6 +785,34 @@ def api_chat():
                 "conversation_id": result.get("conversation_id"),
             }
         )
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
+
+@app.route("/api/cloudsec/action", methods=["POST"])
+def api_cloudsec_action():
+
+    payload = request.get_json(silent=True) or {}
+    action = (payload.get("action") or "").strip()
+    params = payload.get("params") or {}
+    agent_id = (payload.get("agent_id") or "").strip() or None
+    conversation_id = (payload.get("conversation_id") or "").strip() or None
+
+    if not action:
+        return jsonify({"error": "action is required."}), 400
+
+    try:
+        result = foundry_incidents.run(
+            action=action,
+            params=params,
+            agent_id=agent_id,
+            conversation_id=conversation_id,
+            user_id=current_user_id(),
+            record=(action != "incident_counts"),
+        )
+        return jsonify(result)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
     except Exception as e:
