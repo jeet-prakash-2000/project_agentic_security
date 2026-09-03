@@ -1,5 +1,7 @@
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
+from azure.mgmt.network.models import NetworkSecurityGroup
+from azure.mgmt.network.models import SecurityRule
 
 from connectors.auth import (
     credential,
@@ -122,59 +124,47 @@ def block_all_traffic(
     nsg_name: str
 ):
 
-    inbound_rule = {
+    inbound_rule = SecurityRule(
 
-        "protocol":
-            "*",
+        name="deny-all-inbound",
 
-        "source_port_range":
-            "*",
+        protocol="*",
 
-        "destination_port_range":
-            "*",
+        source_port_range="*",
 
-        "source_address_prefix":
-            "*",
+        destination_port_range="*",
 
-        "destination_address_prefix":
-            "*",
+        source_address_prefix="*",
 
-        "access":
-            "Deny",
+        destination_address_prefix="*",
 
-        "priority":
-            100,
+        access="Deny",
 
-        "direction":
-            "Inbound"
-    }
+        priority=100,
 
-    outbound_rule = {
+        direction="Inbound"
+    )
 
-        "protocol":
-            "*",
+    outbound_rule = SecurityRule(
 
-        "source_port_range":
-            "*",
+        name="deny-all-outbound",
 
-        "destination_port_range":
-            "*",
+        protocol="*",
 
-        "source_address_prefix":
-            "*",
+        source_port_range="*",
 
-        "destination_address_prefix":
-            "*",
+        destination_port_range="*",
 
-        "access":
-            "Deny",
+        source_address_prefix="*",
 
-        "priority":
-            101,
+        destination_address_prefix="*",
 
-        "direction":
-            "Outbound"
-    }
+        access="Deny",
+
+        priority=101,
+
+        direction="Outbound"
+    )
 
     (
         network_client
@@ -225,9 +215,9 @@ def attach_nsg_to_nic(
         )
     )
 
-    nic.network_security_group = {
-        "id": nsg_id
-    }
+    nic.network_security_group = NetworkSecurityGroup(
+        id=nsg_id
+    )
 
     poller = (
         network_client
