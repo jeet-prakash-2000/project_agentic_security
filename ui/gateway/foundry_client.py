@@ -1,10 +1,13 @@
 import json
+import logging
 import os
 import re
 import time
 from urllib.parse import quote
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 CHAT_TIMEOUT = 120
 
@@ -280,22 +283,39 @@ def chat(agent, messages):
     if agent_name and cache_key not in _AGENT_ROUTE_UNAVAILABLE:
         try:
             url = _foundry_agent_responses_url(agent_endpoint, agent_name)
-            return _run_responses(
+            result = _run_responses(
                 url, api_key, conversation, model,
                 ephemeral=False, sys_prompt=None, started=started,
             )
+            result["routed_via"] = "foundry_agent"
+            result["agent_route"] = url
+            return result
         except FoundryHTTPError as exc:
             if (
                 exc.status_code in (404, 403)
                 or (exc.status_code == 400 and _error_suggests_missing_agent(exc))
             ):
+                logger.warning(
+                    "Foundry prompt-agent route unavailable for agent %r "
+                    "(endpoint=%s): HTTP %s - falling back to an ephemeral "
+                    "model call without the agent's tools.",
+                    agent_name, cache_key, exc.status_code,
+                )
                 _AGENT_ROUTE_UNAVAILABLE.add(cache_key)
             else:
                 raise
 
+    logger.warning(
+        "Routing agent %r via ephemeral model call (no Foundry prompt-agent "
+        "route): the agent's server-side tools are not available.",
+        agent_name or agent.get("name"),
+    )
     sys_prompt = _system_prompt(agent)
     url = _responses_url(agent_endpoint)
-    return _run_responses(
+    result = _run_responses(
         url, api_key, conversation, model,
         ephemeral=True, sys_prompt=sys_prompt, started=started,
     )
+    result["routed_via"] = "ephemeral_model"
+    result["agent_route"] = None
+    return result

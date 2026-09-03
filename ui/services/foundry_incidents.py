@@ -206,6 +206,13 @@ def run(action, params=None, agent_id=None, conversation_id=None, user_id="anony
         [{"role": "user", "content": prompt}],
     )
 
+    if result.get("routed_via") == "ephemeral_model":
+        raise RuntimeError(
+            "The Cloud Incident Response agent is unreachable, so the request "
+            "was answered by a fallback model without cloud tools. Verify the "
+            "agent endpoint, name, and API key, then try again."
+        )
+
     if record:
         try:
             _record(agent, prompt, result, conversation_id, user_id)
@@ -221,6 +228,7 @@ def run(action, params=None, agent_id=None, conversation_id=None, user_id="anony
             "type": agent.get("type", ""),
             "model": result.get("model") or agent.get("model", ""),
         },
+        "routed_via": result.get("routed_via", ""),
     }
     if action == "incident_counts":
         out["counts"] = parse_counts(out.get("reply"))
