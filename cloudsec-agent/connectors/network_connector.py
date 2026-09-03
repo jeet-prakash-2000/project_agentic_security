@@ -1,13 +1,14 @@
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.network import NetworkManagementClient
-from azure.mgmt.network.models import NetworkSecurityGroup
-from azure.mgmt.network.models import SecurityRule
+from azure.mgmt.network.models import (
+    NetworkSecurityGroup,
+    SecurityRule
+)
 
 from connectors.auth import (
     credential,
     SUBSCRIPTION_ID
 )
-
 
 compute_client = ComputeManagementClient(
     credential,
@@ -19,24 +20,16 @@ network_client = NetworkManagementClient(
     SUBSCRIPTION_ID
 )
 
-
-ISOLATION_NSG_NAME = (
-    "cloudsec-isolation-nsg"
-)
+ISOLATION_NSG_NAME = "cloudsec-isolation-nsg"
 
 
 def get_primary_nic(
     resource_group: str,
     vm_name: str
 ):
-
-    vm = (
-        compute_client
-        .virtual_machines
-        .get(
-            resource_group,
-            vm_name
-        )
+    vm = compute_client.virtual_machines.get(
+        resource_group,
+        vm_name
     )
 
     nic_id = (
@@ -45,54 +38,32 @@ def get_primary_nic(
         .id
     )
 
-    nic_name = (
-        nic_id.split("/")[-1]
-    )
+    nic_name = nic_id.split("/")[-1]
 
-    nic = (
-        network_client
-        .network_interfaces
-        .get(
-            resource_group,
-            nic_name
-        )
+    return network_client.network_interfaces.get(
+        resource_group,
+        nic_name
     )
-
-    return nic
 
 
 def get_network_interface(
     resource_group: str,
     nic_name: str
 ):
-
-    nic = (
-        network_client
-        .network_interfaces
-        .get(
-            resource_group,
-            nic_name
-        )
+    nic = network_client.network_interfaces.get(
+        resource_group,
+        nic_name
     )
 
     return {
-
-        "id":
-            nic.id,
-
-        "name":
-            nic.name,
-
-        "location":
-            nic.location,
-
-        "private_ip":
-            (
-                nic.ip_configurations[0]
-                .private_ip_address
-                if nic.ip_configurations
-                else None
-            )
+        "id": nic.id,
+        "name": nic.name,
+        "location": nic.location,
+        "private_ip": (
+            nic.ip_configurations[0].private_ip_address
+            if nic.ip_configurations
+            else None
+        )
     }
 
 
@@ -101,20 +72,32 @@ def create_isolation_nsg(
     location: str,
     nsg_name: str = ISOLATION_NSG_NAME
 ):
+    try:
+        existing = (
+            network_client
+            .network_security_groups
+            .get(
+                resource_group,
+                nsg_name
+            )
+        )
+        return existing
 
-    poller = (
+    except Exception:
+        pass
+
+    nsg = (
         network_client
         .network_security_groups
         .begin_create_or_update(
             resource_group,
             nsg_name,
-            {
-                "location": location
-            }
+            NetworkSecurityGroup(
+                location=location
+            )
         )
+        .result()
     )
-
-    nsg = poller.result()
 
     return nsg
 
@@ -125,78 +108,60 @@ def block_all_traffic(
 ):
 
     inbound_rule = SecurityRule(
-
-        name="deny-all-inbound",
-
         protocol="*",
-
         source_port_range="*",
-
         destination_port_range="*",
-
         source_address_prefix="*",
-
         destination_address_prefix="*",
-
         access="Deny",
-
-        priority=100,
-
+        priority=300,
         direction="Inbound"
     )
 
     outbound_rule = SecurityRule(
-
-        name="deny-all-outbound",
-
         protocol="*",
-
         source_port_range="*",
-
         destination_port_range="*",
-
         source_address_prefix="*",
-
         destination_address_prefix="*",
-
         access="Deny",
-
-        priority=101,
-
+        priority=301,
         direction="Outbound"
     )
 
-    (
-        network_client
-        .security_rules
-        .begin_create_or_update(
-            resource_group,
-            nsg_name,
-            "deny-all-inbound",
-            inbound_rule
+    try:
+        (
+            network_client
+            .security_rules
+            .begin_create_or_update(
+                resource_group,
+                nsg_name,
+                "deny-all-inbound",
+                inbound_rule
+            )
+            .result()
         )
-        .result()
-    )
+    except Exception:
+        pass
 
-    (
-        network_client
-        .security_rules
-        .begin_create_or_update(
-            resource_group,
-            nsg_name,
-            "deny-all-outbound",
-            outbound_rule
+    try:
+        (
+            network_client
+            .security_rules
+            .begin_create_or_update(
+                resource_group,
+                nsg_name,
+                "deny-all-outbound",
+                outbound_rule
+            )
+            .result()
         )
-        .result()
-    )
+    except Exception:
+        pass
 
     return {
-
-        "status":
-            "success",
-
-        "message":
-            "All traffic blocked"
+        "status": "success",
+        "message": "All traffic blocked"
     }
 
 
@@ -205,7 +170,6 @@ def attach_nsg_to_nic(
     nic_name: str,
     nsg_id: str
 ):
-
     nic = (
         network_client
         .network_interfaces
@@ -215,11 +179,11 @@ def attach_nsg_to_nic(
         )
     )
 
-    nic.network_security_group = NetworkSecurityGroup(
-        id=nsg_id
-    )
+    nic.network_security_group = {
+        "id": nsg_id
+    }
 
-    poller = (
+    (
         network_client
         .network_interfaces
         .begin_create_or_update(
@@ -227,17 +191,12 @@ def attach_nsg_to_nic(
             nic_name,
             nic
         )
+        .result()
     )
 
-    poller.result()
-
     return {
-
-        "status":
-            "success",
-
-        "nic_name":
-            nic_name
+        "status": "success",
+        "nic_name": nic_name
     }
 
 
@@ -245,7 +204,6 @@ def isolate_vm(
     vm_name: str,
     resource_group: str
 ):
-
     nic = get_primary_nic(
         resource_group,
         vm_name
@@ -268,24 +226,12 @@ def isolate_vm(
     )
 
     return {
-
-        "status":
-            "success",
-
-        "action":
-            "containment",
-
-        "vm_name":
-            vm_name,
-
-        "nic_name":
-            nic.name,
-
-        "nsg_name":
-            nsg.name,
-
-        "message":
-            "VM isolated successfully"
+        "status": "success",
+        "action": "containment",
+        "vm_name": vm_name,
+        "nic_name": nic.name,
+        "nsg_name": nsg.name,
+        "message": "VM isolated successfully"
     }
 
 
@@ -293,7 +239,6 @@ def restore_vm_connectivity(
     vm_name: str,
     resource_group: str
 ):
-
     nic = get_primary_nic(
         resource_group,
         vm_name
@@ -313,19 +258,9 @@ def restore_vm_connectivity(
     )
 
     return {
-
-        "status":
-            "success",
-
-        "action":
-            "recovery",
-
-        "vm_name":
-            vm_name,
-
-        "nic_name":
-            nic.name,
-
-        "message":
-            "Connectivity restored successfully"
+        "status": "success",
+        "action": "recovery",
+        "vm_name": vm_name,
+        "nic_name": nic.name,
+        "message": "Connectivity restored successfully"
     }
