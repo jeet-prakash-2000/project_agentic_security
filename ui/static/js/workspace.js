@@ -159,6 +159,11 @@
             .then(function (data) {
                 if (state.activeId !== id) return;
                 state.messages = (data && data.messages) || [];
+                var bound = agentFromMessages(state.messages);
+                if (bound && state.activeAgentId !== bound.id) {
+                    setActiveAgent(bound);
+                    if (window.setGlobalAgent) window.setGlobalAgent(bound);
+                }
                 renderActiveConversation();
                 updateSessionMetrics();
             })
@@ -462,13 +467,15 @@
         chatWindow.appendChild(wrap);
 
         var sug = wrap.querySelector(".ws-suggestions");
-        SUGGESTIONS.forEach(function (s) {
-            var b = document.createElement("button");
-            b.className = "ws-suggestion";
-            b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' + escapeHtml(s.label);
-            b.addEventListener("click", function () { runAction(s.action); });
-            sug.appendChild(b);
-        });
+        if (isFirewallAgent(state.activeAgent)) {
+            SUGGESTIONS.forEach(function (s) {
+                var b = document.createElement("button");
+                b.className = "ws-suggestion";
+                b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' + escapeHtml(s.label);
+                b.addEventListener("click", function () { runAction(s.action); });
+                sug.appendChild(b);
+            });
+        }
     }
 
     // ============================================================
@@ -478,6 +485,7 @@
     function renderPromptChips() {
         if (!promptChips) return;
         promptChips.innerHTML = "";
+        if (!isFirewallAgent(state.activeAgent)) return;
         COMPOSER_CHIPS.forEach(function (id) {
             var a = ACTIONS[id];
             if (!a) return;
@@ -785,6 +793,35 @@
         return parts.map(function (p) { return p.charAt(0); }).join("").toUpperCase().slice(0, 2) || "AG";
     }
 
+    function isFirewallAgent(agent) {
+        if (!agent) return false;
+        var type = String(agent.type || "").toLowerCase();
+        var name = String(agent.name || "").toLowerCase();
+        return type.indexOf("firewall") !== -1 || name.indexOf("firewall") !== -1;
+    }
+
+    function agentFromMessages(msgs) {
+        msgs = msgs || [];
+        for (var i = msgs.length - 1; i >= 0; i--) {
+            var name = String((msgs[i] && msgs[i].agentName) || "").trim();
+            if (!name) continue;
+            var lower = name.toLowerCase();
+            for (var j = 0; j < state.agents.length; j++) {
+                var a = state.agents[j];
+                if (String(a.name || "").toLowerCase() === lower || String(a.id || "").toLowerCase() === lower) {
+                    return a;
+                }
+            }
+        }
+        return null;
+    }
+
+    function conversationBoundAgent() {
+        var fromMsgs = agentFromMessages(state.messages);
+        if (fromMsgs) return fromMsgs;
+        return state.activeAgent;
+    }
+
     function setActiveAgent(agent) {
         if (!agent) return;
         state.activeAgent = agent;
@@ -801,6 +838,9 @@
         if (wsAgentSelect && agent.id && wsAgentSelect.value !== agent.id) {
             wsAgentSelect.value = agent.id;
         }
+
+        renderPromptChips();
+        if (chatWindow && !state.messages.length) renderEmptyState();
     }
 
     function populateAgentSelect() {
@@ -1163,12 +1203,24 @@
     if (wsAgentSelect) {
         wsAgentSelect.addEventListener("change", function () {
             var id = wsAgentSelect.value;
+            var next = null;
             for (var i = 0; i < state.agents.length; i++) {
                 if (state.agents[i].id === id) {
-                    setActiveAgent(state.agents[i]);
-                    if (window.setGlobalAgent) window.setGlobalAgent(state.agents[i]);
+                    next = state.agents[i];
                     break;
                 }
+            }
+            if (!next) return;
+
+            var hasMessages = state.messages.length > 0;
+            var bound = conversationBoundAgent();
+
+            setActiveAgent(next);
+            if (window.setGlobalAgent) window.setGlobalAgent(next);
+
+            if (hasMessages && bound && bound.id !== next.id) {
+                createConversation();
+                if (promptInput) promptInput.focus();
             }
         });
     }

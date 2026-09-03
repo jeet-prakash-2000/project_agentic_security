@@ -81,11 +81,13 @@
                 <h2>{% block page_title %}LTM Security Platform{% endblock %}</h2>
                 <span class="topbar-crumb">Security Operations Center</span>
             </div>
+            {% if request.endpoint != 'workspace' %}
             <div class="agent-selector" id="agentSelectorWrap">
                 <select class="agent-select" id="globalAgentSelect" onchange="onGlobalAgentChange()">
                     <option value="">Loading agents...</option>
                 </select>
             </div>
+            {% endif %}
             <div class="topbar-actions">
                 <span class="live-badge" id="liveBadge"><span class="pulse-dot" id="liveBadgeDot"></span><span id="liveBadgeText">Live</span></span>
                 <div class="user-chip">
