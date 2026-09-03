@@ -118,6 +118,17 @@ def _system_prompt(agent):
     )
 
 
+def is_cloud_agent(agent):
+    if not agent:
+        return False
+    text = " ".join([
+        str(agent.get("type") or ""),
+        str(agent.get("name") or ""),
+        str(agent.get("id") or ""),
+    ]).lower()
+    return "cloud" in text or "incident" in text
+
+
 def _normalize_messages(messages):
     return [
         {"role": m.get("role", "user"), "content": m.get("content", "")}
@@ -279,6 +290,7 @@ def chat(agent, messages):
 
     agent_name = (agent.get("agent_id") or agent.get("name") or "").strip()
     cache_key = _agent_route_cache_key(agent_endpoint, agent_name)
+    fallback_status = None
 
     if agent_name and cache_key not in _AGENT_ROUTE_UNAVAILABLE:
         try:
@@ -289,12 +301,14 @@ def chat(agent, messages):
             )
             result["routed_via"] = "foundry_agent"
             result["agent_route"] = url
+            result["fallback_status"] = None
             return result
         except FoundryHTTPError as exc:
             if (
                 exc.status_code in (404, 403)
                 or (exc.status_code == 400 and _error_suggests_missing_agent(exc))
             ):
+                fallback_status = exc.status_code
                 logger.warning(
                     "Foundry prompt-agent route unavailable for agent %r "
                     "(endpoint=%s): HTTP %s - falling back to an ephemeral "
@@ -318,4 +332,5 @@ def chat(agent, messages):
     )
     result["routed_via"] = "ephemeral_model"
     result["agent_route"] = None
+    result["fallback_status"] = fallback_status
     return result

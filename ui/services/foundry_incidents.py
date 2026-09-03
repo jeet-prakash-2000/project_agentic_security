@@ -246,10 +246,17 @@ def run(action, params=None, agent_id=None, conversation_id=None, user_id="anony
     )
 
     if result.get("routed_via") == "ephemeral_model":
+        status = result.get("fallback_status")
+        suffix = (
+            " The agent route returned HTTP {0}.".format(status)
+            if status else ""
+        )
         raise RuntimeError(
             "The Cloud Incident Response agent is unreachable, so the request "
-            "was answered by a fallback model without cloud tools. Verify the "
-            "agent endpoint, name, and API key, then try again."
+            "was answered by a fallback model without cloud tools.{0} Verify "
+            "the agent endpoint, name, and API key, then try again.".format(
+                suffix
+            )
         )
 
     if record:

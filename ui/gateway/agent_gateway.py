@@ -35,6 +35,21 @@ class AgentGateway:
 
         try:
             result = foundry_client.chat(agent, messages)
+            if (
+                foundry_client.is_cloud_agent(agent)
+                and result.get("routed_via") == "ephemeral_model"
+            ):
+                status = result.get("fallback_status")
+                suffix = (
+                    " (agent route returned HTTP {0})".format(status)
+                    if status else ""
+                )
+                raise RuntimeError(
+                    "The Cloud Incident Response agent is unreachable, so the "
+                    "request was answered by a fallback model without cloud "
+                    "tools{suffix}. Verify the agent endpoint, name, and API "
+                    "key, then try again.".format(suffix=suffix)
+                )
         except Exception:
             telemetry_map_service.record_request(agent.get("id", ""), error=True)
             raise
