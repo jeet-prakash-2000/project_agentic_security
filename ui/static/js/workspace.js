@@ -112,6 +112,18 @@
             name: "Incident Investigation",
             icon: '<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><circle cx="12" cy="12" r="9"/>'
         },
+        incident_summary: {
+            name: "Incident Summary",
+            icon: '<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><path d="M9 12l2 2 4-4"/>'
+        },
+        vm_context: {
+            name: "VM Configuration",
+            icon: '<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><rect x="8" y="12" width="8" height="8" rx="1.5"/>'
+        },
+        vm_instance_view: {
+            name: "VM Status & Health",
+            icon: '<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><path d="M12 11v4M12 18h.01"/>'
+        },
         isolate: {
             name: "VM Isolation",
             icon: '<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><path d="M5 21h14"/>'
@@ -905,6 +917,13 @@
             "</div>" +
             '<button class="ws-cloud-run" type="button" data-cloud-action="investigate">' + ARROW_ICON + "Investigate</button>" +
             "</div>" +
+            '<div class="ws-mcq-head"><strong>Incident Summary</strong><span>Generate an investigation summary for a Sentinel incident.</span></div>' +
+            '<div class="ws-cloud-block">' +
+            '<div class="ws-cloud-fields">' +
+            '<input class="ws-cloud-input" type="text" data-cloud-param="incident_id" placeholder="Sentinel incident ID" autocomplete="off">' +
+            "</div>" +
+            '<button class="ws-cloud-run" type="button" data-cloud-action="incident_summary">' + ARROW_ICON + "Generate Summary</button>" +
+            "</div>" +
             '<div class="ws-mcq-head"><strong>Take Action \u2014 Isolate VM</strong><span>Contain a compromised virtual machine.</span></div>' +
             '<div class="ws-cloud-block">' +
             '<div class="ws-cloud-fields ws-cloud-fields-duo">' +
@@ -970,6 +989,8 @@
         renderConversationList();
 
         var vmBtns = [
+            { action: "vm_instance_view", label: "Status / Health", cls: "" },
+            { action: "vm_context", label: "Config / Context", cls: "" },
             { action: "start_vm", label: "Start", cls: "ws-cloud-run-ok" },
             { action: "restart_vm", label: "Restart", cls: "" },
             { action: "stop_vm", label: "Stop", cls: "ws-cloud-run-warn" },
@@ -979,7 +1000,7 @@
         }).join("");
 
         var html = '<div class="ws-cloud-card ws-mcq-card">' +
-            '<div class="ws-mcq-head"><strong>Virtual Machine</strong><span>Start, restart, stop, or restore connectivity for an Azure VM.</span></div>' +
+            '<div class="ws-mcq-head"><strong>Virtual Machine</strong><span>Check status and health, view configuration, or start, restart, stop, and restore connectivity for an Azure VM.</span></div>' +
             '<div class="ws-cloud-block">' +
             '<div class="ws-cloud-fields ws-cloud-fields-duo">' +
             '<input class="ws-cloud-input" type="text" data-cloud-param="vm_name" placeholder="VM name" autocomplete="off">' +
@@ -1009,9 +1030,10 @@
     }
 
     function cloudRequiresParams(action) {
-        if (action === "investigate") return ["incident_id"];
+        if (action === "investigate" || action === "incident_summary") return ["incident_id"];
         if (action === "isolate") return ["vm_name", "resource_group"];
-        if (action === "start_vm" || action === "stop_vm" || action === "restart_vm" || action === "reconnect_vm") {
+        if (action === "start_vm" || action === "stop_vm" || action === "restart_vm" || action === "reconnect_vm" ||
+            action === "vm_context" || action === "vm_instance_view") {
             return ["vm_name", "resource_group"];
         }
         return [];
@@ -1019,7 +1041,10 @@
 
     function cloudUserLabel(action, params) {
         if (action === "investigate") return "Investigate incident " + (params.incident_id || "");
+        if (action === "incident_summary") return "Generate summary for incident " + (params.incident_id || "");
         if (action === "isolate") return "Isolate VM " + (params.vm_name || "") + " in " + (params.resource_group || "");
+        if (action === "vm_context") return "Retrieve configuration for VM " + (params.vm_name || "");
+        if (action === "vm_instance_view") return "Check status/health of VM " + (params.vm_name || "");
         var names = { start_vm: "Start", restart_vm: "Restart", stop_vm: "Stop", reconnect_vm: "Reconnect" };
         return (names[action] || action) + " VM " + (params.vm_name || "");
     }

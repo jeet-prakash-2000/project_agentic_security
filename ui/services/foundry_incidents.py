@@ -22,11 +22,14 @@ _OPERATION = {
     "incident_counts": "GetSentinelIncidents",
     "incident_list": "GetSentinelIncidents",
     "investigate": "GetSentinelIncident",
+    "incident_summary": "GenerateIncidentSummary",
     "isolate": "IsolateAzureVM",
     "start_vm": "StartVM",
     "stop_vm": "StopVM",
     "restart_vm": "RestartVM",
     "reconnect_vm": "RestoreVMConnectivity",
+    "vm_context": "GetVMContext",
+    "vm_instance_view": "GetVMInstanceView",
 }
 
 
@@ -110,7 +113,43 @@ def build_prompt(action, params=None):
             )
         )
 
+    if action == "incident_summary":
+        incident_id = str(params.get("incident_id") or "").strip()
+        return (
+            "Use the IncidentResponseTool to call GenerateIncidentSummary with "
+            "incident_id '{incident_id}'. Then present the generated summary of "
+            "the incident: what happened, key timeline events, affected resources "
+            "and entities, and recommended containment and remediation next "
+            "steps. Format the response with clear headings.".format(
+                incident_id=incident_id
+            )
+        )
+
     vm_name, resource_group = _vm_bits(params)
+    if action == "vm_context":
+        return (
+            "Use the IncidentResponseTool to call GetVMContext with "
+            "vm_name '{vm_name}' and resource_group '{resource_group}'. "
+            "Report the VM's configuration and context, including its size, "
+            "operating system, location, resource group, attached network "
+            "interfaces, and current power state.".format(
+                vm_name=vm_name,
+                resource_group=resource_group,
+            )
+        )
+
+    if action == "vm_instance_view":
+        return (
+            "Use the IncidentResponseTool to call GetVMInstanceView with "
+            "vm_name '{vm_name}' and resource_group '{resource_group}'. "
+            "Report the VM's current runtime status and health from the "
+            "instance view, including power state, provisioning state, and any "
+            "platform, fault, or agent statuses.".format(
+                vm_name=vm_name,
+                resource_group=resource_group,
+            )
+        )
+
     if action == "isolate":
         return (
             "Use the IncidentResponseTool to call IsolateAzureVM with "
