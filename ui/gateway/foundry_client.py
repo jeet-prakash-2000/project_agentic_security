@@ -2,10 +2,17 @@ import json
 import os
 import re
 import time
+from urllib.parse import quote
 
 import requests
 
-CHAT_TIMEOUT = 90
+CHAT_TIMEOUT = 120
+
+
+class FoundryHTTPError(RuntimeError):
+    def __init__(self, status_code, message):
+        super().__init__(message)
+        self.status_code = status_code
 
 # Tool schemas in Azure AI Foundry Responses API format (flat function objects).
 TOOL_SCHEMAS = [
@@ -45,11 +52,12 @@ def _post(url, api_key, payload):
     )
 
     if response.status_code != 200:
-        raise RuntimeError(
+        raise FoundryHTTPError(
+            response.status_code,
             "Azure AI Foundry returned HTTP {status}: {body}".format(
                 status=response.status_code,
                 body=response.text[:300],
-            )
+            ),
         )
 
     return response.json()
@@ -172,29 +180,52 @@ def _responses_url(agent_endpoint):
     return endpoint + "/openai/v1/responses"
 
 
-def chat(agent, messages):
+_AGENT_ROUTE_UNAVAILABLE = set()
+
+
+def _agent_route_cache_key(agent_endpoint, agent_name):
+    return "{0}|{1}".format(agent_endpoint.rstrip("/"), agent_name)
+
+
+def _foundry_agent_responses_url(agent_endpoint, agent_name):
+    """URL for a Foundry prompt agent, which runs its own instructions and
+    server-side tools (e.g. an OpenAPI tool backed by an Azure Function).
+    """
+    endpoint = agent_endpoint.rstrip("/")
+    return "{0}/agents/{1}/endpoint/protocols/openai/responses?api-version=v1".format(
+        endpoint,
+        quote(agent_name, safe=""),
+    )
+
+
+def _error_suggests_missing_agent(exc):
+    lowered = str(exc).lower()
+    return any(
+        marker in lowered
+        for marker in ("not found", "does not exist", "not exist", "no agent")
+    )
+
+
+def _run_responses(url, api_key, conversation, model, ephemeral, sys_prompt, started):
+    """Run one chat over the Foundry Responses API.
+
+    ``ephemeral`` agents (the historical behaviour) are defined per call with
+    a model, platform instructions, and the firewall tool schemas. Foundry
+    prompt agents instead resolve their definition server-side, so only the
+    input history is sent.
+    """
     from gateway import tools as tool_registry
 
-    agent_endpoint = (agent.get("agent_endpoint") or "").rstrip("/")
-    api_key = _resolve_api_key(agent)
-    model = agent.get("model", "gpt-5.1")
+    def build_payload(next_input):
+        payload = {"input": next_input}
+        if ephemeral:
+            payload["model"] = model
+            payload["tools"] = TOOL_SCHEMAS
+            if sys_prompt:
+                payload["instructions"] = sys_prompt
+        return payload
 
-    if not agent_endpoint:
-        raise ValueError("Agent is missing the agent endpoint.")
-    if not api_key:
-        raise ValueError("Agent is missing the API key.")
-
-    conversation = _normalize_messages(messages)
-    sys_prompt = _system_prompt(agent)
-    url = _responses_url(agent_endpoint)
-
-    started = time.monotonic()
-
-    payload = {"model": model, "input": conversation, "tools": TOOL_SCHEMAS}
-    if sys_prompt:
-        payload["instructions"] = sys_prompt
-
-    data = _post(url, api_key, payload)
+    data = _post(url, api_key, build_payload(conversation))
     content, function_calls = _extract_reply(data)
     total_usage = dict(data.get("usage") or {})
 
@@ -212,22 +243,59 @@ def chat(agent, messages):
                 "output": _call_tool(tool_registry, function_call),
             })
 
-        payload = {"model": model, "input": next_input, "tools": TOOL_SCHEMAS}
-        if sys_prompt:
-            payload["instructions"] = sys_prompt
-
-        data = _post(url, api_key, payload)
+        data = _post(url, api_key, build_payload(next_input))
         content, function_calls = _extract_reply(data)
         _merge_usage(total_usage, data.get("usage") or {})
 
     if content is None:
         content = "Assessment completed. Check the outputs above for detailed results."
 
-    latency_ms = int((time.monotonic() - started) * 1000)
-
     return {
         "reply": content,
         "usage": total_usage,
-        "latency_ms": latency_ms,
+        "latency_ms": int((time.monotonic() - started) * 1000),
         "model": data.get("model") or model,
     }
+
+
+def chat(agent, messages):
+    """Route a chat to a Foundry prompt agent when one exists for the agent,
+    otherwise fall back to the ephemeral model+platform-tool Responses call.
+    """
+    agent_endpoint = (agent.get("agent_endpoint") or "").rstrip("/")
+    api_key = _resolve_api_key(agent)
+    model = agent.get("model", "gpt-5.1")
+
+    if not agent_endpoint:
+        raise ValueError("Agent is missing the agent endpoint.")
+    if not api_key:
+        raise ValueError("Agent is missing the API key.")
+
+    conversation = _normalize_messages(messages)
+    started = time.monotonic()
+
+    agent_name = (agent.get("agent_id") or agent.get("name") or "").strip()
+    cache_key = _agent_route_cache_key(agent_endpoint, agent_name)
+
+    if agent_name and cache_key not in _AGENT_ROUTE_UNAVAILABLE:
+        try:
+            url = _foundry_agent_responses_url(agent_endpoint, agent_name)
+            return _run_responses(
+                url, api_key, conversation, model,
+                ephemeral=False, sys_prompt=None, started=started,
+            )
+        except FoundryHTTPError as exc:
+            if (
+                exc.status_code in (404, 403)
+                or (exc.status_code == 400 and _error_suggests_missing_agent(exc))
+            ):
+                _AGENT_ROUTE_UNAVAILABLE.add(cache_key)
+            else:
+                raise
+
+    sys_prompt = _system_prompt(agent)
+    url = _responses_url(agent_endpoint)
+    return _run_responses(
+        url, api_key, conversation, model,
+        ephemeral=True, sys_prompt=sys_prompt, started=started,
+    )
