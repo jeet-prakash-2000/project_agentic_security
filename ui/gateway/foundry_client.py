@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import time
 
 import requests
@@ -54,17 +55,29 @@ def _post(url, api_key, payload):
     return response.json()
 
 
+def _agent_key_env_name(agent):
+    """Per-agent API key env var, e.g. FOUNDRY_API_KEY_INCIDENT_RESPONSE_AGENT_CLOUD_SECURITY.
+
+    Derived from the agent id so every Foundry project (firewall, cloud, ...)
+    can carry its own key without sharing the firewall's FOUNDRY_API_KEY.
+    """
+    agent_id = agent.get("id") or agent.get("agent_id") or agent.get("name") or ""
+    slug = re.sub(r"[^A-Z0-9]+", "_", agent_id.upper()).strip("_")
+    return "FOUNDRY_API_KEY_{0}".format(slug)
+
+
 def _resolve_api_key(agent):
     """Resolve the agent's API key.
 
     Keys live in Application Settings or the ``agents`` table (which is
     populated from Application Settings at deploy time) - never Key Vault.
-    A placeholder value is treated as unset so the ``FOUNDRY_API_KEY``
-    Application Setting wins.
+    A placeholder value is treated as unset, so an agent-specific
+    ``FOUNDRY_API_KEY_<AGENT_ID>`` Application Setting is preferred, falling
+    back to the shared ``FOUNDRY_API_KEY`` Application Setting.
     """
     key = (agent.get("api_key", "") or "").strip()
     if not key or key.startswith("PLACEHOLDER"):
-        return os.environ.get("FOUNDRY_API_KEY", "")
+        return os.environ.get(_agent_key_env_name(agent)) or os.environ.get("FOUNDRY_API_KEY", "")
     return key
 
 

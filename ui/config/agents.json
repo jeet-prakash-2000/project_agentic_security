@@ -10,6 +10,17 @@
       "connected": true,
       "created_at": "2026-08-06T00:00:00Z",
       "agent_id": "Firewall-Audit-Agent"
+    },
+    {
+      "id": "incident-response-agent-cloud-security",
+      "name": "Incident-Response-Agent-Cloud-Security",
+      "type": "Cloud Incident Response",
+      "model": "gpt-5.1",
+      "agent_endpoint": "https://cloudsec-incident-containment-agent-01.services.ai.azure.com/api/projects/CloudSec-Incident-Containment-Agent",
+      "api_key": "PLACEHOLDER_REPLACE_WITH_YOUR_API_KEY",
+      "connected": true,
+      "created_at": "2026-09-03T00:00:00Z",
+      "agent_id": "Incident-Response-Agent-Cloud-Security"
     }
   ]
 }
