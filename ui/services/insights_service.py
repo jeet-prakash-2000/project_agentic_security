@@ -20,6 +20,7 @@ OUTPUT_PRICE_PER_M = 10.0
 
 MAX_TURNS = 500
 MAX_CONVERSATIONS = 200
+MAX_SERIES_POINTS = 800
 
 
 def _estimate_cost(input_tokens, output_tokens):
@@ -107,6 +108,7 @@ def summarize():
     )
 
     by_agent = {}
+    series_map = {}
     total = {
         "conversations": 0,
         "turns": 0,
@@ -157,6 +159,7 @@ def summarize():
 
         turns = conversation.get("turns", [])
         total["latency_ms"] += sum(t.get("latency_ms", 0) for t in turns)
+        series = series_map.setdefault(agent_id, [])
         for turn in turns:
             total["input_tokens"] += turn.get("input_tokens", 0)
             total["output_tokens"] += turn.get("output_tokens", 0)
@@ -172,6 +175,16 @@ def summarize():
             agent["cache_write_tokens"] += turn.get("cache_write_tokens", 0)
             agent["reasoning_tokens"] += turn.get("reasoning_tokens", 0)
             agent["total_latency_ms"] += turn.get("latency_ms", 0)
+
+            series.append(
+                {
+                    "ts": turn.get("timestamp") or conversation.get("updated"),
+                    "input": turn.get("input_tokens", 0),
+                    "output": turn.get("output_tokens", 0),
+                    "total": turn.get("total_tokens", 0),
+                    "latency_ms": turn.get("latency_ms", 0),
+                }
+            )
 
         recent.append(
             {
@@ -197,6 +210,11 @@ def summarize():
         agent["cost"] = _estimate_cost(
             agent.get("input_tokens", 0), agent.get("output_tokens", 0)
         )
+        points = sorted(
+            series_map.get(agent["agent_id"], []),
+            key=lambda p: p["ts"] or 0,
+        )
+        agent["series"] = points[-MAX_SERIES_POINTS:]
 
     total["avg_latency_ms"] = (
         int(total["latency_ms"] / total["turns"]) if total["turns"] else 0

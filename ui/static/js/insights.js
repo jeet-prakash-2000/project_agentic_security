@@ -1,10 +1,7 @@
 (function () {
     "use strict";
 
-    var grid = document.getElementById("agentInsightsGrid");
-    var overview = document.getElementById("insightsOverview");
-    var recentBody = document.getElementById("recentBody");
-    var recentCount = document.getElementById("recentCount");
+    var historyList = document.getElementById("agentHistoryPanels");
     var refreshBtn = document.getElementById("refreshInsightsBtn");
 
     var costTotal = document.getElementById("costTotal");
@@ -12,6 +9,21 @@
     var costConvs = document.getElementById("costConvs");
     var costLatency = document.getElementById("costLatency");
     var costDrivers = document.getElementById("costDrivers");
+
+    var POLL_MS = 5000;
+    var TICKS = 5;
+
+    var COLOR_INPUT = "#2563EB";
+    var COLOR_OUTPUT = "#16A34A";
+    var COLOR_TOTAL = "#7C3AED";
+    var COLOR_LATENCY = "#E4002B";
+
+    var CW = 720;
+    var CH = 210;
+    var PAD_LEFT = 52;
+    var PAD_RIGHT = 14;
+    var PAD_TOP = 14;
+    var PAD_BOTTOM = 22;
 
     function fmtNumber(value) {
         if (value == null) return "-";
@@ -28,8 +40,9 @@
 
     function fmtLatency(value) {
         if (value == null) return "-";
-        if (value >= 1000) return (value / 1000).toFixed(2) + "s";
-        return value + "ms";
+        var n = Number(value);
+        if (n >= 1000) return (n / 1000).toFixed(2) + "s";
+        return Math.round(n) + "ms";
     }
 
     function fmtCost(value) {
@@ -49,6 +62,24 @@
         return Math.floor(diff / 86400) + "d ago";
     }
 
+    function fmtStamp(ts) {
+        if (!ts) return "-";
+        var d = new Date(ts * 1000);
+        return d.toLocaleString();
+    }
+
+    function fmtAxis(ts) {
+        if (!ts) return "";
+        var d = new Date(ts * 1000);
+        var hh = d.getHours();
+        var mm = d.getMinutes();
+        var time = (hh < 10 ? "0" + hh : hh) + ":" + (mm < 10 ? "0" + mm : mm);
+        var today = new Date();
+        if (d.toDateString() === today.toDateString()) return time;
+        var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return months[d.getMonth()] + " " + d.getDate();
+    }
+
     function escapeHtml(value) {
         var div = document.createElement("div");
         div.textContent = value == null ? "" : String(value);
@@ -61,16 +92,11 @@
         return out.slice(0, 2) || "AG";
     }
 
-    function renderOverview(totals) {
-        if (!overview) return;
-        var set = function (id, value) {
-            var el = document.getElementById(id);
-            if (el) el.textContent = value;
-        };
-        set("kpiAgents", "-");
-        set("kpiConversations", fmtNumber(totals && totals.conversations));
-        set("kpiTokens", fmtTokens(totals && totals.total_tokens));
-        set("kpiLatency", fmtLatency(totals && totals.avg_latency_ms));
+    function sortedSeries(agent) {
+        var pts = (agent && agent.series) || [];
+        return pts.slice().sort(function (a, b) {
+            return (a.ts || 0) - (b.ts || 0);
+        });
     }
 
     function renderCost(totals, agents) {
@@ -101,7 +127,7 @@
                 '<div class="cost-driver">' +
                 '<div class="cost-driver-head">' +
                 '<span class="cost-driver-name">' + escapeHtml(a.agent_name) + "</span>" +
-                '<span class="cost-driver-value">' + fmtCost(a.cost) + " · " + fmtTokens(a.total_tokens) + " tokens</span>" +
+                '<span class="cost-driver-value">' + fmtCost(a.cost) + " \u00b7 " + fmtTokens(a.total_tokens) + " tokens</span>" +
                 "</div>" +
                 '<div class="cost-driver-track"><div class="cost-driver-fill" style="width:' + pct + '%"></div></div>' +
                 "</div>";
@@ -109,51 +135,187 @@
         costDrivers.innerHTML = html;
     }
 
-    function renderAgentCard(agent) {
-        var card = document.createElement("div");
-        card.className = "agent-insight-card";
+    function chartScales(points, maxValue) {
+        var n = points.length;
+        if (n === 0) return null;
+        var max = maxValue || 1;
+        var min = 0;
 
+        function x(ts) {
+            var idx = points.indexOf(ts);
+            if (n === 1) return PAD_LEFT + (CW - PAD_LEFT - PAD_RIGHT) / 2;
+            return PAD_LEFT + (idx / (n - 1)) * (CW - PAD_LEFT - PAD_RIGHT);
+        }
+
+        function y(v) {
+            return PAD_TOP + (1 - (v - min) / max) * (CH - PAD_TOP - PAD_BOTTOM);
+        }
+
+        return { n: n, max: max, x: x, y: y };
+    }
+
+    function gridHtml(sc, format, ticks) {
+        var html = "";
+        for (var g = 0; g <= ticks; g++) {
+            var gv = (g / ticks) * sc.max;
+            var gy = sc.y(gv);
+            html += '<line class="agent-chart-grid" x1="' + PAD_LEFT + '" y1="' + gy.toFixed(1) + '" x2="' + (CW - PAD_RIGHT) + '" y2="' + gy.toFixed(1) + '"/>';
+            html += '<text class="agent-chart-tick" x="' + (PAD_LEFT - 8) + '" y="' + (gy + 3).toFixed(1) + '" text-anchor="end">' + escapeHtml(format(gv)) + "</text>";
+        }
+        return html;
+    }
+
+    function linePath(points, sc, valueKey) {
+        return "M" + points.map(function (p) {
+            return sc.x(p).toFixed(1) + " " + sc.y(p[valueKey]).toFixed(1);
+        }).join(" L");
+    }
+
+    function hoverDots(points, sc, tipFn) {
+        var showDots = points.length <= 120;
+        var html = "";
+        points.forEach(function (p, i) {
+            var cy = sc.y(tipFn(p)).toFixed(1);
+            html += '<circle class="agent-chart-hit" cx="' + sc.x(p).toFixed(1) + '" cy="' + cy + '" r="9"><title>' + escapeHtml(agentTooltip(points, i)) + "</title></circle>";
+            if (showDots) {
+                html += '<circle class="agent-chart-dot" cx="' + sc.x(p).toFixed(1) + '" cy="' + cy + '" r="2.6"/>';
+            }
+        });
+        return html;
+    }
+
+    function agentTooltip(points, i) {
+        var p = points[i];
+        var lines = [
+            "Turn " + (i + 1) + " of " + points.length,
+            "Tokens " + fmtTokens(p.total) + " (input " + fmtTokens(p.input) + " / output " + fmtTokens(p.output) + ")",
+            "Latency " + fmtLatency(p.latency_ms),
+            "Updated " + fmtStamp(p.ts)
+        ];
+        return lines.join("\n");
+    }
+
+    function axisTicks(points) {
+        var n = points.length;
+        var count = Math.min(TICKS, n);
+        var out = [];
+        for (var i = 0; i < count; i++) {
+            var idx = Math.round((i / (count - 1 || 1)) * (n - 1));
+            if (out.length && out[out.length - 1].idx === idx) continue;
+            out.push({ idx: idx, ts: points[idx].ts });
+        }
+        return out;
+    }
+
+    function tokensChartSvg(points) {
+        if (!points.length) {
+            return '<p class="agent-chart-empty">No token usage recorded yet.</p>';
+        }
+        var maxTotal = points.reduce(function (m, p) { return Math.max(m, p.total || 0); }, 0);
+        var sc = chartScales(points, Math.max(1, maxTotal));
+        var html = '<svg class="agent-chart-svg" viewBox="0 0 ' + CW + " " + CH + '" role="img" aria-label="Token usage over time">';
+        html += gridHtml(sc, fmtTokens, 4);
+        html += '<path d="' + linePath(points, sc, "input") + '" fill="none" stroke="' + COLOR_INPUT + '" stroke-width="1.6" class="agent-chart-line"/>';
+        html += '<path d="' + linePath(points, sc, "output") + '" fill="none" stroke="' + COLOR_OUTPUT + '" stroke-width="1.6" class="agent-chart-line"/>';
+        html += '<path d="' + linePath(points, sc, "total") + '" fill="none" stroke="' + COLOR_TOTAL + '" stroke-width="2.4" class="agent-chart-line"/>';
+        html += hoverDots(points, sc, function (p) { return p.total || 0; });
+        axisTicks(points).forEach(function (t) {
+            html += '<text class="agent-chart-axis" x="' + sc.x(points[t.idx]).toFixed(1) + '" y="' + (CH - 6) + '" text-anchor="middle">' + escapeHtml(fmtAxis(t.ts)) + "</text>";
+        });
+        html += "</svg>";
+        return html;
+    }
+
+    function latencyChartSvg(points) {
+        if (!points.length) {
+            return '<p class="agent-chart-empty">No latency recorded yet.</p>';
+        }
+        var maxLat = points.reduce(function (m, p) { return Math.max(m, p.latency_ms || 0); }, 0);
+        var sc = chartScales(points, Math.max(1, maxLat));
+        var line = linePath(points, sc, "latency_ms");
+        var area = line +
+            " L" + sc.x(points[points.length - 1]).toFixed(1) + " " + sc.y(0).toFixed(1) +
+            " L" + sc.x(points[0]).toFixed(1) + " " + sc.y(0).toFixed(1) + " Z";
+        var html = '<svg class="agent-chart-svg" viewBox="0 0 ' + CW + " " + CH + '" role="img" aria-label="Latency over time">';
+        html += gridHtml(sc, fmtLatency, 4);
+        html += '<path d="' + area + '" fill="' + COLOR_LATENCY + '" fill-opacity="0.08" stroke="none"/>';
+        html += '<path d="' + line + '" fill="none" stroke="' + COLOR_LATENCY + '" stroke-width="2.4" class="agent-chart-line"/>';
+        html += hoverDots(points, sc, function (p) { return p.latency_ms || 0; });
+        axisTicks(points).forEach(function (t) {
+            html += '<text class="agent-chart-axis" x="' + sc.x(points[t.idx]).toFixed(1) + '" y="' + (CH - 6) + '" text-anchor="middle">' + escapeHtml(fmtAxis(t.ts)) + "</text>";
+        });
+        html += "</svg>";
+        return html;
+    }
+
+    function chartBlock(title, legendHtml, svgHtml) {
+        return '<div class="agent-chart card">' +
+            '<div class="agent-chart-head">' +
+            '<span class="agent-chart-title">' + escapeHtml(title) + "</span>" +
+            (legendHtml ? '<span class="agent-chart-legend">' + legendHtml + "</span>" : "") +
+            "</div>" +
+            svgHtml +
+            "</div>";
+    }
+
+    function renderAgentPanel(agent) {
         var tokens = agent.total_tokens || 0;
         var input = agent.input_tokens || 0;
         var output = agent.output_tokens || 0;
         var cached = agent.cached_tokens || 0;
         var reasoning = agent.reasoning_tokens || 0;
+        var points = sortedSeries(agent);
 
-        card.innerHTML =
-            '<div class="agent-insight-head">' +
+        var stat = function (label, value) {
+            return '<span class="agent-stat"><span class="agent-stat-label">' + escapeHtml(label) + '</span><strong>' + value + "</strong></span>";
+        };
+
+        var panel = document.createElement("div");
+        panel.className = "agent-history-panel card";
+        panel.innerHTML =
+            '<div class="agent-history-head">' +
             '<span class="agent-avatar agent-avatar-blue">' + escapeHtml(avatarFor(agent.agent_name)) + "</span>" +
-            "<div>" +
+            '<div class="agent-history-id">' +
             "<h3>" + escapeHtml(agent.agent_name) + "</h3>" +
-            "<p>" + escapeHtml(agent.agent_type || "Agent") + " · " + escapeHtml(agent.model || "-") + "</p>" +
+            "<p>" + escapeHtml(agent.agent_type || "Agent") + " \u00b7 " + escapeHtml(agent.model || "-") + "</p>" +
             "</div>" +
             '<span class="agent-cost-badge">' + fmtCost(agent.cost) + "</span>" +
             "</div>" +
 
-            '<div class="insight-token-grid">' +
-            '<div class="insight-token insight-token-blue"><strong>' + fmtTokens(input) + "</strong><span>Input</span></div>" +
-            '<div class="insight-token insight-token-green"><strong>' + fmtTokens(output) + "</strong><span>Output</span></div>" +
-            '<div class="insight-token insight-token-purple"><strong>' + fmtTokens(tokens) + "</strong><span>Total</span></div>" +
+            '<div class="agent-history-stats">' +
+            stat("Input", fmtTokens(input)) +
+            stat("Output", fmtTokens(output)) +
+            stat("Total", fmtTokens(tokens)) +
+            stat("Cached", fmtNumber(cached)) +
+            stat("Reasoning", fmtNumber(reasoning)) +
+            stat("Convos", fmtNumber(agent.conversations)) +
+            stat("Turns", fmtNumber(agent.turns)) +
+            stat("Avg / turn", fmtTokens(agent.avg_tokens_per_turn) + " tok") +
+            stat("Avg latency", fmtLatency(agent.avg_latency_ms)) +
+            stat("Last active", fmtRelative(agent.last_active)) +
             "</div>" +
 
-            '<div class="insight-breakdown">' +
-            '<span class="tag">Cached <strong>' + fmtNumber(cached) + "</strong></span>" +
-            '<span class="tag">Reasoning <strong>' + fmtNumber(reasoning) + "</strong></span>" +
-            '<span class="tag">Convos <strong>' + fmtNumber(agent.conversations) + "</strong></span>" +
-            '<span class="tag">Turns <strong>' + fmtNumber(agent.turns) + "</strong></span>" +
-            "</div>" +
-
-            '<div class="insight-meta">' +
-            '<div class="insight-meta-item"><span>Avg / turn</span><strong>' + fmtTokens(agent.avg_tokens_per_turn) + " tokens</strong></div>" +
-            '<div class="insight-meta-item"><span>Avg latency</span><strong>' + fmtLatency(agent.avg_latency_ms) + "</strong></div>" +
-            '<div class="insight-meta-item"><span>Last active</span><strong>' + fmtRelative(agent.last_active) + "</strong></div>" +
+            '<div class="agent-charts">' +
+            chartBlock(
+                "Token usage",
+                '<span class="agent-chart-key"><i style="background:' + COLOR_INPUT + '"></i>Input</span>' +
+                '<span class="agent-chart-key"><i style="background:' + COLOR_OUTPUT + '"></i>Output</span>' +
+                '<span class="agent-chart-key"><i style="background:' + COLOR_TOTAL + '"></i>Total</span>',
+                tokensChartSvg(points)
+            ) +
+            chartBlock(
+                "Latency per turn",
+                '<span class="agent-chart-key"><i style="background:' + COLOR_LATENCY + '"></i>Latency</span>',
+                latencyChartSvg(points)
+            ) +
             "</div>";
 
-        return card;
+        return panel;
     }
 
-    function renderAgents(agents) {
-        if (!grid) return;
-        grid.innerHTML = "";
+    function renderHistory(agents) {
+        if (!historyList) return;
+        historyList.innerHTML = "";
 
         var list = agents || [];
         if (!list.length) {
@@ -162,61 +324,36 @@
             empty.innerHTML =
                 '<div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0012 2z"/></svg></div>' +
                 "<h3>No agent telemetry yet</h3>" +
-                "<p>Chat with the Firewall Auditor in the AI Workspace to start collecting token and context insights.</p>" +
+                "<p>Chat with an agent in the AI Workspace to start collecting token and latency history.</p>" +
                 '<a href="/workspace" class="btn btn-primary">Open AI Workspace</a>';
-            grid.appendChild(empty);
+            historyList.appendChild(empty);
             return;
         }
 
         list.forEach(function (agent) {
-            grid.appendChild(renderAgentCard(agent));
+            historyList.appendChild(renderAgentPanel(agent));
         });
     }
 
-    function renderRecent(conversations) {
-        if (!recentBody) return;
-        recentBody.innerHTML = "";
-
-        var list = conversations || [];
-        if (recentCount) recentCount.textContent = list.length + " recorded";
-
-        if (!list.length) {
-            var row = document.createElement("tr");
-            row.innerHTML = '<td colspan="6" class="empty-cell">No conversations recorded yet.</td>';
-            recentBody.appendChild(row);
-            return;
-        }
-
-        list.forEach(function (conv) {
-            var row = document.createElement("tr");
-            row.innerHTML =
-                "<td>" +
-                '<span class="avatar-sm avatar-blue">' + escapeHtml(avatarFor(conv.agent_name)) + "</span> " +
-                "<strong>" + escapeHtml(conv.agent_name) + "</strong>" +
-                "</td>" +
-                "<td>" + escapeHtml(conv.model || "-") + "</td>" +
-                "<td>" + fmtNumber(conv.turn_count) + "</td>" +
-                '<td class="text-right">' + fmtTokens(conv.last_tokens) + "</td>" +
-                '<td class="text-right">' + fmtLatency(conv.last_latency_ms) + "</td>" +
-                "<td>" + fmtRelative(conv.updated) + "</td>";
-            recentBody.appendChild(row);
-        });
+    function render(data) {
+        if (!data) return;
+        renderCost(data.totals, data.agents);
+        renderHistory(data.agents);
     }
 
+    var loading = false;
     function load() {
+        if (loading) return;
+        loading = true;
         fetch("/api/insights")
-            .then(function (res) {
-                return res.json();
-            })
+            .then(function (res) { return res.json(); })
             .then(function (data) {
-                if (!data) return;
-                renderOverview(data.totals);
-                renderAgents(data.agents);
-                renderRecent(data.recent);
-                renderCost(data.totals, data.agents);
+                render(data);
+                loading = false;
             })
             .catch(function () {
-                if (grid) grid.innerHTML = '<div class="empty-state card"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></div><h3>Unable to load insights</h3><p>Backend unavailable.</p></div>';
+                loading = false;
+                if (historyList) historyList.innerHTML = '<div class="empty-state card"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></div><h3>Unable to load insights</h3><p>Backend unavailable.</p></div>';
             });
     }
 
@@ -226,6 +363,10 @@
             window.showToast("Insights refreshed.", "success");
         });
     }
+
+    setInterval(function () {
+        if (!document.hidden) load();
+    }, POLL_MS);
 
     load();
 })();
