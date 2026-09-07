@@ -10,13 +10,26 @@
     <div>
         <span class="hero-eyebrow">Telemetry</span>
         <h1>Agent Insights</h1>
-        <p>Cost observability plus live token and latency history tracked per agent as conversations are used.</p>
+        <p>Cost observability plus live agent connectivity and token/latency history tracked per agent.</p>
     </div>
     <button class="btn btn-ghost" id="refreshInsightsBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15"/></svg>
         Refresh
     </button>
 </div>
+
+<section class="agent-health card">
+    <div class="section-head">
+        <div>
+            <h3>Agent Health</h3>
+            <span class="section-sub">Live or down connectivity status per configured agent</span>
+        </div>
+        <span class="agent-health-updated" id="agentHealthUpdated"></span>
+    </div>
+    <div class="agent-health-list" id="agentHealthList">
+        <p class="agent-health-empty">Checking configured agents...</p>
+    </div>
+</section>
 
 <section class="cost-observability card">
     <div class="section-head">

@@ -15,6 +15,7 @@ from flask import g
 
 from config import settings as platform_settings
 from services import assessment_service
+from services import agent_status_service
 from services import agents_service
 from services import dashboard_service
 from services import insights_service
@@ -878,6 +879,18 @@ def api_agents():
     return jsonify(
         {"agents": agents_service.list_agents()}
     )
+
+
+@app.route("/api/agent-status")
+def api_agent_status():
+
+    force = request.args.get("refresh", "0") == "1"
+    try:
+        return jsonify(
+            {"agents": agent_status_service.get_agent_statuses(force=force)}
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/agents", methods=["POST"])

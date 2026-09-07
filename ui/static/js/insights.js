@@ -10,6 +10,9 @@
     var costLatency = document.getElementById("costLatency");
     var costDrivers = document.getElementById("costDrivers");
 
+    var agentHealthList = document.getElementById("agentHealthList");
+    var agentHealthUpdated = document.getElementById("agentHealthUpdated");
+
     var POLL_MS = 5000;
     var TICKS = 5;
 
@@ -335,6 +338,63 @@
         });
     }
 
+    function renderAgentHealth(agents) {
+        if (!agentHealthList) return;
+
+        var list = agents || [];
+        if (!list.length) {
+            agentHealthList.innerHTML = '<p class="agent-health-empty">No agents registered yet. Add one in the Settings page.</p>';
+            if (agentHealthUpdated) agentHealthUpdated.textContent = "";
+            return;
+        }
+
+        var checkedAt = 0;
+        var html = "";
+        list.forEach(function (a) {
+            if (a.checked_at > checkedAt) checkedAt = a.checked_at;
+            var live = a.status === "live";
+            var latency = a.latency_ms == null ? "-" : fmtLatency(a.latency_ms);
+            var lastActive = a.last_active ? fmtRelative(a.last_active) : "No telemetry";
+            html +=
+                '<div class="agent-health-row">' +
+                '<span class="agent-status-dot ' + (live ? "live" : "down") + '" aria-hidden="true"></span>' +
+                '<div class="agent-health-agent">' +
+                '<span class="agent-health-name">' + escapeHtml(a.name) + "</span>" +
+                '<span class="agent-health-type">' + escapeHtml(a.type || "Agent") + " \u00b7 " + escapeHtml(a.model || "-") + "</span>" +
+                "</div>" +
+                '<div class="agent-health-state">' +
+                '<span class="agent-health-label ' + (live ? "live" : "down") + '">' + (live ? "Live" : "Down") + "</span>" +
+                '<span class="agent-health-detail" title="' + escapeHtml(a.detail || "") + '">' + escapeHtml(a.detail || (live ? "Reachable" : "Unreachable")) + "</span>" +
+                "</div>" +
+                '<div class="agent-health-stats">' +
+                '<span class="agent-health-stat"><small>Latency</small><b>' + latency + "</b></span>" +
+                '<span class="agent-health-stat"><small>Last active</small><b>' + lastActive + "</b></span>" +
+                '<span class="agent-health-stat"><small>Convos</small><b>' + fmtNumber(a.conversations) + "</b></span>" +
+                "</div>" +
+                "</div>";
+        });
+        agentHealthList.innerHTML = html;
+        if (agentHealthUpdated) {
+            agentHealthUpdated.textContent = checkedAt ? "Checked " + fmtRelative(checkedAt) : "";
+        }
+    }
+
+    function loadAgentHealth() {
+        if (!agentHealthList) return;
+        if (agentHealthList.getAttribute("data-loading") === "1") return;
+        agentHealthList.setAttribute("data-loading", "1");
+        fetch("/api/agent-status")
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+                agentHealthList.removeAttribute("data-loading");
+                renderAgentHealth(data && data.agents);
+            })
+            .catch(function () {
+                agentHealthList.removeAttribute("data-loading");
+                agentHealthList.innerHTML = '<p class="agent-health-empty">Unable to check agent status. Backend unavailable.</p>';
+            });
+    }
+
     function render(data) {
         if (!data) return;
         renderCost(data.totals, data.agents);
@@ -360,6 +420,7 @@
     if (refreshBtn) {
         refreshBtn.addEventListener("click", function () {
             load();
+            loadAgentHealth();
             window.showToast("Insights refreshed.", "success");
         });
     }
@@ -368,5 +429,10 @@
         if (!document.hidden) load();
     }, POLL_MS);
 
+    setInterval(function () {
+        if (!document.hidden) loadAgentHealth();
+    }, 30000);
+
     load();
+    loadAgentHealth();
 })();

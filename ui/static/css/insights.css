@@ -1167,3 +1167,196 @@
         padding: 7px 10px;
     }
 }
+
+.agent-health {
+    margin-bottom: 24px;
+}
+
+.agent-health .section-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.agent-health-updated {
+    color: var(--muted);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.agent-health-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.agent-health-empty {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 18px 4px;
+    margin: 0;
+}
+
+.agent-health-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 16px;
+    background: var(--bg-elevated, var(--card));
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md, 10px);
+}
+
+.agent-status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex: none;
+    background: var(--muted);
+}
+
+.agent-status-dot.live {
+    background: #16A34A;
+    animation: agentBlinkLive 1.4s ease-in-out infinite;
+}
+
+.agent-status-dot.down {
+    background: #DC2626;
+    animation: agentBlinkDown 1.4s ease-in-out infinite;
+}
+
+.agent-health-agent {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1 1 200px;
+}
+
+.agent-health-name {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-health-type {
+    font-size: 12px;
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-health-state {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-start;
+}
+
+.agent-health-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+}
+
+.agent-health-label.live {
+    color: #16A34A;
+    background: rgba(22, 163, 74, 0.12);
+}
+
+.agent-health-label.down {
+    color: #DC2626;
+    background: rgba(220, 38, 38, 0.12);
+}
+
+.agent-health-detail {
+    font-size: 11px;
+    color: var(--muted);
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-health-stats {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.agent-health-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    text-align: right;
+}
+
+.agent-health-stat small {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.agent-health-stat b {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+@keyframes agentBlinkLive {
+    0% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.55);
+    }
+    70% {
+        opacity: 0.35;
+        box-shadow: 0 0 0 8px rgba(22, 163, 74, 0);
+    }
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(22, 163, 74, 0);
+    }
+}
+
+@keyframes agentBlinkDown {
+    0% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.55);
+    }
+    70% {
+        opacity: 0.35;
+        box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+    }
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    }
+}
+
+@media (max-width: 720px) {
+    .agent-health-row {
+        gap: 10px;
+    }
+
+    .agent-health-stats {
+        margin-left: 0;
+        gap: 12px;
+    }
+
+    .agent-health-stat {
+        text-align: left;
+    }
+}
