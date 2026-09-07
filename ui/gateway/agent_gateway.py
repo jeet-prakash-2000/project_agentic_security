@@ -15,6 +15,15 @@ class AgentGateway:
         if not agent:
             raise ValueError("No connected agent is configured.")
 
+        if conversation_id and user_id and user_id != "anonymous":
+            existing = session_manager.get_conversation(
+                conversation_id,
+                user_id=user_id,
+            )
+            if existing is None:
+                raise ValueError(
+                    "This conversation does not exist or belongs to another account."
+                )
         conversation = session_manager.get_or_create(
             conversation_id,
             user_id=user_id,

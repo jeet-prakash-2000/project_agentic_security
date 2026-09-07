@@ -129,3 +129,127 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* --------------------------------------------------
+   User accounts & approvals
+-------------------------------------------------- */
+
+.users-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 18px;
+}
+
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.users-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.users-table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-soft);
+    vertical-align: middle;
+    color: var(--text-0);
+}
+
+.users-table tr:last-child td {
+    border-bottom: none;
+}
+
+.users-empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 22px 10px !important;
+}
+
+.users-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.users-none {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.users-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 10px 0 0;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.btn-danger {
+    background: rgba(220, 38, 38, 0.12);
+    border: 1px solid rgba(220, 38, 38, 0.4);
+    color: #ff9a9a;
+}
+
+.btn-danger:hover {
+    background: rgba(220, 38, 38, 0.22);
+}
+
+.invite-user {
+    border-top: 1px solid var(--border-soft);
+    padding-top: 16px;
+}
+
+.invite-user > strong {
+    display: block;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.invite-user-row {
+    display: grid;
+    grid-template-columns: 1.1fr 1.2fr 1fr 1.1fr auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.invite-user-row input,
+.invite-user-row select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text-0);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+}
+
+.invite-user-row select option {
+    background: #151826;
+    color: #e8ecf4;
+}
+
+@media (max-width: 1100px) {
+    .invite-user-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .invite-user-row {
+        grid-template-columns: 1fr;
+    }
+}

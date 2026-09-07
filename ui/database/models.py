@@ -43,6 +43,7 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(512), nullable=False)
     role = Column(String(64), default="Security Analyst")
+    status = Column(String(32), default="approved")
     created = Column(Float)
 
 
@@ -109,6 +110,7 @@ class ReportHistory(Base):
     __tablename__ = "reports_history"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(64), default="anonymous", index=True)
     name = Column(String(255))
     type = Column(String(64))
     generated_by = Column(String(255))

@@ -89,3 +89,23 @@ APP_INSIGHTS_CONNECTION_STRING = env(
 )
 
 APP_INSIGHTS_ENABLED = env_bool("APP_INSIGHTS_ENABLED", True)
+
+# --- Optional SMTP for registration approval emails -----------------------
+#
+# When unset, approval emails are skipped (with a logged warning) and the
+# pending approvals remain visible to administrators under Settings > Users.
+SMTP_HOST = env("SMTP_HOST")
+SMTP_PORT = int(env("SMTP_PORT", "587"))
+SMTP_USER = env("SMTP_USER")
+SMTP_PASSWORD = env("SMTP_PASSWORD")
+SMTP_USE_TLS = env_bool("SMTP_USE_TLS", True)
+MAIL_FROM = env(
+    "MAIL_FROM",
+    env("SMTP_FROM", "security-platform@ltm.local"),
+)
+
+# Comma-separated recipients for approval notifications. When empty, the
+# platform notifies every account whose role is Admin/Administrator instead.
+MAIL_APPROVAL_RECIPIENTS = env("MAIL_APPROVAL_RECIPIENTS")
+
+APP_BASE_URL = env("APP_BASE_URL", "")

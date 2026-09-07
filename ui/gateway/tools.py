@@ -55,9 +55,28 @@ def call_tool(name, **kwargs):
     return result
 
 
+def _report_owner():
+    """Best-effort current account for tool-generated report history rows.
+
+    Tool handlers run synchronously inside the requesting account's session,
+    so the Flask session carries the owner when available; otherwise the row
+    stays ownerless and is reclaimed to the administrator on the next boot.
+    """
+    try:
+        from flask import session as flask_session
+
+        user_id = flask_session.get("user_id")
+        if user_id and user_id != "anonymous":
+            return user_id
+    except Exception:
+        pass
+    return None
+
+
 def _record_tool_report(name, result):
     if name not in ("executive_summary", "generate_excel_report"):
         return
+    owner = _report_owner()
     agent = agents_service.get_connected_agent()
     if name == "executive_summary":
         report_history_service.append_report({
@@ -68,7 +87,7 @@ def _record_tool_report(name, result):
             "status": "Completed",
             "size": "—",
             "download_url": None,
-        })
+        }, user_id=owner)
     elif name == "generate_excel_report":
         size = "—"
         if isinstance(result, dict):
@@ -81,4 +100,4 @@ def _record_tool_report(name, result):
             "status": "Completed",
             "size": size,
             "download_url": result.get("download_url") if isinstance(result, dict) else None,
-        })
+        }, user_id=owner)

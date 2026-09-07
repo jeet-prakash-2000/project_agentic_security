@@ -17,8 +17,11 @@ class InsightsRepository(BaseRepository):
     def get(self, conversation_id):
         return self.session.get(Insight, conversation_id)
 
-    def list_conversations(self):
-        return self.session.query(Insight).all()
+    def list_conversations(self, user_id=None):
+        query = self.session.query(Insight)
+        if user_id:
+            query = query.filter(Insight.user_id == user_id)
+        return query.all()
 
     def recent(self, limit=50):
         rows = self.session.query(Insight).all()
@@ -27,6 +30,23 @@ class InsightsRepository(BaseRepository):
             reverse=True,
         )
         return rows[:limit]
+
+    def claim_legacy(self, user_id, legacy=("anonymous", "demo")):
+        """Reassign unowned insight rows to the given user (bootstrap)."""
+        from sqlalchemy import or_
+
+        result = (
+            self.session.query(Insight)
+            .filter(
+                or_(
+                    Insight.user_id.is_(None),
+                    Insight.user_id.in_(list(legacy)),
+                )
+            )
+            .update({Insight.user_id: user_id}, synchronize_session=False)
+        )
+        self.session.commit()
+        return int(result or 0)
 
     def record(self, data):
         """Insert or update one conversation insight row.

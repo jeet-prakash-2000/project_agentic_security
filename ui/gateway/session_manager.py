@@ -88,6 +88,18 @@ def _set_title(repo, conversation, role, content):
         repo.touch(conversation.id)
 
 
+def _can_append(conversation, user_id=None):
+    """True when ``user_id`` may keep writing into this conversation.
+
+    A real (signed-in) account may only write to its own conversations.
+    Anonymous/legacy placeholders may continue ownerless history only.
+    """
+    owner = conversation.user_id
+    if user_id and user_id != "anonymous":
+        return owner == user_id
+    return owner in (None, "anonymous", "demo")
+
+
 def add_message(conversation_id, role, content, user_id="anonymous", meta=None):
     now = _now()
     conversation_id = conversation_id or "conv-" + uuid.uuid4().hex[:12]
@@ -95,6 +107,8 @@ def add_message(conversation_id, role, content, user_id="anonymous", meta=None):
     with _lock:
         repo = _repo()
         conversation = _ensure_conversation(repo, conversation_id, user_id, now)
+        if not _can_append(conversation, user_id):
+            return None
 
         message = dict(meta or {})
         message["role"] = role
@@ -109,14 +123,24 @@ def add_message(conversation_id, role, content, user_id="anonymous", meta=None):
 
 
 def add_messages(conversation_id, messages, user_id="anonymous"):
-    """Bulk-append full message metadata supplied by the client."""
+    """Bulk-append full message metadata supplied by the client.
+
+    Returns the conversation id, or ``None`` when the conversation belongs to
+    another account (nothing is written).
+    """
     now = _now()
     conversation_id = conversation_id or "conv-" + uuid.uuid4().hex[:12]
     messages = messages or []
 
     with _lock:
         repo = _repo()
-        conversation = _ensure_conversation(repo, conversation_id, user_id, now)
+        existing = repo.get(conversation_id)
+        if existing is not None:
+            if not _can_append(existing, user_id):
+                return None
+            conversation = existing
+        else:
+            conversation = _ensure_conversation(repo, conversation_id, user_id, now)
 
         for item in messages:
             if not isinstance(item, dict):
@@ -143,9 +167,17 @@ def get_conversation(conversation_id, user_id=None):
     conversation = repo.get(conversation_id)
     if conversation is None:
         return None
-    if user_id and conversation.user_id != user_id:
+    if user_id and user_id != "anonymous" and conversation.user_id != user_id:
         return None
     return _conversation_dict(repo, conversation)
+
+
+def owns_conversation(conversation_id, user_id=None):
+    """True when the caller may read this conversation."""
+    conversation = _repo().get(conversation_id)
+    if conversation is None:
+        return False
+    return _can_append(conversation, user_id)
 
 
 def get_messages(conversation_id, limit=None, user_id=None):

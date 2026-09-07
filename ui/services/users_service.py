@@ -1,4 +1,12 @@
-"""Users service backed by the ``users`` table (formerly ``users.json``)."""
+"""Users service backed by the ``users`` table (formerly ``users.json``).
+
+Supports a registration + admin approval lifecycle:
+
+* New self-registered accounts are created with ``status="pending"`` and are
+  blocked from signing in until an administrator approves them.
+* Administrators can approve/reject accounts, change roles, and create
+  accounts on behalf of users (already approved).
+"""
 
 import threading
 import time
@@ -12,6 +20,16 @@ from database.repositories import UsersRepository
 
 _lock = threading.Lock()
 
+ADMIN_ROLES = ("Admin", "Administrator", "Security Administrator")
+
+# Roles a self-registering user may pick. Elevated roles are granted by an
+# administrator only (never self-assigned).
+SIGNUP_ROLES = ("Security Analyst", "SOC Analyst", "Auditor", "Viewer")
+
+VALID_STATUS = ("pending", "approved", "rejected", "disabled")
+
+ALLOWED_ROLES = ADMIN_ROLES + SIGNUP_ROLES
+
 
 def _public(user):
     if not user:
@@ -21,12 +39,17 @@ def _public(user):
         "name": user.name,
         "email": user.email,
         "role": user.role,
+        "status": user.status or "approved",
         "created": user.created,
     }
 
 
 def _repo():
     return UsersRepository(get_session())
+
+
+def is_admin_role(role):
+    return (role or "") in ADMIN_ROLES
 
 
 def find_by_email(email):
@@ -41,10 +64,29 @@ def public_user(user_id):
     return _public(get_user(user_id))
 
 
-def create_user(name, email, password, role=None):
+def list_users(status=None):
+    if status:
+        users = _repo().list_by_status(status)
+    else:
+        users = _repo().list_users()
+    return [_public(user) for user in users]
+
+
+def list_admins():
+    return [_public(user) for user in _repo().list_admins()]
+
+
+def create_user(name, email, password, role=None, status="pending", user_id=None):
+    """Create a user account.
+
+    Registration defaults to ``status="pending"`` so the account cannot sign
+    in until an administrator approves it. Administrators may create accounts
+    directly with ``status="approved"``.
+    """
     name = (name or "").strip()
     email = (email or "").strip().lower()
     password = password or ""
+    role = (role or "").strip()
 
     if not name or not email or not password:
         raise ValueError("Name, email, and password are required.")
@@ -52,17 +94,24 @@ def create_user(name, email, password, role=None):
         raise ValueError("Enter a valid email address.")
     if len(password) < 6:
         raise ValueError("Password must be at least 6 characters.")
+    if role and role not in ALLOWED_ROLES:
+        raise ValueError(
+            "Role must be one of: {0}.".format(", ".join(ALLOWED_ROLES))
+        )
+    if status not in VALID_STATUS:
+        raise ValueError("Invalid account status.")
 
     with _lock:
         if find_by_email(email):
             raise ValueError("An account with this email already exists.")
         user = _repo().create(
             {
-                "id": "usr-" + uuid.uuid4().hex[:16],
+                "id": user_id or ("usr-" + uuid.uuid4().hex[:16]),
                 "name": name,
                 "email": email,
                 "password_hash": generate_password_hash(password),
-                "role": role or "Security Administrator",
+                "role": role or "Security Analyst",
+                "status": status,
                 "created": time.time(),
             }
         )
@@ -71,13 +120,45 @@ def create_user(name, email, password, role=None):
 
 
 def authenticate(email, password):
+    """Return the public user when the credentials are valid and approved."""
     user = find_by_email(email)
     if not user:
+        return None
+    if (user.status or "approved") != "approved":
         return None
     if not check_password_hash(user.password_hash or "", password or ""):
         return None
     return _public(user)
 
 
-def list_users():
-    return [_public(user) for user in _repo().list_users()]
+def status_for_email(email):
+    """Return the account status for an email, or None when it does not exist."""
+    user = find_by_email(email)
+    if not user:
+        return None
+    return user.status or "approved"
+
+
+def set_status(user_id, status):
+    """Approve/reject/disable an account (administrator action)."""
+    if status not in VALID_STATUS:
+        raise ValueError("Invalid account status.")
+    with _lock:
+        user = _repo().set_status(user_id, status)
+    if user is None:
+        raise ValueError("Account not found.")
+    return _public(user)
+
+
+def set_role(user_id, role):
+    """Change an account's role (administrator action)."""
+    role = (role or "").strip()
+    if role not in ALLOWED_ROLES:
+        raise ValueError(
+            "Role must be one of: {0}.".format(", ".join(ALLOWED_ROLES))
+        )
+    with _lock:
+        user = _repo().set_role(user_id, role)
+    if user is None:
+        raise ValueError("Account not found.")
+    return _public(user)

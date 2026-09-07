@@ -10,10 +10,13 @@ from database.repositories.base import BaseRepository
 class ReportsRepository(BaseRepository):
     model = ReportHistory
 
-    def list_reports(self):
+    def list_reports(self, user_id=None, limit=100):
+        query = self.session.query(ReportHistory)
+        if user_id:
+            query = query.filter(ReportHistory.user_id == user_id)
         return (
-            self.session.query(ReportHistory)
-            .order_by(ReportHistory.ts.desc())
+            query.order_by(ReportHistory.ts.desc())
+            .limit(limit)
             .all()
         )
 
@@ -25,8 +28,9 @@ class ReportsRepository(BaseRepository):
             .all()
         )
 
-    def append_report(self, data):
+    def append_report(self, data, user_id=None):
         report = ReportHistory(
+            user_id=(user_id or "anonymous"),
             name=data.get("name"),
             type=data.get("type"),
             generated_by=data.get("generated_by"),
@@ -41,3 +45,20 @@ class ReportsRepository(BaseRepository):
 
     def count(self):
         return self.session.query(ReportHistory).count()
+
+    def claim_legacy(self, user_id, legacy=("anonymous", "demo")):
+        """Reassign unowned reports to the given user (bootstrap)."""
+        from sqlalchemy import or_
+
+        result = (
+            self.session.query(ReportHistory)
+            .filter(
+                or_(
+                    ReportHistory.user_id.is_(None),
+                    ReportHistory.user_id.in_(list(legacy)),
+                )
+            )
+            .update({ReportHistory.user_id: user_id}, synchronize_session=False)
+        )
+        self.session.commit()
+        return int(result or 0)

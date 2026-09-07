@@ -142,6 +142,16 @@ body {
     margin-bottom: 16px;
 }
 
+.auth-notice {
+    background: rgba(9, 122, 81, 0.14);
+    border: 1px solid rgba(31, 191, 133, 0.4);
+    color: #8fe8c0;
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+
 .auth-form {
     display: flex;
     flex-direction: column;
@@ -177,7 +187,32 @@ body {
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.auth-field select {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: var(--text-0);
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+
+.auth-field select option {
+    background: #151826;
+    color: #e8ecf4;
+}
+
 .auth-field input:focus {
+    border-color: var(--red-2);
+    box-shadow: 0 0 0 3px rgba(228, 0, 43, 0.18);
+}
+
+.auth-field select:focus {
     border-color: var(--red-2);
     box-shadow: 0 0 0 3px rgba(228, 0, 43, 0.18);
 }

@@ -120,6 +120,13 @@ def validate_runtime():
             "reconciliation: {0}".format(", ".join(sorted(absent)))
         )
 
+    try:
+        from services.bootstrap import run_bootstrap
+
+        run_bootstrap()
+    except Exception as exc:
+        log.warning("Bootstrap (admin seed / legacy reclaim) failed: %s", exc)
+
     log.info(
         "Startup validation passed: %s (schema drift=%s, applied=%s)",
         message,

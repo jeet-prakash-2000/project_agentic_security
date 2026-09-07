@@ -50,8 +50,11 @@ def _to_dict(row):
     }
 
 
-def _all_conversations():
-    return [_to_dict(row) for row in _repo().list_conversations()]
+def _all_conversations(user_id=None):
+    return [
+        _to_dict(row)
+        for row in _repo().list_conversations(user_id=user_id)
+    ]
 
 
 def record_turn(agent, messages, usage, latency_ms, reply="", conversation_id=None, user_id=None):
@@ -100,9 +103,9 @@ def record_turn(agent, messages, usage, latency_ms, reply="", conversation_id=No
     return conversation_id
 
 
-def summarize():
+def summarize(user_id=None):
     conversations = sorted(
-        _all_conversations(),
+        _all_conversations(user_id=user_id),
         key=lambda c: (c.get("updated") or 0),
         reverse=True,
     )
@@ -231,10 +234,12 @@ def summarize():
     }
 
 
-def summarize_conversation(conversation_id):
+def summarize_conversation(conversation_id, user_id=None):
     row = _repo().get(conversation_id)
     conversation = _to_dict(row) if row is not None else None
     if conversation is None:
+        return None
+    if user_id and conversation.get("user_id") not in (None, user_id):
         return None
 
     turns = conversation.get("turns", [])

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign in — LTM Security Platform</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}?v=1">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}?v=2">
 </head>
 <body>
     <div class="auth-scene">
@@ -33,10 +33,14 @@
             <div class="auth-error">{{ error }}</div>
             {% endif %}
 
-            <form class="auth-form {{ 'is-hidden' if mode == 'signup' else '' }}" id="loginForm" method="POST" action="{{ url_for('login') }}">
+            {% if notice %}
+            <div class="auth-notice">{{ notice }}</div>
+            {% endif %}
+
+            <form class="auth-form {{ 'is-hidden' if mode == 'signup' else '' }}" id="loginForm" method="POST" action="{{ url_for('login', next=next_url) if next_url else url_for('login') }}">
                 <label class="auth-field">
                     <span>Email</span>
-                    <input type="email" name="email" placeholder="you@company.com" required autocomplete="email">
+                    <input type="email" name="email" placeholder="you@company.com" required autocomplete="email" value="{{ form.email if form else '' }}">
                 </label>
                 <label class="auth-field">
                     <span>Password</span>
@@ -46,7 +50,7 @@
                 <p class="auth-hint">Sign in to access your AI Workspace and chat history.</p>
             </form>
 
-            <form class="auth-form {{ 'is-hidden' if mode == 'login' else '' }}" id="signupForm" method="POST" action="{{ url_for('signup') }}">
+            <form class="auth-form {{ 'is-hidden' if mode == 'login' else '' }}" id="signupForm" method="POST" action="{{ url_for('signup', next=next_url) if next_url else url_for('signup') }}">
                 <label class="auth-field">
                     <span>Full name</span>
                     <input type="text" name="name" placeholder="e.g. Jeet Prakash Parida" required value="{{ form.name if form else '' }}">
@@ -56,11 +60,22 @@
                     <input type="email" name="email" placeholder="you@company.com" required autocomplete="email" value="{{ form.email if form else '' }}">
                 </label>
                 <label class="auth-field">
+                    <span>Role</span>
+                    <select name="role" class="auth-select">
+                        {% for role in signup_roles or [] %}
+                        <option value="{{ role }}" {{ 'selected' if form and form.role == role else '' }}>{{ role }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="auth-field">
                     <span>Password</span>
                     <input type="password" name="password" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
                 </label>
                 <button type="submit" class="auth-submit">Create account</button>
-                <p class="auth-hint">Your conversations and reports are saved to your account.</p>
+                <p class="auth-hint">
+                    Your account is created once an administrator approves it.
+                    Conversations and reports are private to your account.
+                </p>
             </form>
         </div>
     </main>
@@ -71,6 +86,7 @@
             var loginForm = document.getElementById("loginForm");
             var signupForm = document.getElementById("signupForm");
             var errorEl = document.querySelector(".auth-error");
+            var noticeEl = document.querySelector(".auth-notice");
 
             function setMode(mode) {
                 tabs.forEach(function (t) {
@@ -79,6 +95,7 @@
                 if (loginForm) loginForm.classList.toggle("is-hidden", mode !== "login");
                 if (signupForm) signupForm.classList.toggle("is-hidden", mode !== "signup");
                 if (errorEl) errorEl.style.display = "none";
+                if (noticeEl) noticeEl.style.display = "none";
             }
 
             tabs.forEach(function (t) {

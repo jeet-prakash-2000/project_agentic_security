@@ -84,7 +84,7 @@ class ConversationsRepository(BaseRepository):
         self.session.commit()
         return conversation
 
-    def claim_anonymous(self, user_id):
+    def claim_anonymous(self, user_id, legacy=("anonymous", "demo")):
         if not user_id:
             return 0
         result = (
@@ -92,7 +92,7 @@ class ConversationsRepository(BaseRepository):
             .filter(
                 or_(
                     Conversation.user_id.is_(None),
-                    Conversation.user_id == "anonymous",
+                    Conversation.user_id.in_(list(legacy)),
                 )
             )
             .update({Conversation.user_id: user_id}, synchronize_session=False)

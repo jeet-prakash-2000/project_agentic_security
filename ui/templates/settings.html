@@ -16,6 +16,57 @@
 
 <section class="settings-grid">
 
+    {% if is_admin %}
+    <div class="settings-card card settings-card-wide">
+        <div class="settings-card-head">
+            <span class="settings-icon settings-icon-blue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            </span>
+            <div>
+                <h3>User Accounts &amp; Approvals</h3>
+                <p>Approve registration requests and manage account access</p>
+            </div>
+            <span class="status-chip status-on" id="pendingCountChip">Pending 0</span>
+        </div>
+        <div class="settings-body">
+            <div class="users-table-wrap">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersBody">
+                        <tr><td colspan="5" class="users-empty">Loading accounts…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="invite-user">
+                <strong>Add an account</strong>
+                <div class="invite-user-row">
+                    <input type="text" id="inviteName" placeholder="Full name">
+                    <input type="email" id="inviteEmail" placeholder="Email">
+                    <select id="inviteRole">
+                        <option value="Security Analyst">Security Analyst</option>
+                        <option value="SOC Analyst">SOC Analyst</option>
+                        <option value="Auditor">Auditor</option>
+                        <option value="Viewer">Viewer</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                    <input type="password" id="invitePassword" placeholder="Temporary password" autocomplete="off">
+                    <button class="btn btn-primary" id="inviteBtn" type="button">Add User</button>
+                </div>
+                <p class="users-hint">New accounts created here are approved immediately. Self-registered accounts appear as Pending until approved.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="settings-card card">
         <div class="settings-card-head">
             <span class="settings-icon settings-icon-blue">

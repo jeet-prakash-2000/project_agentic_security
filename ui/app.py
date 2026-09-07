@@ -1,6 +1,8 @@
 import os
 import time
 
+from functools import wraps
+
 from flask import Flask
 from flask import render_template
 from flask import jsonify
@@ -16,6 +18,7 @@ from services import assessment_service
 from services import agents_service
 from services import dashboard_service
 from services import insights_service
+from services import mailer
 from services import report_history_service
 from services import system_status_service
 from services import telemetry_map_service
@@ -39,7 +42,7 @@ def current_user():
     if not user_id:
         return None
     user = users_service.get_user(user_id)
-    if not user:
+    if not user or (user.status or "approved") != "approved":
         session.pop("user_id", None)
         return None
     return users_service.public_user(user_id)
@@ -58,6 +61,53 @@ def require_authentication():
 @app.context_processor
 def inject_current_user():
     return {"current_user": current_user()}
+
+
+def _is_admin(user):
+    return bool(
+        user
+        and users_service.is_admin_role(user.get("role"))
+    )
+
+
+def _login_redirect():
+    from urllib.parse import urlencode
+
+    target = url_for("login")
+    if request.endpoint:
+        args = dict(request.view_args or {})
+        args.update(request.args.to_dict())
+        next_url = url_for(request.endpoint, **args) if request.endpoint != "login" else ""
+        if next_url:
+            target = url_for("login") + "?" + urlencode({"next": next_url})
+    return redirect(target)
+
+
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not current_user():
+            return _login_redirect()
+        return f(*args, **kwargs)
+    return wrapper
+
+
+def _admin_or_403():
+    """Return a (jsonify, status) tuple when the caller is not an admin."""
+    user = current_user()
+    if _is_admin(user):
+        return None
+    return jsonify({"error": "Administrator access required."}), 403
+
+
+def admin_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        denied = _admin_or_403()
+        if denied:
+            return denied
+        return f(*args, **kwargs)
+    return wrapper
 
 
 # --------------------------------------------------
@@ -146,7 +196,9 @@ app.add_template_filter(initials, "initials")
 
 
 def render_reports(**context):
-    context["reports"] = report_history_service.list_reports()
+    context["reports"] = report_history_service.list_reports(
+        user_id=current_user_id()
+    )
     context["firewalls"] = assessment_service.FIREWALLS
     context.setdefault("firewall_id", _firewall_param())
     return render_with_css("reports.html", **context)
@@ -155,32 +207,117 @@ def render_reports(**context):
 # AUTH ROUTES (login / signup / logout)
 # --------------------------------------------------
 
+def _login_notice():
+    notice = (request.args.get("notice") or "").strip()
+    if not notice:
+        return None
+    return {
+        "pending": (
+            "Your account was created and is awaiting administrator "
+            "approval. You will be able to sign in once it is approved."
+        ),
+        "logged_out": "You have been signed out.",
+        "approved": "Your account has been approved. You can sign in now.",
+        "rejected": "Your account request was declined. Contact an administrator.",
+    }.get(notice)
+
+
 @app.route("/login", methods=["GET", "POST"], endpoint="login")
 def login():
-    if request.method == "POST":
-        # Demo login: any credentials land on the dashboard.
-        email = (request.form.get("email") or "").strip()
-        user = users_service.authenticate(email, request.form.get("password") or "")
-        if user:
-            session["user_id"] = user["id"]
-        else:
-            session["user_id"] = "demo"
+    mode = "login" if (request.args.get("mode") or "login") == "login" else "signup"
+    next_url = (request.args.get("next") or "").strip()
+    if next_url and not (next_url.startswith("/") and not next_url.startswith("//")):
+        next_url = ""
+
+    if current_user():
         return redirect(url_for("dashboard"))
-    return render_template("login.html", mode="login", error=None)
+
+    if request.method == "POST":
+        # Real authentication: only approved accounts may sign in. There is no
+        # demo/any-credentials backdoor anymore.
+        email = (request.form.get("email") or "").strip().lower()
+        password = request.form.get("password") or ""
+        user = users_service.authenticate(email, password)
+        if user:
+            session.clear()
+            session["user_id"] = user["id"]
+            if next_url:
+                return redirect(next_url)
+            return redirect(url_for("dashboard"))
+
+        state = users_service.status_for_email(email)
+        if state == "pending":
+            error = (
+                "Your account is pending approval. You will be able to sign "
+                "in once an administrator approves it."
+            )
+        elif state in ("rejected", "disabled"):
+            error = (
+                "Your account is not active. Contact an administrator for "
+                "assistance."
+            )
+        else:
+            error = "Invalid email or password."
+        return render_template(
+            "login.html",
+            mode=mode,
+            error=error,
+            notice=None,
+            next_url=next_url,
+            signup_roles=users_service.SIGNUP_ROLES,
+        )
+
+    return render_template(
+        "login.html",
+        mode=mode,
+        error=None,
+        notice=_login_notice(),
+        next_url=next_url,
+        signup_roles=users_service.SIGNUP_ROLES,
+    )
 
 
 @app.route("/signup", methods=["POST"], endpoint="signup")
 def signup():
-    # Demo sign-up: any details land on the dashboard.
-    name = (request.form.get("name") or "").strip() or "Demo User"
-    email = (request.form.get("email") or "").strip() or "demo@ltm.com"
-    password = request.form.get("password") or "demo"
+    name = (request.form.get("name") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    password = request.form.get("password") or ""
+    role = (request.form.get("role") or "").strip() or "Security Analyst"
+
+    if role not in users_service.SIGNUP_ROLES:
+        role = "Security Analyst"
+
     try:
-        user = users_service.create_user(name, email, password)
-        session["user_id"] = user["id"]
-    except ValueError:
-        session["user_id"] = "demo"
-    return redirect(url_for("dashboard"))
+        user = users_service.create_user(
+            name,
+            email,
+            password,
+            role=role,
+            status="pending",
+        )
+    except ValueError as exc:
+        return render_template(
+            "login.html",
+            mode="signup",
+            error=str(exc),
+            notice=None,
+            signup_roles=users_service.SIGNUP_ROLES,
+        )
+
+    # Notify administrators; the approval ticket also surfaces under
+    # Settings > Users when e-mail transport is unavailable.
+    delivery = mailer.send_approval_ticket(
+        user,
+        base_url=platform_settings.APP_BASE_URL,
+    )
+    if not delivery.get("delivered"):
+        app.logger.warning(
+            "Approval e-mail not sent for %s: %s",
+            user.get("email"),
+            delivery.get("reason"),
+        )
+
+    return redirect(url_for("login", mode="login", notice="pending"))
 
 
 @app.route("/logout")
@@ -205,6 +342,7 @@ def home():
 # --------------------------------------------------
 
 @app.route("/dashboard")
+@login_required
 def dashboard():
 
     connected = agents_service.get_connected_agent()
@@ -226,6 +364,7 @@ def dashboard():
 # --------------------------------------------------
 
 @app.route("/workspace")
+@login_required
 def workspace():
 
     return render_with_css(
@@ -237,6 +376,7 @@ def workspace():
 # --------------------------------------------------
 
 @app.route("/findings")
+@login_required
 def findings():
 
     return render_with_css(
@@ -249,6 +389,7 @@ def findings():
 # --------------------------------------------------
 
 @app.route("/run-assessment")
+@login_required
 def run_assessment():
 
     try:
@@ -283,6 +424,7 @@ def run_assessment():
 # --------------------------------------------------
 
 @app.route("/reports")
+@login_required
 def reports():
 
     return render_reports()
@@ -293,6 +435,7 @@ def reports():
 # --------------------------------------------------
 
 @app.route("/executive-summary")
+@login_required
 def executive_report():
 
     try:
@@ -318,7 +461,8 @@ def executive_report():
                 "status": "Completed",
                 "size": file_size_label(result["local_file"]),
                 "download_url": result["download_url"],
-            }
+            },
+            user_id=current_user_id(),
         )
 
         return render_reports(
@@ -343,6 +487,7 @@ def executive_report():
 # --------------------------------------------------
 
 @app.route("/generate-excel")
+@login_required
 def generate_excel():
 
     try:
@@ -384,7 +529,8 @@ def generate_excel():
                 "status": "Completed",
                 "size": size,
                 "download_url": result["download_url"],
-            }
+            },
+            user_id=current_user_id(),
         )
 
         return render_reports(
@@ -407,6 +553,7 @@ def generate_excel():
 # --------------------------------------------------
 
 @app.route("/insights")
+@login_required
 def insights():
 
     return render_with_css(
@@ -418,6 +565,7 @@ def insights():
 # --------------------------------------------------
 
 @app.route("/telemetry-map")
+@login_required
 def telemetry_map():
 
     return render_with_css(
@@ -429,6 +577,7 @@ def telemetry_map():
 # --------------------------------------------------
 
 @app.route("/settings")
+@login_required
 def settings():
 
     return render_with_css(
@@ -436,7 +585,9 @@ def settings():
 
         azure_function_url=platform_settings.BASE_URL,
 
-        live_mode=platform_settings.LIVE_ENABLED
+        live_mode=platform_settings.LIVE_ENABLED,
+
+        is_admin=_is_admin(current_user()),
     )
 
 # --------------------------------------------------
@@ -627,7 +778,7 @@ def api_summary():
             "status": "Completed",
             "size": file_size_label(result["local_file"]),
             "download_url": result["download_url"],
-        })
+        }, user_id=current_user_id())
 
         return jsonify(payload)
 
@@ -669,7 +820,7 @@ def api_excel():
             "status": "Completed",
             "size": file_size_label(result.get("local_file")),
             "download_url": result.get("download_url"),
-        })
+        }, user_id=current_user_id())
 
         return jsonify(payload)
 
@@ -681,6 +832,7 @@ def api_excel():
 
 
 @app.route("/download-workbook")
+@login_required
 def download_workbook():
 
     try:
@@ -705,7 +857,7 @@ def download_workbook():
             "status": "Completed",
             "size": file_size_label(local_file),
             "download_url": "reports/{0}".format(filename),
-        })
+        }, user_id=current_user_id())
 
         return send_file(
             local_file,
@@ -831,15 +983,19 @@ def api_tools():
 def api_conversations():
 
     return jsonify(
-        {"conversations": gateway.conversations()}
+        {"conversations": gateway.conversations(user_id=current_user_id())}
     )
 
 
 @app.route("/api/conversations/<conversation_id>/messages", methods=["GET"])
 def api_conversation_messages(conversation_id):
 
+    if not session_manager.owns_conversation(conversation_id, current_user_id()):
+        return jsonify({"error": "Conversation not found."}), 403
+
     messages = session_manager.get_messages(
         conversation_id,
+        user_id=current_user_id(),
     )
     return jsonify({"messages": messages})
 
@@ -849,21 +1005,25 @@ def api_conversation_messages_add(conversation_id):
 
     payload = request.get_json(silent=True) or {}
     messages = payload.get("messages") or []
-    session_manager.add_messages(
+    result = session_manager.add_messages(
         conversation_id,
         messages,
         user_id=current_user_id(),
     )
+    if result is None:
+        return jsonify({"error": "Conversation not found."}), 403
     return jsonify({"status": "ok"})
 
 
 @app.route("/api/conversations/<conversation_id>/clear", methods=["POST"])
 def api_conversation_clear(conversation_id):
 
-    session_manager.clear_conversation(
+    cleared = session_manager.clear_conversation(
         conversation_id,
         user_id=current_user_id(),
     )
+    if not cleared:
+        return jsonify({"error": "Conversation not found."}), 403
     return jsonify({"status": "ok"})
 
 
@@ -879,13 +1039,16 @@ def api_me():
 @app.route("/api/insights")
 def api_insights():
 
-    return jsonify(insights_service.summarize())
+    return jsonify(insights_service.summarize(user_id=current_user_id()))
 
 
 @app.route("/api/insights/conversation/<conversation_id>")
 def api_insights_conversation(conversation_id):
 
-    summary = insights_service.summarize_conversation(conversation_id)
+    summary = insights_service.summarize_conversation(
+        conversation_id,
+        user_id=current_user_id(),
+    )
     return jsonify({"conversation": summary})
 
 
@@ -909,7 +1072,7 @@ def api_dashboard():
 def api_reports():
 
     return jsonify(
-        {"reports": report_history_service.list_reports()}
+        {"reports": report_history_service.list_reports(user_id=current_user_id())}
     )
 
 
@@ -939,6 +1102,70 @@ def api_telemetry_map_history():
     return jsonify(
         telemetry_map_service.get_history(agent_id=agent_id)
     )
+
+
+# --------------------------------------------------
+# ADMIN USER MANAGEMENT API
+# --------------------------------------------------
+
+@app.route("/api/admin/users")
+@admin_required
+def api_admin_users():
+
+    status = (request.args.get("status") or "").strip() or None
+    return jsonify({"users": users_service.list_users(status=status)})
+
+
+@app.route("/api/admin/users/<user_id>/approve", methods=["POST"])
+@admin_required
+def api_admin_user_approve(user_id):
+
+    try:
+        user = users_service.set_status(user_id, "approved")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+    return jsonify({"user": user})
+
+
+@app.route("/api/admin/users/<user_id>/reject", methods=["POST"])
+@admin_required
+def api_admin_user_reject(user_id):
+
+    try:
+        user = users_service.set_status(user_id, "rejected")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+    return jsonify({"user": user})
+
+
+@app.route("/api/admin/users", methods=["POST"])
+@admin_required
+def api_admin_users_add():
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        user = users_service.create_user(
+            (payload.get("name") or "").strip(),
+            (payload.get("email") or "").strip(),
+            payload.get("password") or "",
+            role=(payload.get("role") or "").strip(),
+            status="approved",
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"user": user}), 201
+
+
+@app.route("/api/admin/users/<user_id>/role", methods=["POST"])
+@admin_required
+def api_admin_user_role(user_id):
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        user = users_service.set_role(user_id, (payload.get("role") or "").strip())
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"user": user})
 
 
 # --------------------------------------------------
