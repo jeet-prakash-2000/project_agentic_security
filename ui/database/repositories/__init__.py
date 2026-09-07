@@ -7,6 +7,7 @@ gateways and function apps. Each repository wraps a SQLAlchemy session.
 from database.repositories.agents_repository import AgentsRepository
 from database.repositories.assessments_repository import AssessmentsRepository
 from database.repositories.conversations_repository import ConversationsRepository
+from database.repositories.demo_requests_repository import DemoRequestsRepository
 from database.repositories.findings_repository import FindingsRepository
 from database.repositories.insights_repository import InsightsRepository
 from database.repositories.reports_repository import ReportsRepository
@@ -17,6 +18,7 @@ __all__ = [
     "AgentsRepository",
     "AssessmentsRepository",
     "ConversationsRepository",
+    "DemoRequestsRepository",
     "FindingsRepository",
     "InsightsRepository",
     "ReportsRepository",

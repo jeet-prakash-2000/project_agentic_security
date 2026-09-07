@@ -145,3 +145,76 @@ def send_approval_ticket(candidate, base_url=""):
             "to": recipient_emails,
             "reason": str(exc)[:200],
         }
+
+
+def send_demo_notification(lead, base_url=""):
+    """Notify administrators when a demo is requested from the landing page.
+
+    ``lead`` is the public demo-request dict created by the signup flow.
+    Returns a dict::
+
+        {"delivered": bool, "to": [...], "reason": optional str}
+    """
+    recipient_emails = resolve_recipients()
+    if not smtp_configured() or not recipient_emails:
+        return {
+            "delivered": False,
+            "to": recipient_emails,
+            "reason": (
+                "SMTP is not configured; demo request logged."
+                if not smtp_configured()
+                else "No admin recipients configured."
+            ),
+        }
+
+    subject = "Demo request: {0} <{1}>".format(
+        lead.get("name") or "Unknown", lead.get("email") or "?"
+    )
+
+    body = (
+        "A new demo was requested from the landing page.\n\n"
+        "Name: {name}\n"
+        "Email: {email}\n"
+        "Company: {company}\n"
+        "Role: {role}\n"
+        "Message:\n{message}\n\n"
+        "Review link: {link}\n"
+    ).format(
+        name=lead.get("name") or "",
+        email=lead.get("email") or "",
+        company=lead.get("company") or "",
+        role=lead.get("role") or "",
+        message=lead.get("message") or "",
+        link=((base_url or "").rstrip("/") + "/settings"),
+    )
+
+    message = MIMEText(body, "plain", "utf-8")
+    message["Subject"] = subject
+    message["From"] = platform_settings.MAIL_FROM
+    message["To"] = ", ".join(recipient_emails)
+
+    try:
+        server = _smtp_connect()
+        try:
+            server.sendmail(
+                platform_settings.MAIL_FROM,
+                recipient_emails,
+                message.as_string(),
+            )
+        finally:
+            try:
+                server.quit()
+            except Exception:
+                pass
+        return {"delivered": True, "to": recipient_emails, "reason": None}
+    except Exception as exc:
+        log.warning(
+            "Demo notification e-mail to %s failed: %s",
+            recipient_emails,
+            exc,
+        )
+        return {
+            "delivered": False,
+            "to": recipient_emails,
+            "reason": str(exc)[:200],
+        }

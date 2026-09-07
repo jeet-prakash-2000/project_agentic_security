@@ -18,6 +18,7 @@ from services import assessment_service
 from services import agent_status_service
 from services import agents_service
 from services import dashboard_service
+from services import demo_request_service
 from services import insights_service
 from services import mailer
 from services import report_history_service
@@ -344,6 +345,35 @@ def home():
     return render_with_css(
         "landing.html"
     )
+
+
+@app.route("/request-demo", methods=["POST"])
+def request_demo():
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        lead = demo_request_service.create_lead(
+            (payload.get("name") or "").strip(),
+            (payload.get("email") or "").strip(),
+            (payload.get("company") or "").strip(),
+            (payload.get("role") or "").strip(),
+            (payload.get("message") or "").strip(),
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    delivery = mailer.send_demo_notification(
+        lead,
+        base_url=platform_settings.APP_BASE_URL or request.host_url,
+    )
+    if not delivery.get("delivered"):
+        app.logger.info(
+            "Demo request e-mail not sent for %s: %s",
+            lead.get("email"),
+            delivery.get("reason"),
+        )
+
+    return jsonify({"ok": True, "id": lead.get("id")}), 201
 
 # --------------------------------------------------
 # DASHBOARD
@@ -1134,6 +1164,13 @@ def api_admin_users():
 
     status = (request.args.get("status") or "").strip() or None
     return jsonify({"users": users_service.list_users(status=status)})
+
+
+@app.route("/api/admin/demo-requests")
+@admin_required
+def api_admin_demo_requests():
+
+    return jsonify({"requests": demo_request_service.list_leads()})
 
 
 @app.route("/api/admin/users/<user_id>/approve", methods=["POST"])

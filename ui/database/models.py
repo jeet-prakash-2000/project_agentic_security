@@ -206,3 +206,18 @@ class AgentActivityLog(Base):
     message = Column(Text)
     ts = Column(Float, index=True)
     meta = Column(JSON)
+
+
+class DemoRequest(Base):
+    """Landing-page demo request lead with the requester's notes."""
+
+    __tablename__ = "demo_requests"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False, index=True)
+    company = Column(String(255), default="")
+    role = Column(String(128), default="")
+    message = Column(Text, default="")
+    status = Column(String(32), default="new")
+    created = Column(Float, index=True)

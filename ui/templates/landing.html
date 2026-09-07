@@ -3,156 +3,493 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LTM Security Platform — Agentic Network &amp; Cloud Security</title>
+    <title>LTM Security Platform — Agentic Firewall & Azure Cloud Security</title>
+    <meta name="description" content="AI agents continuously assess network firewall configuration and Microsoft Azure cloud security, surface prioritized risk, and produce executive-ready reports.">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='images/logo.svg') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=2">
 </head>
 <body>
 
-    <header class="land-nav">
-        <a href="{{ url_for('home') }}" class="land-brand">
-            <span class="land-logo"><img src="{{ url_for('static', filename='images/logo.svg') }}" alt="LTM Security Platform"></span>
-            <span class="land-brand-text"><strong>LTM Security</strong><span>Platform</span></span>
+    <header class="ld-nav" id="ldNav">
+        <a href="#top" class="ld-brand" aria-label="LTM Security Platform home">
+            <span class="ld-logo"><img src="{{ url_for('static', filename='images/logo.svg') }}" alt=""></span>
+            <span class="ld-brand-text"><strong>LTM Security</strong><span>Platform</span></span>
         </a>
-        <nav class="land-nav-links">
+        <button class="ld-menu-btn" id="ldMenuBtn" aria-label="Toggle navigation" aria-expanded="false">
+            <span></span><span></span><span></span>
+        </button>
+        <nav class="ld-nav-links" id="ldNavLinks" aria-label="Primary">
+            <a href="#product">Product</a>
             <a href="#features">Features</a>
             <a href="#benefits">Benefits</a>
             <a href="#usecases">Use Cases</a>
             <a href="#faq">FAQ</a>
         </nav>
-        <a href="{{ url_for('login', mode='login') }}" class="land-login-btn">Login</a>
+        <div class="ld-nav-actions">
+            <a href="{{ url_for('login', mode='login') }}" class="ld-login-btn">Sign in</a>
+            <a href="#demo" class="ld-cta ld-cta-primary">Request a demo</a>
+        </div>
     </header>
 
-    <section class="land-hero">
-        <div class="land-hero-inner">
-            <span class="land-eyebrow">Agentic Security Operations</span>
-            <h1>Continuous Network &amp; Cloud <span>Security</span></h1>
-            <p>LTM Security Platform uses AI agents to assess your Palo Alto firewall estate, surface risks, and generate executive-ready reports — automatically.</p>
-            <div class="land-hero-cta">
-                <a href="{{ url_for('login', mode='signup') }}" class="land-btn land-btn-primary">Get Started</a>
-                <a href="{{ url_for('login', mode='login') }}" class="land-btn land-btn-ghost">Request a Demo</a>
+    <main id="top">
+
+        <section class="ld-hero">
+            <div class="ld-hero-glow"></div>
+            <div class="ld-container ld-hero-grid">
+                <div class="ld-hero-copy">
+                    <span class="ld-eyebrow"><span class="ld-eyebrow-dot"></span>Agentic Security Operations</span>
+                    <h1>Continuous firewall &amp; <span class="ld-accent">Azure cloud</span> security, run by AI agents.</h1>
+                    <p>LTM deploys purpose-built agents that audit your network firewall estate and Microsoft Azure environment around the clock — turning configuration drift and cloud risk into a prioritized, executive-ready story.</p>
+                    <div class="ld-hero-cta">
+                        <a href="#demo" class="ld-cta ld-cta-primary ld-cta-lg">
+                            Request a demo
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                        </a>
+                        <a href="#product" class="ld-cta ld-cta-ghost ld-cta-lg">See the product</a>
+                    </div>
+                    <ul class="ld-hero-points">
+                        <li>Agentic firewall configuration &amp; hardening audits</li>
+                        <li>Azure cloud security posture and incident containment</li>
+                        <li>SOC investigation console with AI copilot</li>
+                    </ul>
+                    <div class="ld-hero-proof">
+                        <div class="ld-avatars"><span>JP</span><span>SR</span><span>AK</span></div>
+                        <p><strong>Trusted by security engineering teams</strong> to keep posture measurable and auditable.</p>
+                    </div>
+                </div>
+
+                <div class="ld-hero-visual" aria-hidden="true">
+                    <div class="ld-hero-stage">
+                        <div class="ld-hv-top">
+                            <span class="ld-hv-dot ld-hv-dot-r"></span>
+                            <span class="ld-hv-pill">vmpafw01</span>
+                            <span class="ld-hv-pill ld-hv-pill-azure">
+                                <span class="ld-hv-cloud"></span>Azure Cloud
+                            </span>
+                            <span class="ld-hv-user"></span>
+                        </div>
+                        <div class="ld-hv-body">
+                            <div class="ld-hv-donut-card">
+                                <div class="ld-hv-card-head"><span>Compliance Score</span><em>82%</em></div>
+                                <div class="ld-hv-donut"><div class="ld-hv-donut-hole"><strong>82</strong><small>/100</small></div></div>
+                                <div class="ld-hv-legend">
+                                    <span><i class="ld-dot-ok"></i>Passed 34</span>
+                                    <span><i class="ld-dot-bad"></i>Failed 10</span>
+                                </div>
+                            </div>
+                            <div class="ld-hv-col">
+                                <div class="ld-hv-sev-card">
+                                    <div class="ld-hv-card-head"><span>Findings</span></div>
+                                    <div class="ld-hv-sev-row"><label>Critical</label><div class="ld-hv-bar"><i style="width:22%"></i></div><b>3</b></div>
+                                    <div class="ld-hv-sev-row"><label>High</label><div class="ld-hv-bar"><i class="ld-bar-red" style="width:44%"></i></div><b>7</b></div>
+                                    <div class="ld-hv-sev-row"><label>Medium</label><div class="ld-hv-bar"><i class="ld-bar-soft" style="width:68%"></i></div><b>12</b></div>
+                                </div>
+                                <div class="ld-hv-trend-card">
+                                    <span class="ld-hv-mini-up"></span>
+                                    <div class="ld-hv-trend-nums"><b>+12 pts</b><small>posture, 90 days</small></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ld-hv-float ld-hv-float-a">
+                            <span class="ld-hv-float-ic">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0012 2z"/></svg>
+                            </span>
+                            <span><strong>Agent detected drift</strong><small>NSG rule opened to 0.0.0.0/0</small></span>
+                        </div>
+                        <div class="ld-hv-float ld-hv-float-b">
+                            <span class="ld-hv-status-dot"></span>
+                            <span><strong>Both agents live</strong><small>Firewall Auditor &middot; Cloud Responder</small></span>
+                        </div>
+                    </div>
+                </div>
             </div>
+        </section>
+
+        <section class="ld-stats" aria-label="Platform highlights">
+            <div class="ld-container ld-stats-grid">
+                <div class="ld-stat"><strong>24/7</strong><span>agent-driven posture checks</span></div>
+                <div class="ld-stat"><strong>44+</strong><span>hardening controls assessed</span></div>
+                <div class="ld-stat"><strong>2</strong><span>agents: firewall &amp; Azure cloud</span></div>
+                <div class="ld-stat"><strong>1-click</strong><span>executive &amp; audit reports</span></div>
+            </div>
+        </section>
+
+        <section class="ld-section" id="product">
+            <div class="ld-container">
+                <div class="ld-section-head">
+                    <span class="ld-kicker">Product tour</span>
+                    <h2>One console for your whole security estate</h2>
+                    <p>Explore the real product views below — click a screen to see the dashboard, the Security Operations Center, or live agent telemetry.</p>
+                </div>
+
+                <div class="ld-tour" id="ldTour">
+                    <div class="ld-tour-tabs" role="tablist" aria-label="Product views">
+                        <button class="ld-tour-tab is-active" data-screen="dashboard" role="tab" aria-selected="true">
+                            <span class="ld-tour-tab-ic">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+                            </span>
+                            <span class="ld-tour-tab-txt"><strong>Dashboard</strong><small>Compliance at a glance</small></span>
+                        </button>
+                        <button class="ld-tour-tab" data-screen="soc" role="tab" aria-selected="false">
+                            <span class="ld-tour-tab-ic">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M9 7h6M9 11h6"/></svg>
+                            </span>
+                            <span class="ld-tour-tab-txt"><strong>Security Operations Center</strong><small>Triage &amp; investigate findings</small></span>
+                        </button>
+                        <button class="ld-tour-tab" data-screen="insights" role="tab" aria-selected="false">
+                            <span class="ld-tour-tab-ic">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                            </span>
+                            <span class="ld-tour-tab-txt"><strong>Agent Insights</strong><small>Health, tokens &amp; latency</small></span>
+                        </button>
+                    </div>
+
+                    <div class="ld-tour-stage">
+                        <div class="ld-browser">
+                            <div class="ld-browser-bar">
+                                <span class="ld-browser-dot"></span><span class="ld-browser-dot"></span><span class="ld-browser-dot"></span>
+                                <span class="ld-browser-url">ltm-security-platform / dashboard</span>
+                            </div>
+
+                            <div class="ld-screen is-active" data-screen="dashboard">
+                                <div class="ld-sc-top">
+                                    <span class="ld-sc-chip">vmpafw01</span>
+                                    <span class="ld-sc-chip ld-sc-chip-azure">Azure Cloud</span>
+                                    <span class="ld-sc-spacer"></span>
+                                    <span class="ld-sc-chip ld-sc-chip-ok">Live data</span>
+                                </div>
+                                <div class="ld-sc-grid">
+                                    <div class="ld-sc-card ld-sc-donut">
+                                        <div class="ld-sc-card-head"><h4>Compliance Score</h4></div>
+                                        <div class="ld-donut lg"><div class="ld-donut-hole"><strong>82</strong><small>/100</small></div></div>
+                                        <div class="ld-sc-pills">
+                                            <span><i class="ld-dot-ok"></i>34 passed</span>
+                                            <span><i class="ld-dot-bad"></i>10 failed</span>
+                                            <span><i class="ld-dot-na"></i>4 not assessed</span>
+                                        </div>
+                                    </div>
+                                    <div class="ld-sc-card ld-sc-sev">
+                                        <div class="ld-sc-card-head"><h4>Findings by Severity</h4></div>
+                                        <div class="ld-sc-sev-row"><label>Critical</label><div class="ld-sc-bar"><i style="width:21%"></i></div><b>3</b></div>
+                                        <div class="ld-sc-sev-row"><label>High</label><div class="ld-sc-bar"><i class="ld-bar-red" style="width:44%"></i></div><b>7</b></div>
+                                        <div class="ld-sc-sev-row"><label>Medium</label><div class="ld-sc-bar"><i class="ld-bar-soft" style="width:70%"></i></div><b>12</b></div>
+                                        <div class="ld-sc-sev-row"><label>Low</label><div class="ld-sc-bar"><i class="ld-bar-faint" style="width:88%"></i></div><b>21</b></div>
+                                    </div>
+                                    <div class="ld-sc-card ld-sc-findings">
+                                        <div class="ld-sc-card-head"><h4>Recent Findings</h4><span class="ld-sc-link">View all &rarr;</span></div>
+                                        <div class="ld-sc-table">
+                                            <div class="ld-sc-tr"><span class="ld-sev ld-sev-crit">Critical</span><div><strong>Management interface exposed to untrusted zone</strong><small>vmpafw01 &middot; Management &middot; 2h ago</small></div></div>
+                                            <div class="ld-sc-tr"><span class="ld-sev ld-sev-high">High</span><div><strong>OSPF neighbor authentication not enforced</strong><small>vmpafw02 &middot; Routing &middot; 5h ago</small></div></div>
+                                            <div class="ld-sc-tr"><span class="ld-sev ld-sev-med">Medium</span><div><strong>Log forwarding not configured for threat logs</strong><small>vmpafw01 &middot; Logging &middot; 1d ago</small></div></div>
+                                            <div class="ld-sc-tr"><span class="ld-sev ld-sev-low">Low</span><div><strong>IKE lifetime deviates from baseline</strong><small>vmpafw02 &middot; VPN &middot; 2d ago</small></div></div>
+                                        </div>
+                                    </div>
+                                    <div class="ld-sc-card ld-sc-trend">
+                                        <div class="ld-sc-card-head"><h4>Compliance Trend</h4><span class="ld-sc-trend-num"><b>+12</b> pts / 90d</span></div>
+                                        <svg class="ld-sc-line" viewBox="0 0 320 110" preserveAspectRatio="none" aria-hidden="true">
+                                            <defs>
+                                                <linearGradient id="ldLineFill" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stop-color="#E4002B" stop-opacity="0.28"></stop>
+                                                    <stop offset="100%" stop-color="#E4002B" stop-opacity="0"></stop>
+                                                </linearGradient>
+                                            </defs>
+                                            <path class="ld-sc-line-fill" d="M0,88 C30,84 45,74 70,76 C95,78 108,62 135,60 C160,58 172,66 195,52 C220,38 238,42 258,32 C280,22 298,20 320,14 L320,110 L0,110 Z"></path>
+                                            <path class="ld-sc-line-stroke" d="M0,88 C30,84 45,74 70,76 C95,78 108,62 135,60 C160,58 172,66 195,52 C220,38 238,42 258,32 C280,22 298,20 320,14"></path>
+                                        </svg>
+                                        <div class="ld-sc-axis"><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ld-screen" data-screen="soc">
+                                <div class="ld-sc-top">
+                                    <span class="ld-sc-search">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                                        Search findings, domains, evidence…
+                                    </span>
+                                    <span class="ld-sc-spacer"></span>
+                                    <span class="ld-sc-chip">Severity: All</span>
+                                </div>
+                                <div class="ld-sc-kpis">
+                                    <div class="ld-sc-kpi"><small>Total findings</small><strong>43</strong></div>
+                                    <div class="ld-sc-kpi"><small>Critical</small><strong>3</strong></div>
+                                    <div class="ld-sc-kpi"><small>High</small><strong>7</strong></div>
+                                    <div class="ld-sc-kpi"><small>Est. risk score</small><strong>68</strong></div>
+                                    <div class="ld-sc-kpi ld-sc-kpi-actions"><button class="ld-sc-btn">Run assessment</button><button class="ld-sc-btn ld-sc-btn-ghost">Export report</button></div>
+                                </div>
+                                <div class="ld-sc-card ld-sc-findings">
+                                    <div class="ld-sc-table">
+                                        <div class="ld-sc-tr ld-sc-tr-head"><span>Severity</span><div><strong>Finding</strong></div><span>Risk</span></div>
+                                        <div class="ld-sc-tr"><span class="ld-sev ld-sev-crit">Critical</span><div><strong>Outbound rule permits 0.0.0.0/0 on port 22</strong><small>nsg-vmpafw-mgmt &middot; Azure Network &middot; Remediation: restrict source to admin CIDR</small></div><span class="ld-risk">92</span></div>
+                                        <div class="ld-sc-tr"><span class="ld-sev ld-sev-crit">Critical</span><div><strong>Firewall admin access lacks MFA enforcement</strong><small>vmpafw01 &middot; Administration &middot; Remediation: enforce MFA on admin roles</small></div><span class="ld-risk">88</span></div>
+                                        <div class="ld-sc-tr"><span class="ld-sev ld-sev-high">High</span><div><strong>Log analytics workspace not shipping firewall logs</strong><small>Azure Security &middot; Remediation: attach diagnostics to workspace</small></div><span class="ld-risk">76</span></div>
+                                        <div class="ld-sc-tr"><span class="ld-sev ld-sev-high">High</span><div><strong>Unpatched management plane (CVEs in web UI)</strong><small>vmpafw02 &middot; Software &middot; Remediation: apply vendor hotfix</small></div><span class="ld-risk">74</span></div>
+                                        <div class="ld-sc-tr"><span class="ld-sev ld-sev-med">Medium</span><div><strong>IKE phase-2 lifetime deviates from baseline</strong><small>vmpafw01 &middot; VPN &middot; Remediation: align lifetimes to policy</small></div><span class="ld-risk">55</span></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="ld-screen" data-screen="insights">
+                                <div class="ld-sc-top">
+                                    <span class="ld-sc-chip">Agent Insights</span>
+                                    <span class="ld-sc-spacer"></span>
+                                    <span class="ld-sc-chip ld-sc-chip-ok">Live</span>
+                                </div>
+                                <div class="ld-sc-kpis">
+                                    <div class="ld-sc-kpi"><small>Est. AI cost</small><strong>$12.40</strong></div>
+                                    <div class="ld-sc-kpi"><small>Token consumption</small><strong>318k</strong></div>
+                                    <div class="ld-sc-kpi"><small>Conversations</small><strong>55</strong></div>
+                                    <div class="ld-sc-kpi"><small>Avg latency</small><strong>3.8s</strong></div>
+                                </div>
+                                <div class="ld-sc-grid ld-sc-grid-insights">
+                                    <div class="ld-sc-card ld-sc-health">
+                                        <div class="ld-sc-card-head"><h4>Agent Health</h4></div>
+                                        <div class="ld-sc-agent"><span class="ld-live-dot"></span><div><strong>Firewall Auditor</strong><small>network firewall estate &middot; reachable</small></div><em>Live</em></div>
+                                        <div class="ld-sc-agent"><span class="ld-live-dot"></span><div><strong>Cloud Incident Responder</strong><small>Microsoft Azure &middot; reachable</small></div><em>Live</em></div>
+                                    </div>
+                                    <div class="ld-sc-card ld-sc-tokens">
+                                        <div class="ld-sc-card-head"><h4>Token Usage / day</h4><span class="ld-sc-link">past 14 days</span></div>
+                                        <svg class="ld-sc-line" viewBox="0 0 300 90" preserveAspectRatio="none" aria-hidden="true">
+                                            <defs>
+                                                <linearGradient id="ldTokFill" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stop-color="#E4002B" stop-opacity="0.25"></stop>
+                                                    <stop offset="100%" stop-color="#E4002B" stop-opacity="0"></stop>
+                                                </linearGradient>
+                                            </defs>
+                                            <path fill="url(#ldTokFill)" d="M0,72 C18,70 30,60 48,62 C70,64 80,44 102,46 C122,48 132,30 156,34 C178,38 188,20 210,22 C232,24 252,16 272,12 C282,10 292,12 300,10 L300,90 L0,90 Z"></path>
+                                            <path class="ld-sc-line-stroke" d="M0,72 C18,70 30,60 48,62 C70,64 80,44 102,46 C122,48 132,30 156,34 C178,38 188,20 210,22 C232,24 252,16 272,12 C282,10 292,12 300,10"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="ld-section ld-section-tint" id="features">
+            <div class="ld-container">
+                <div class="ld-section-head">
+                    <span class="ld-kicker">Features</span>
+                    <h2>Everything your team needs to stay ahead of risk</h2>
+                    <p>Two specialist agents — one for network firewalls, one for Azure cloud — working from a single security platform.</p>
+                </div>
+                <div class="ld-feature-grid">
+                    <article class="ld-feature">
+                        <span class="ld-feature-ic">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+                        </span>
+                        <h3>Agentic firewall audits</h3>
+                        <p>Continuous, on-demand assessment of firewall configuration and hardening across 44+ controls — no more quarterly manual reviews.</p>
+                    </article>
+                    <article class="ld-feature">
+                        <span class="ld-feature-ic">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M7 9V6a5 5 0 0110 0v3"/><path d="M12 13v4"/></svg>
+                        </span>
+                        <h3>Azure cloud security</h3>
+                        <p>Continuous visibility into your Microsoft Azure environment — network security groups, identity exposure and posture drift across subscriptions.</p>
+                    </article>
+                    <article class="ld-feature">
+                        <span class="ld-feature-ic">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><path d="M9 7h6M9 11h6"/></svg>
+                        </span>
+                        <h3>SOC investigation console</h3>
+                        <p>A dedicated Security Operations view to triage, filter and investigate every finding with evidence and remediation context.</p>
+                    </article>
+                    <article class="ld-feature">
+                        <span class="ld-feature-ic">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                        </span>
+                        <h3>Cloud incident containment</h3>
+                        <p>In a suspected breach, the cloud agent can execute containment actions — isolating resources and applying deny rules — with full audit trail.</p>
+                    </article>
+                    <article class="ld-feature">
+                        <span class="ld-feature-ic">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
+                        </span>
+                        <h3>Executive &amp; audit reporting</h3>
+                        <p>Generate management-ready executive summaries and detailed Excel workbooks from every assessment, stored in your report history.</p>
+                    </article>
+                    <article class="ld-feature">
+                        <span class="ld-feature-ic">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+                        </span>
+                        <h3>Posture &amp; trend analytics</h3>
+                        <p>Track compliance scores, tokens and latency over time on Agent Insights so you can prove posture is improving to leadership.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="ld-section" id="benefits">
+            <div class="ld-container">
+                <div class="ld-section-head">
+                    <span class="ld-kicker">Benefits</span>
+                    <h2>Why security teams choose LTM</h2>
+                    <p>The measurable outcomes that come from pairing specialist agents with your firewall and Azure estate.</p>
+                </div>
+                <div class="ld-benefit-grid">
+                    <div class="ld-benefit">
+                        <span class="ld-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                        <div><h3>Fewer manual audits</h3><p>Agents run checks around the clock so your team stops spending weeks on spreadsheets and starts acting on risk.</p></div>
+                    </div>
+                    <div class="ld-benefit">
+                        <span class="ld-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                        <div><h3>Less alert fatigue</h3><p>AI triage condenses thousands of configuration details into a focused, severity-ranked action list.</p></div>
+                    </div>
+                    <div class="ld-benefit">
+                        <span class="ld-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                        <div><h3>Faster incident response</h3><p>When a cloud incident is suspected, containment runbooks execute in minutes with a full audit trail.</p></div>
+                    </div>
+                    <div class="ld-benefit">
+                        <span class="ld-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                        <div><h3>Executive clarity</h3><p>Management-ready summaries translate technical findings into business-risk language decision-makers understand.</p></div>
+                    </div>
+                    <div class="ld-benefit">
+                        <span class="ld-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                        <div><h3>Audit-ready evidence</h3><p>Every assessment, finding and report is retained so your compliance and audit evidence is always one click away.</p></div>
+                    </div>
+                    <div class="ld-benefit">
+                        <span class="ld-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+                        <div><h3>One trusted source of truth</h3><p>Firewall and cloud posture live in a single platform — no more scattered spreadsheets or blind spots.</p></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="ld-section ld-section-tint" id="usecases">
+            <div class="ld-container">
+                <div class="ld-section-head">
+                    <span class="ld-kicker">Use cases</span>
+                    <h2>Built for the way your security team works</h2>
+                    <p>Where LTM delivers value every day across network and cloud operations.</p>
+                </div>
+                <div class="ld-use-grid">
+                    <article class="ld-use"><span class="ld-use-num">01</span><h3>Firewall configuration audits</h3><p>Routinely verify policies, routing, VPN, HA, logging and hardening against best-practice baselines.</p></article>
+                    <article class="ld-use"><span class="ld-use-num">02</span><h3>Azure posture &amp; drift detection</h3><p>Keep a continuous watch on network security groups, exposed resources and configuration drift in the cloud.</p></article>
+                    <article class="ld-use"><span class="ld-use-num">03</span><h3>Cloud incident response</h3><p>Detect a suspected breach and use guided containment actions to isolate resources and cut off lateral movement.</p></article>
+                    <article class="ld-use"><span class="ld-use-num">04</span><h3>Compliance &amp; audit preparation</h3><p>Produce evidence-backed reports for internal audits and regulatory reviews on demand.</p></article>
+                    <article class="ld-use"><span class="ld-use-num">05</span><h3>Security posture tracking</h3><p>Monitor firewall and cloud trends over time and demonstrate continuous improvement to leadership.</p></article>
+                    <article class="ld-use"><span class="ld-use-num">06</span><h3>Remediation planning</h3><p>Use prioritized, severity-ranked findings and recommendations to drive a measurable hardening roadmap.</p></article>
+                </div>
+            </div>
+        </section>
+
+        <section class="ld-section" id="demo">
+            <div class="ld-container ld-demo-wrap">
+                <div class="ld-demo-copy">
+                    <span class="ld-kicker">Request a demo</span>
+                    <h2>See LTM on your firewall &amp; Azure estate</h2>
+                    <p>Tell us a little about your environment and objectives. A security engineer will walk you through a tailored demo with your own network and cloud context.</p>
+                    <ul class="ld-demo-list">
+                        <li><span class="ld-step">1</span><div><strong>30-minute guided walkthrough</strong><small>Live product tour across firewall and Azure security</small></div></li>
+                        <li><span class="ld-step">2</span><div><strong>Tailored to your estate</strong><small>We map the demo to your firewalls, subscriptions and priorities</small></div></li>
+                        <li><span class="ld-step">3</span><div><strong>No obligation</strong><small>Answers, a roadmap proposal, and pricing that fits your team</small></div></li>
+                    </ul>
+                    <p class="ld-demo-note">Prefer to try it yourself? <a href="{{ url_for('login', mode='signup') }}">Create an account</a> — once an administrator approves it you can explore the platform directly.</p>
+                </div>
+
+                <div class="ld-demo-form-card" id="demoFormCard">
+                    <div class="ld-demo-form-head"><h3>Request your demo</h3><p>Fields marked * are required.</p></div>
+                    <form id="ldDemoForm" novalidate>
+                        <div class="ld-form-row">
+                            <label class="ld-field"><span>Full name *</span><input type="text" name="name" maxlength="255" autocomplete="name" required></label>
+                            <label class="ld-field"><span>Work email *</span><input type="email" name="email" maxlength="255" autocomplete="email" required></label>
+                        </div>
+                        <div class="ld-form-row">
+                            <label class="ld-field"><span>Company</span><input type="text" name="company" maxlength="255" autocomplete="organization"></label>
+                            <label class="ld-field"><span>Your role</span>
+                                <select name="role">
+                                    <option value="">Select a role</option>
+                                    <option>Security / SOC Analyst</option>
+                                    <option>Compliance / Audit</option>
+                                    <option>Cloud / Infrastructure</option>
+                                    <option>Security Leadership</option>
+                                    <option>Executive</option>
+                                    <option>Other</option>
+                                </select>
+                            </label>
+                        </div>
+                        <label class="ld-field"><span>Tell us about your environment *</span>
+                            <textarea name="message" rows="4" maxlength="4000" placeholder="e.g. We manage 40+ network firewalls and several Azure subscriptions, and we need continuous compliance evidence for an upcoming audit…" required></textarea>
+                        </label>
+                        <div class="ld-demo-error" id="ldDemoError" role="alert" hidden></div>
+                        <button type="submit" class="ld-cta ld-cta-primary ld-cta-lg ld-cta-block" id="ldDemoSubmit">
+                            Request my demo
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                        </button>
+                        <p class="ld-form-privacy">Your details are only used to respond to your demo request. We never share them.</p>
+                    </form>
+                    <div class="ld-demo-success" id="ldDemoSuccess" hidden>
+                        <span class="ld-demo-success-ic">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        </span>
+                        <h3>Request received</h3>
+                        <p>Thanks — your demo request is in. A member of the team will reach out to your inbox shortly to schedule your walkthrough.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="ld-section ld-faq" id="faq">
+            <div class="ld-container">
+                <div class="ld-section-head">
+                    <span class="ld-kicker">FAQ</span>
+                    <h2>Frequently asked questions</h2>
+                </div>
+                <div class="ld-faq-list">
+                    <details>
+                        <summary>What does the LTM platform assess?</summary>
+                        <p>LTM continuously assesses two estates: your network firewall configuration (44+ hardening controls covering policies, routing, VPN, high availability, logging and administration) and your Microsoft Azure cloud security posture.</p>
+                    </details>
+                    <details>
+                        <summary>Which firewall and cloud environments do you support?</summary>
+                        <p>The platform is built around network firewall appliances and the Microsoft Azure cloud. It inspects firewall configuration state and Azure resources such as network security groups, subscriptions and identity exposure.</p>
+                    </details>
+                    <details>
+                        <summary>How does the AI copilot and the agents work?</summary>
+                        <p>Specialist agents connect to your firewall and Azure environments through secure endpoints. Ask questions in plain English and the AI returns data-driven answers with evidence and prioritized remediation guidance.</p>
+                    </details>
+                    <details>
+                        <summary>How does requesting a demo work?</summary>
+                        <p>Fill in the request form with a few details about your environment. A security engineer reviews it and contacts you to schedule a tailored walkthrough — no obligation.</p>
+                    </details>
+                    <details>
+                        <summary>How do I get an account?</summary>
+                        <p>Use the Create account option to register. New accounts are approved by an administrator before the first sign-in so access stays controlled.</p>
+                    </details>
+                    <details>
+                        <summary>Is my data stored securely?</summary>
+                        <p>Yes. Assessment history, conversations and reports are persisted in your own PostgreSQL database. Your firewall and cloud data is never shared with other tenants.</p>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="ld-footer">
+        <div class="ld-container ld-footer-grid">
+            <div class="ld-footer-brand">
+                <a href="#top" class="ld-brand ld-brand-footer">
+                    <span class="ld-logo"><img src="{{ url_for('static', filename='images/logo.svg') }}" alt=""></span>
+                    <span class="ld-brand-text"><strong>LTM Security</strong><span>Platform</span></span>
+                </a>
+                <p>Agentic security operations for network firewall and Azure cloud estates.</p>
+            </div>
+            <div class="ld-footer-col"><strong>Product</strong><a href="#product">Product tour</a><a href="#features">Features</a><a href="#benefits">Benefits</a><a href="#usecases">Use cases</a></div>
+            <div class="ld-footer-col"><strong>Resources</strong><a href="#faq">FAQ</a><a href="#demo">Request a demo</a><a href="{{ url_for('login', mode='login') }}">Sign in</a><a href="{{ url_for('login', mode='signup') }}">Create account</a></div>
         </div>
-    </section>
-
-    <section class="land-section" id="features">
-        <h2>Platform Features</h2>
-        <p class="land-sub">Everything your security team needs to assess, understand, and report on compliance — powered by AI.</p>
-        <div class="land-grid land-grid-3">
-            <div class="land-card">
-                <span class="land-card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/></svg>
-                </span>
-                <h3>Compliance Assessment</h3>
-                <p>Automatically evaluate 44+ controls across your firewall estate against hardened security baselines.</p>
-            </div>
-            <div class="land-card">
-                <span class="land-card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>
-                </span>
-                <h3>AI Copilot</h3>
-                <p>Ask natural-language questions and receive instant answers with prioritized remediation guidance.</p>
-            </div>
-            <div class="land-card">
-                <span class="land-card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
-                </span>
-                <h3>Executive Reporting</h3>
-                <p>Generate management-ready executive summaries and detailed Excel workbooks in a single click.</p>
-            </div>
-            <div class="land-card">
-                <span class="land-card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><circle cx="12" cy="17" r="1"/></svg>
-                </span>
-                <h3>Risk Prioritization</h3>
-                <p>Findings are ranked by severity and risk score so your team focuses on what matters most first.</p>
-            </div>
-            <div class="land-card">
-                <span class="land-card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 00-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0012 2z"/><path d="M9 18h6M10 22h4"/></svg>
-                </span>
-                <h3>Trend Analytics</h3>
-                <p>Track compliance scores over time and understand whether your posture is improving or declining.</p>
-            </div>
-            <div class="land-card">
-                <span class="land-card-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                </span>
-                <h3>Audit-Ready Outputs</h3>
-                <p>Keep a full history of assessments, findings, and reports for compliance and audit reviews.</p>
-            </div>
+        <div class="ld-container ld-footer-bottom">
+            <span>&copy; 2026 LTM Security Platform. All rights reserved.</span>
+            <span>Firewall &amp; Azure cloud security, run by AI agents.</span>
         </div>
-    </section>
-
-    <div class="land-benefits" id="benefits">
-        <h2>Why security teams choose LTM</h2>
-        <div>
-            <div class="land-benefit">
-                <span class="land-check">&#10003;</span>
-                <div><strong>Faster, continuous assessments</strong><p>Move from quarterly manual audits to on-demand, automated compliance checks.</p></div>
-            </div>
-            <div class="land-benefit">
-                <span class="land-check">&#10003;</span>
-                <div><strong>Less alert fatigue</strong><p>AI triage turns thousands of configuration details into a focused, prioritized action list.</p></div>
-            </div>
-            <div class="land-benefit">
-                <span class="land-check">&#10003;</span>
-                <div><strong>Executive clarity</strong><p>Management-ready summaries translate technical findings into business risk language.</p></div>
-            </div>
-            <div class="land-benefit">
-                <span class="land-check">&#10003;</span>
-                <div><strong>Actionable remediation</strong><p>Every finding includes concrete remediation steps and severity-based prioritization.</p></div>
-            </div>
-        </div>
-    </div>
-
-    <section class="land-section" id="usecases">
-        <h2>Use Cases</h2>
-        <p class="land-sub">Where the LTM Security Platform delivers value every day.</p>
-        <div class="land-grid land-grid-2">
-            <div class="land-card">
-                <h3>Firewall Configuration Audits</h3>
-                <p>Routinely verify policies, routing, VPN, HA, logging, and hardening settings against best-practice baselines.</p>
-            </div>
-            <div class="land-card">
-                <h3>Compliance &amp; Audit Preparation</h3>
-                <p>Produce evidence-backed compliance reports for internal audits and regulatory reviews on demand.</p>
-            </div>
-            <div class="land-card">
-                <h3>Security Posture Tracking</h3>
-                <p>Monitor compliance trends over time and demonstrate continuous improvement to leadership.</p>
-            </div>
-            <div class="land-card">
-                <h3>Remediation Planning</h3>
-                <p>Use prioritized, severity-ranked findings and recommendations to drive your hardening roadmap.</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="land-section land-faq" id="faq">
-        <h2>Frequently Asked Questions</h2>
-        <p class="land-sub">Answers to the questions we hear most.</p>
-        <details>
-            <summary>What does the LTM Security Platform assess?</summary>
-            <p>The platform evaluates your Palo Alto firewall estate across 44+ controls covering software &amp; platform currency, capacity, security services, networking, VPN, administration, and logging &amp; monitoring.</p>
-        </details>
-        <details>
-            <summary>How does the AI copilot work?</summary>
-            <p>The AI Workspace connects to your firewall data through an agent endpoint. Ask questions in plain English and the copilot returns data-driven answers with remediation guidance.</p>
-        </details>
-        <details>
-            <summary>Is my data stored securely?</summary>
-            <p>Yes. Assessment history, conversations, and reports are persisted in your own PostgreSQL database or secure storage, never shared.</p>
-        </details>
-        <details>
-            <summary>Can I export reports?</summary>
-            <p>Absolutely. Generate executive summaries (PDF) and detailed assessment workbooks (XLSX), all stored in your Reports history.</p>
-        </details>
-    </section>
-
-    <footer class="land-footer">
-        <p><strong>LTM Security Platform</strong> &mdash; Agentic network &amp; cloud security compliance. &copy; 2026. Built for enterprise security teams.</p>
     </footer>
 
+    <script src="{{ url_for('static', filename='js/landing.js') }}?v=1"></script>
 </body>
 </html>
