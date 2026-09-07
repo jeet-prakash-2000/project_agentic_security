@@ -245,3 +245,53 @@ body {
     color: var(--text-3);
     text-align: center;
 }
+
+.auth-signedin {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: rgba(10, 132, 255, 0.08);
+    border: 1px solid rgba(10, 132, 255, 0.25);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+}
+
+.auth-signedin-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.auth-signedin-body strong {
+    font-size: 14px;
+    color: var(--text-1);
+}
+
+.auth-signedin-body span {
+    font-size: 12px;
+    color: var(--text-3);
+}
+
+.auth-signedin-actions {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.auth-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--red);
+    text-decoration: none;
+}
+
+.auth-link:hover {
+    text-decoration: underline;
+}
+
+.auth-link-muted {
+    color: var(--text-3);
+}

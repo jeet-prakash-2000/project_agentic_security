@@ -56,23 +56,7 @@ def _last_activity_by_agent():
     return by_name
 
 
-def _probe_agent(agent):
-    """Return ``{"live": bool, "detail": str, "latency_ms": int|None}``."""
-    endpoint = (agent.get("agent_endpoint") or "").rstrip("/")
-    api_key = foundry_client._resolve_api_key(agent)
-
-    if not endpoint:
-        return {"live": False, "detail": "No endpoint configured", "latency_ms": None}
-    if not api_key:
-        return {"live": False, "detail": "No API key configured", "latency_ms": None}
-
-    url = foundry_client._responses_url(endpoint)
-    payload = {
-        "model": agent.get("model", "gpt-5.1"),
-        "input": [{"role": "user", "content": "status"}],
-        "max_output_tokens": 1,
-    }
-
+def _post_probe(url, api_key, payload):
     started = time.monotonic()
     try:
         response = requests.post(
@@ -86,23 +70,54 @@ def _probe_agent(agent):
         )
         latency_ms = int((time.monotonic() - started) * 1000)
         if response.status_code == 200:
-            return {
-                "live": True,
-                "detail": "Reachable (HTTP 200)",
-                "latency_ms": latency_ms,
-            }
-        return {
-            "live": False,
-            "detail": "HTTP {0}".format(response.status_code),
-            "latency_ms": latency_ms,
-        }
+            return {"live": True, "detail": "Reachable (HTTP 200)", "latency_ms": latency_ms}
+        return {"live": False, "detail": "HTTP {0}".format(response.status_code), "latency_ms": latency_ms}
     except Exception as exc:
         latency_ms = int((time.monotonic() - started) * 1000)
-        return {
-            "live": False,
-            "detail": str(exc)[:100] or "Unreachable",
-            "latency_ms": latency_ms,
-        }
+        return {"live": False, "detail": str(exc)[:100] or "Unreachable", "latency_ms": latency_ms}
+
+
+def _probe_agent(agent):
+    """Return ``{"live": bool, "detail": str, "latency_ms": int|None}``.
+
+    Mirrors ``gateway.foundry_client.chat`` routing exactly: the agent is live
+    when its Foundry prompt-agent route answers, otherwise (route missing) when
+    the ephemeral model+platform-tools call that chat would use answers HTTP 200.
+    A minimal ``{"input": ...}`` is sent so the probe never runs tool side
+    effects - function calls are returned to us but never executed.
+    """
+    endpoint = (agent.get("agent_endpoint") or "").rstrip("/")
+    api_key = foundry_client._resolve_api_key(agent)
+
+    if not endpoint:
+        return {"live": False, "detail": "No endpoint configured", "latency_ms": None}
+    if not api_key:
+        return {"live": False, "detail": "No API key configured", "latency_ms": None}
+
+    agent_name = (agent.get("agent_id") or agent.get("name") or "").strip()
+    conversation = [{"role": "user", "content": "status"}]
+
+    if agent_name:
+        # Primary path (as in foundry_client.chat): the Foundry prompt agent.
+        url = foundry_client._foundry_agent_responses_url(endpoint, agent_name)
+        result = _post_probe(url, api_key, {"input": conversation})
+        if result["live"]:
+            return result
+        # Route missing (mirrors chat's 404/403 -> ephemeral fallback).
+        if result["detail"] not in ("HTTP 404", "HTTP 403"):
+            return result
+
+    # Fallback path (as in foundry_client.chat): ephemeral model + tool schemas.
+    url = foundry_client._responses_url(endpoint)
+    payload = {
+        "model": agent.get("model", "gpt-5.1"),
+        "input": conversation,
+        "tools": foundry_client.TOOL_SCHEMAS,
+    }
+    sys_prompt = foundry_client._system_prompt(agent)
+    if sys_prompt:
+        payload["instructions"] = sys_prompt
+    return _post_probe(url, api_key, payload)
 
 
 def get_agent_statuses(force=False):

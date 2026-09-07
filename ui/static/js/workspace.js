@@ -1067,20 +1067,11 @@
     // CHAT / SEND
     // ============================================================
 
-    function sendPrompt(prompt, opts) {
-        opts = opts || {};
-        var text = (prompt || "").trim();
-        if (!text) return;
+    function isOwnershipError(message) {
+        return /does not exist or belongs to another account/i.test(String(message || ""));
+    }
 
-        ensureActiveId();
-        appendMessage({ role: "user", content: text, ts: now() });
-        renderConversationList();
-        promptInput.value = "";
-        autoResize();
-
-        var typing = appendTyping();
-        sendBtn.disabled = true;
-
+    function requestChat(text, opts, typing, retried) {
         var convId = state.activeId;
         fetch("/api/chat", {
             method: "POST",
@@ -1099,13 +1090,48 @@
             })
             .catch(function (error) {
                 removeTyping(typing);
+
+                // A stored/clicked conversation can become inaccessible (e.g.
+                // it was cleared or belongs to a different account after the
+                // multi-tenant rework). Retry once on a fresh conversation
+                // instead of falling back to a preview response.
+                if (!retried && error && isOwnershipError(error.message)) {
+                    if (state.activeId) {
+                        state.conversations = state.conversations.filter(function (c) { return c.id !== state.activeId; });
+                    }
+                    state.activeId = null;
+                    state.messages = [];
+                    renderConversationList();
+                    renderActiveConversation();
+                    appendMessage({ role: "user", content: text, ts: now() });
+                    var retryTyping = appendTyping();
+                    window.showToast("Starting a new conversation.", "info");
+                    requestChat(text, opts, retryTyping, true);
+                    return;
+                }
+
                 var fallback = buildAssistantReply(text);
                 appendMessage({ role: "assistant", content: fallback, tool: opts.tool || null, ts: now() });
-                if (error && error.message && error.message.indexOf("No connected agent") === -1) {
+                if (error && error.message) {
                     window.showToast("Agent unavailable \u2014 showing preview response.", "error");
                 }
             })
             .finally(function () { sendBtn.disabled = false; promptInput.focus(); });
+    }
+
+    function sendPrompt(prompt, opts) {
+        opts = opts || {};
+        var text = (prompt || "").trim();
+        if (!text) return;
+
+        ensureActiveId();
+        appendMessage({ role: "user", content: text, ts: now() });
+        renderConversationList();
+        promptInput.value = "";
+        autoResize();
+
+        sendBtn.disabled = true;
+        requestChat(text, opts, appendTyping(), false);
     }
 
     // ============================================================

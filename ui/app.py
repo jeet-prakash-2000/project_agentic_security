@@ -226,12 +226,10 @@ def _login_notice():
 @app.route("/login", methods=["GET", "POST"], endpoint="login")
 def login():
     mode = "login" if (request.args.get("mode") or "login") == "login" else "signup"
+    explicit_mode = (request.args.get("mode") or "").strip() in ("login", "signup")
     next_url = (request.args.get("next") or "").strip()
     if next_url and not (next_url.startswith("/") and not next_url.startswith("//")):
         next_url = ""
-
-    if current_user():
-        return redirect(url_for("dashboard"))
 
     if request.method == "POST":
         # Real authentication: only approved accounts may sign in. There is no
@@ -268,6 +266,14 @@ def login():
             signup_roles=users_service.SIGNUP_ROLES,
         )
 
+    # Already signed in? A plain visit to /login goes straight to the
+    # dashboard, but when the user explicitly asked for the sign-in or
+    # create-account page (landing page CTA with ?mode=) we still render the
+    # auth page and surface the active session instead of silently skipping it.
+    authenticated = current_user()
+    if authenticated and not explicit_mode:
+        return redirect(url_for("dashboard"))
+
     return render_template(
         "login.html",
         mode=mode,
@@ -275,6 +281,7 @@ def login():
         notice=_login_notice(),
         next_url=next_url,
         signup_roles=users_service.SIGNUP_ROLES,
+        authenticated_user=authenticated,
     )
 
 
