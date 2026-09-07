@@ -24,7 +24,7 @@ from database.repositories import InsightsRepository
 from gateway import foundry_client
 
 STATUS_TTL = 60
-PROBE_TIMEOUT = 8
+PROBE_TIMEOUT = 15
 
 _lock = threading.Lock()
 _cache = {"ts": 0.0, "agents": []}
@@ -83,7 +83,7 @@ def _probe_agent(agent):
     Mirrors ``gateway.foundry_client.chat`` routing exactly: the agent is live
     when its Foundry prompt-agent route answers, otherwise (route missing) when
     the ephemeral model+platform-tools call that chat would use answers HTTP 200.
-    A minimal ``{"input": ...}`` is sent so the probe never runs tool side
+    A minimal ``{"input": ...}`` ping is sent so the probe never runs tool side
     effects - function calls are returned to us but never executed.
     """
     endpoint = (agent.get("agent_endpoint") or "").rstrip("/")
@@ -95,7 +95,10 @@ def _probe_agent(agent):
         return {"live": False, "detail": "No API key configured", "latency_ms": None}
 
     agent_name = (agent.get("agent_id") or agent.get("name") or "").strip()
-    conversation = [{"role": "user", "content": "status"}]
+    # "ping" is deliberately benign: prompts like "status" can make some
+    # Foundry prompt agents invoke their slow server-side tool, which would
+    # time the probe out even though the agent is healthy.
+    conversation = [{"role": "user", "content": "ping"}]
 
     if agent_name:
         # Primary path (as in foundry_client.chat): the Foundry prompt agent.
