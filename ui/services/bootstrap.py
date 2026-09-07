@@ -26,7 +26,7 @@ log = logging.getLogger("bootstrap")
 
 ADMIN_USER_ID = "usr-admin"
 ADMIN_NAME = "Jeet Prakash"
-ADMIN_EMAIL = "jeet.prakashparaida@ltm.com"
+ADMIN_EMAIL = "jeet.prakashparida@ltm.com"
 ADMIN_PASSWORD = "Jeet@12345"
 ADMIN_ROLE = "Admin"
 
