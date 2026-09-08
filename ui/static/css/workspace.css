@@ -2121,4 +2121,216 @@
 .netsec-op-dry-run { color: #0369A1; background: rgba(3, 105, 161, 0.1); }
 .netsec-op-error { color: #EF4444; background: rgba(239, 68, 68, 0.14); }
 
+/* ============================================================
+   NETSEC EXECUTION - CHAT FLOWS (ns-*)
+   ============================================================ */
+
+.ns-card { margin: 0; }
+
+.ns-block {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.ns-mode-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ns-note-text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-muted);
+}
+
+.ns-note-text strong { color: var(--text); }
+
+.ns-note-text code {
+    font-family: var(--font-mono, monospace);
+    background: rgba(120, 120, 130, 0.12);
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-size: 11.5px;
+}
+
+.ns-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-transform: uppercase;
+}
+
+.ns-pill-warn { color: #D97706; background: rgba(217, 119, 6, 0.13); }
+.ns-pill-apply { color: var(--success); background: var(--success-soft); }
+.ns-pill-off { color: #EF4444; background: rgba(239, 68, 68, 0.1); }
+
+/* Manual - object type list */
+.ns-opts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ns-opts-cat {
+    padding: 4px 12px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.ns-opts-cat-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    margin: 0 0 6px;
+}
+
+.ns-pb-opt {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    width: 100%;
+    text-align: left;
+    padding: 9px 12px;
+    background: var(--glass-soft);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ns-pb-opt:hover { border-color: var(--red); box-shadow: var(--shadow-soft); }
+.ns-pb-title { font-size: 12.5px; font-weight: 700; color: var(--text); }
+.ns-pb-sheet { font-size: 11px; color: var(--text-muted); }
+
+/* Manual - form */
+.ns-ops {
+    display: flex;
+    gap: 6px;
+    padding-bottom: 8px;
+}
+
+.ns-op-btn { flex: 1; justify-content: center; }
+
+.ns-op-btn.is-active,
+.ns-op-btn.is-active:hover {
+    border-color: var(--red);
+    background: var(--red);
+    color: #fff;
+}
+
+.ns-form-note { padding-bottom: 8px; }
+
+.ns-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+}
+
+.ns-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ns-field label {
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-muted);
+}
+
+.ns-req { font-style: normal; color: var(--danger); }
+.ns-hint { font-size: 10.5px; color: var(--text-muted); }
+.ns-control { width: 100%; }
+
+.ns-form-foot {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--border);
+}
+
+.ns-form-foot .ns-run { justify-content: center; }
+
+/* Bulk - file cards */
+.ns-file-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 4px 12px 14px;
+}
+
+.ns-file-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-align: center;
+    min-height: 96px;
+    padding: 12px 10px;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    background: var(--glass-soft);
+    cursor: pointer;
+    font-family: inherit;
+    color: var(--text);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+button.ns-file-card { width: 100%; }
+
+.ns-file-card:hover { border-color: var(--red); box-shadow: var(--shadow-soft); }
+.ns-file-card svg { width: 20px; height: 20px; color: var(--red); margin-bottom: 2px; }
+.ns-file-card strong { font-size: 12.5px; font-weight: 700; }
+.ns-file-card span { font-size: 11px; color: var(--text-muted); }
+
+.ns-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+}
+
+/* Bulk - workbook summary in chat */
+.ns-wb-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ns-wb-chip {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-2);
+    background: var(--glass-soft);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 10px;
+}
+
+.ns-select { width: 100%; }
+
+@media (max-width: 640px) {
+    .ns-fields { grid-template-columns: 1fr; }
+    .ns-file-grid { grid-template-columns: 1fr; }
+    .ns-ops { flex-direction: column; }
+}
+
 

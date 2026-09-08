@@ -25,7 +25,6 @@
     var promptChips = document.getElementById("promptChips");
     var composerAgentBadge = document.getElementById("composerAgentBadge");
     var composerWrap = document.querySelector(".ws-composer-wrap");
-    var netsecPanel = document.getElementById("wsNetsecPanel");
 
     var modal = document.getElementById("addAgentModal");
     var openBtn = document.getElementById("openAddAgentBtn");
@@ -60,6 +59,17 @@
     var CLOUD_SUGGESTIONS = [
         { label: "Incidents", action: "incidents" },
         { label: "Virtual Machine", action: "vm" }
+    ];
+
+    // NetSec Execution Agent entries: one Action chip that opens the manual /
+    // bulk operation chooser inside the chat.
+    var NETSEC_CHIPS = [
+        { id: "ns-action", label: "Action", icon: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>' }
+    ];
+
+    var NETSEC_SUGGESTIONS = [
+        { label: "Manual operation", action: "ns-manual" },
+        { label: "Bulk operation", action: "ns-bulk" }
     ];
 
     var CLOUD_KPI_PERIODS = [
@@ -542,6 +552,14 @@
                 b.addEventListener("click", function () { runAction(s.action); });
                 sug.appendChild(b);
             });
+        } else if (isNetsecAgent(state.activeAgent)) {
+            NETSEC_SUGGESTIONS.forEach(function (s) {
+                var b = document.createElement("button");
+                b.className = "ws-suggestion";
+                b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>' + escapeHtml(s.label);
+                b.addEventListener("click", function () { runAction(s.action); });
+                sug.appendChild(b);
+            });
         }
     }
 
@@ -557,6 +575,8 @@
             entries = COMPOSER_CHIPS.map(function (id) { return ACTIONS[id]; }).filter(Boolean);
         } else if (isCloudAgent(state.activeAgent)) {
             entries = CLOUD_CHIPS;
+        } else if (isNetsecAgent(state.activeAgent)) {
+            entries = NETSEC_CHIPS;
         }
         entries.forEach(function (a) {
             var b = document.createElement("button");
@@ -578,6 +598,10 @@
         }
         if (action === "vm") {
             showCloudVmPanel();
+            return;
+        }
+        if (window.NetsecPanel && (action === "ns-action" || action === "ns-manual" || action === "ns-bulk")) {
+            window.NetsecPanel.startChat(action);
             return;
         }
         var a = ACTIONS[action];
@@ -1126,11 +1150,6 @@
         var text = (prompt || "").trim();
         if (!text) return;
 
-        if (isNetsecAgent(state.activeAgent)) {
-            window.showToast("Chat is disabled for the NetSec Execution Agent - use the playbook panel.", "error");
-            return;
-        }
-
         ensureActiveId();
         appendMessage({ role: "user", content: text, ts: now() });
         renderConversationList();
@@ -1219,15 +1238,9 @@
 
     function applyNetsecMode(agent) {
         var active = isNetsecAgent(agent);
-        if (!netsecPanel) return;
-        netsecPanel.hidden = !active;
-        if (chatWindow) chatWindow.hidden = active;
-        if (promptChips) promptChips.hidden = active;
-        if (composerWrap) composerWrap.hidden = active;
-        if (sendBtn) sendBtn.disabled = active;
-        if (promptInput) promptInput.disabled = active;
-        if (active && window.NetsecPanel && window.NetsecPanel.activate) {
-            window.NetsecPanel.activate();
+        if (!active) return;
+        if (window.NetsecPanel && window.NetsecPanel.onAgentActivated) {
+            window.NetsecPanel.onAgentActivated();
         }
     }
 
@@ -1669,6 +1682,76 @@
         var agent = e.detail;
         if (agent) setActiveAgent(agent);
     });
+
+    // ============================================================
+    // CHAT BRIDGE (used by netsec.js chat-first flows)
+    // ============================================================
+
+    window.WsChat = {
+        ensureId: function () {
+            ensureActiveId();
+            return state.activeId;
+        },
+        activeAgent: function () {
+            return state.activeAgent;
+        },
+        agentName: function () {
+            if (state.activeAgent && state.activeAgent.name) return state.activeAgent.name;
+            return "NetSec-Execution-Agent";
+        },
+        user: function (content) {
+            ensureActiveId();
+            var msg = { role: "user", content: content || "", ts: now() };
+            appendMessage(msg);
+            renderConversationList();
+            return msg;
+        },
+        assistantHtml: function (html, cardTitle) {
+            ensureActiveId();
+            var msg = {
+                role: "assistant",
+                content: "",
+                html: html,
+                cardTitle: cardTitle || "NetSec Execution",
+                agentName: this.agentName(),
+                ts: now()
+            };
+            appendMessage(msg);
+            return msg;
+        },
+        assistantText: function (content) {
+            ensureActiveId();
+            var msg = {
+                role: "assistant",
+                content: content || "",
+                agentName: this.agentName(),
+                ts: now()
+            };
+            appendMessage(msg);
+            return msg;
+        },
+        typingStart: function () {
+            var node = appendTyping(this.agentName());
+            if (sendBtn) sendBtn.disabled = true;
+            return node;
+        },
+        typingEnd: function (node) {
+            removeTyping(node);
+            if (sendBtn) sendBtn.disabled = false;
+            if (promptInput) promptInput.focus();
+        },
+        setBusy: function (busy) {
+            if (sendBtn) sendBtn.disabled = !!busy;
+        },
+        persist: function (msgs) {
+            if (!msgs || !msgs.length) return Promise.resolve();
+            return persistMessages(msgs).then(function () {
+                loadConversations();
+                loadConversationInsights();
+            }).catch(function () {});
+        },
+        scrollBottom: function () { scrollToBottom(); }
+    };
 
     // ============================================================
     // INIT

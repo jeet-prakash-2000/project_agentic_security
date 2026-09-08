@@ -70,57 +70,6 @@
             </div>
         </header>
 
-        <div class="ws-netsec" id="wsNetsecPanel" hidden>
-            <div class="netsec-head">
-                <div>
-                    <h2 class="netsec-title">Firewall Change Playbooks</h2>
-                    <p class="netsec-subtitle">Bulk object, zone, route and policy changes against the Palo Alto firewall from an Excel workbook. Chat is disabled here - use the steps below.</p>
-                </div>
-                <span class="netsec-badge" id="netsecBadge" data-state="unknown">Checking connection&hellip;</span>
-            </div>
-
-            <div class="netsec-alert netsec-alert-warn" id="netsecConnAlert" hidden></div>
-            <div class="netsec-alert netsec-alert-info" id="netsecModeAlert" hidden></div>
-
-            <div class="netsec-body">
-                <div class="netsec-step">
-                    <div class="netsec-step-num">1</div>
-                    <div class="netsec-step-main">
-                        <h3>Download the workbook template</h3>
-                        <p>Contains one sheet per playbook (objects, zones, VRs, routes, security/NAT policies, interfaces) with sample rows and an Instructions tab.</p>
-                        <button class="btn btn-primary btn-sm" id="netsecDownloadBtn" type="button">Download .xlsx template</button>
-                    </div>
-                </div>
-
-                <div class="netsec-step">
-                    <div class="netsec-step-num">2</div>
-                    <div class="netsec-step-main">
-                        <h3>Upload your filled workbook</h3>
-                        <p>Fill in one row per firewall change. <code>Action</code> is <code>create</code>, <code>update</code> or <code>delete</code>; lists use commas, semicolons or new lines.</p>
-                        <div class="netsec-upload-row">
-                            <input type="file" id="netsecFile" accept=".xlsx" class="netsec-file-input">
-                            <button class="btn btn-outline btn-sm" id="netsecUploadBtn" type="button" disabled>Upload workbook</button>
-                        </div>
-                        <div id="netsecWorkbookSummary"></div>
-                    </div>
-                </div>
-
-                <div class="netsec-step">
-                    <div class="netsec-step-num">3</div>
-                    <div class="netsec-step-main">
-                        <h3>Run a playbook</h3>
-                        <p>Pick the sheet you want to execute. Every row runs independently; failures are reported per row and never abort the rest.</p>
-                        <div class="netsec-run-row">
-                            <select id="netsecPlaybookSelect" class="netsec-select"></select>
-                            <button class="btn btn-primary" id="netsecRunBtn" type="button" disabled>Run playbook</button>
-                        </div>
-                        <p class="netsec-run-note" id="netsecRunNote"></p>
-                        <div id="netsecRunResults"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div class="ws-messages" id="chatWindow"></div>
 
         <footer class="ws-composer-wrap">
@@ -230,6 +179,6 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=7"></script>
-<script src="{{ url_for('static', filename='js/netsec.js') }}?v=1"></script>
-<script src="{{ url_for('static', filename='js/workspace.js') }}?v=13"></script>
+<script src="{{ url_for('static', filename='js/netsec.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='js/workspace.js') }}?v=15"></script>
 {% endblock %}

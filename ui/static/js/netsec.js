@@ -1,30 +1,75 @@
-/* NetSec Execution Agent panel - playbook-driven firewall changes.
- * Activated by workspace.js whenever the NetSec-Execution-Agent is selected.
- * Talks to the /api/netsec/* endpoints (see app.py + netsec_service.py). */
+/* NetSec Execution Agent - chat-first manual & bulk firewall operations.
+ *
+ * Loaded before workspace.js. It exposes window.NetsecPanel, the namespace
+ * workspace.js calls for agent detection, activation and chat action runs
+ * ("Action" chip -> manual / bulk operation chooser).
+ *
+ * All in-chat UI is appended through the window.WsChat bridge that workspace.js
+ * registers, so flows live on the NetSec-Execution-Agent conversation itself.
+ *
+ * Backend contract (app.py / services/netsec_service.py):
+ *   GET  /api/netsec/info                -> config + playbook catalogue
+ *   GET  /api/netsec/workbook/template   -> .xlsx template (blob download)
+ *   POST /api/netsec/workbook            -> save uploaded workbook -> summary
+ *   POST /api/netsec/playbooks/run       -> run a playbook -> per-row results
+ *   POST /api/netsec/manual              -> run a single chat row -> results
+ */
 (function () {
     "use strict";
 
     var NETSEC_AGENT_ID = "netsec-execution-agent";
-    var els = {};
-    var state = { info: null, uploaded: null };
-    var bound = false;
+    var state = { info: null, uploading: false };
 
-    function q(id) { return document.getElementById(id); }
+    /* Enum picker options keyed by workbook column header. */
+    var ENUM_FIELDS = {
+        "Address Type": ["ip-netmask", "ip-range", "fqdn"],
+        "Group Type": ["static", "dynamic"],
+        "Protocol": ["tcp", "udp", "sctp"],
+        "Type": ["layer3", "layer2", "tap", "virtual-wire", "external"],
+        "Version": ["ipv4", "ipv6"],
+        "Next Hop Type": ["ip-address", "discard", "next-vr", "fqdn"],
+        "Rule Action": ["allow", "deny", "drop", "reset-client", "reset-server", "reset-both"],
+        "NAT Type": ["source", "destination"],
+        "Source Translation": ["dynamic-ip-and-port", "dynamic-ip", "static-ip"],
+        "Enable User Identification": ["yes", "no"],
+        "Disabled": ["no", "yes"],
+        "Ping": ["yes", "no"],
+        "Telnet": ["yes", "no"],
+        "SSH": ["yes", "no"],
+        "HTTPS": ["yes", "no"],
+        "HTTP": ["yes", "no"],
+        "SNMP": ["yes", "no"],
+        "Response Pages": ["yes", "no"]
+    };
 
-    function grab() {
-        els.panel = q("wsNetsecPanel");
-        els.badge = q("netsecBadge");
-        els.connAlert = q("netsecConnAlert");
-        els.modeAlert = q("netsecModeAlert");
-        els.downloadBtn = q("netsecDownloadBtn");
-        els.file = q("netsecFile");
-        els.uploadBtn = q("netsecUploadBtn");
-        els.summaryBox = q("netsecWorkbookSummary");
-        els.playbookSelect = q("netsecPlaybookSelect");
-        els.runBtn = q("netsecRunBtn");
-        els.runNote = q("netsecRunNote");
-        els.results = q("netsecRunResults");
-    }
+    /* Columns that take a comma-separated member list. */
+    var LIST_FIELDS = {
+        "Tags": true, "Members": true, "Interfaces": true, "IP Addresses": true,
+        "From": true, "To": true, "Source": true, "Destination": true,
+        "Users": true, "Applications": true, "Services": true, "Categories": true,
+        "Source Translated Address": true
+    };
+
+    /* Identifying columns; the only fields delete actually reads. */
+    var IDENTITY = {
+        "network-interfaces": ["Interface"],
+        "network-static-routes": ["Name", "Virtual Router"],
+        "default": ["Name"]
+    };
+
+    var URLS = {
+        info: "/api/netsec/info",
+        template: "/api/netsec/workbook/template",
+        upload: "/api/netsec/workbook",
+        run: "/api/netsec/playbooks/run",
+        manual: "/api/netsec/manual"
+    };
+
+    var ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
+    var ICON_UPLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>';
+    var ICON_RUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>';
+
+    /* ---------------------------------------------------------------- utils */
 
     function esc(value) {
         return String(value == null ? "" : value)
@@ -34,283 +79,12 @@
             .replace(/"/g, "&quot;");
     }
 
-    function badge(stateName, label) {
-        if (!els.badge) return;
-        els.badge.setAttribute("data-state", stateName);
-        els.badge.textContent = label;
-    }
-
-    function setAlert(node, html) {
-        if (!node) return;
-        if (html) { node.innerHTML = html; node.hidden = false; }
-        else { node.innerHTML = ""; node.hidden = true; }
-    }
-
     function toast(msg, kind) {
         if (window.showToast) window.showToast(msg, kind || "error");
     }
 
-    /* ------------------------------------------------------------ */
-
-    function loadInfo() {
-        badge("unknown", "Checking connection\u2026");
-        fetch("/api/netsec/info")
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (data && data.error) { setAlert(els.connAlert, esc(data.error)); badge("down", "Unavailable"); return; }
-                state.info = data;
-                renderConnection(data);
-                renderPlaybooks(data);
-                loadWorkbook();
-            })
-            .catch(function () {
-                badge("down", "Unavailable");
-                setAlert(els.connAlert, "Could not reach the NetSec service. Try again.");
-            });
-    }
-
-    function renderConnection(info) {
-        if (info.configured) {
-            badge("ok", "Connected \u00b7 " + (info.host || ""));
-            setAlert(els.connAlert, "");
-            if (info.dry_run) {
-                setAlert(els.modeAlert, "<strong>Dry-run mode is ON.</strong> Running a playbook previews every change without sending anything to the firewall. To apply changes, deploy with <code>NETSEC_FW_DRY_RUN=0</code>.");
-            } else {
-                setAlert(els.modeAlert, "<strong>Apply mode is ON</strong> (<code>NETSEC_FW_DRY_RUN=0</code>) - running a playbook writes changes to the firewall candidate configuration.");
-            }
-        } else {
-            badge("down", "Not connected");
-            setAlert(els.connAlert, "<strong>Firewall not configured.</strong> The platform is missing <code>" + (info.missing || []).map(esc).join("</code>, <code>") + "</code>. Set these environment variables on the App Service, then reload this page.");
-            setAlert(els.modeAlert, "");
-        }
-        renderRunNote();
-    }
-
-    function renderPlaybooks(info) {
-        if (!els.playbookSelect) return;
-        els.playbookSelect.innerHTML = "";
-        if (!info.playbooks || !info.playbooks.length) {
-            var none = document.createElement("option");
-            none.textContent = "No playbooks available";
-            els.playbookSelect.appendChild(none);
-            return;
-        }
-        var groups = {};
-        info.playbooks.forEach(function (pb) {
-            (groups[pb.category || "Playbooks"] = groups[pb.category || "Playbooks"] || []).push(pb);
-        });
-        Object.keys(groups).forEach(function (category) {
-            var og = document.createElement("optgroup");
-            og.label = category;
-            groups[category].forEach(function (pb) {
-                var opt = document.createElement("option");
-                opt.value = pb.id;
-                opt.textContent = pb.title + " (" + pb.sheet + ")";
-                og.appendChild(opt);
-            });
-            els.playbookSelect.appendChild(og);
-        });
-        els.playbookSelect.addEventListener("change", function () { renderRunNote(); });
-    }
-
-    function renderRunNote() {
-        if (!els.runNote) return;
-        var info = state.info;
-        var pb = selectedPlaybook();
-        var parts = [];
-        if (info) parts.push(info.dry_run ? "DRY RUN - nothing will be sent to the firewall." : "Apply mode - running will write changes and commit them to the running config.");
-        if (pb && pb.sheet) parts.push("Executes sheet \u201c" + pb.sheet + "\u201d.");
-        if (pb && pb.summary) parts.push(pb.summary);
-        els.runNote.textContent = parts.join(" ");
-        if (els.runBtn) els.runBtn.disabled = !(state.uploaded && selectedPlaybook());
-    }
-
-    function selectedPlaybook() {
-        if (!els.playbookSelect || !state.info) return null;
-        var id = els.playbookSelect.value;
-        if (!id) return null;
-        for (var i = 0; i < state.info.playbooks.length; i++) {
-            if (state.info.playbooks[i].id === id) return state.info.playbooks[i];
-        }
-        return null;
-    }
-
-    /* ------------------------------------------------------------ */
-
-    function loadWorkbook() {
-        fetch("/api/netsec/workbook")
-            .then(function (r) { return r.status === 404 ? null : r.json(); })
-            .then(function (data) {
-                if (data && data.summary) { state.uploaded = data.summary; renderWorkbookSummary(data.summary); }
-                else { state.uploaded = null; renderWorkbookSummary(null); }
-                renderRunNote();
-            })
-            .catch(function () { state.uploaded = null; renderWorkbookSummary(null); });
-    }
-
-    function renderWorkbookSummary(summary) {
-        if (!els.summaryBox) return;
-        if (!summary || !summary.sheets || !summary.sheets.length) {
-            els.summaryBox.innerHTML = "";
-            return;
-        }
-        var html = '<div class="netsec-wb-summary"><span class="netsec-wb-total">' +
-            esc(summary.total_rows) + " data row" + (summary.total_rows === 1 ? "" : "s") +
-            " loaded from " + esc(summary.sheets.length) + " sheet" + (summary.sheets.length === 1 ? "" : "s") +
-            '</span><ul class="netsec-wb-sheets">';
-        summary.sheets.forEach(function (sheet) {
-            html += "<li><span class=\"netsec-wb-sheet\">" + esc(sheet.sheet) + "</span>" +
-                "<span class=\"netsec-wb-count\">" + esc(sheet.rows) + " row" + (sheet.rows === 1 ? "" : "s") + "</span></li>";
-        });
-        html += "</ul></div>";
-        els.summaryBox.innerHTML = html;
-    }
-
-    /* ------------------------------------------------------------ */
-
-    function downloadTemplate() {
-        if (!els.downloadBtn) return;
-        els.downloadBtn.disabled = true;
-        var original = els.downloadBtn.textContent;
-        els.downloadBtn.textContent = "Preparing\u2026";
-        fetch("/api/netsec/workbook/template")
-            .then(function (r) {
-                if (!r.ok) throw new Error("HTTP " + r.status);
-                return r.blob();
-            })
-            .then(function (blob) {
-                var url = URL.createObjectURL(blob);
-                var a = document.createElement("a");
-                a.href = url;
-                a.download = "netsec-playbook-template.xlsx";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-                toast("Template downloaded - open it in Excel.", "success");
-            })
-            .catch(function () { toast("Could not download the template."); })
-            .finally(function () {
-                els.downloadBtn.disabled = false;
-                els.downloadBtn.textContent = original;
-            });
-    }
-
-    function uploadWorkbook() {
-        var file = els.file && els.file.files && els.file.files[0];
-        if (!file) { toast("Choose a workbook file first."); return; }
-        if (els.uploadBtn) { els.uploadBtn.disabled = true; els.uploadBtn.textContent = "Uploading\u2026"; }
-        var fd = new FormData();
-        fd.append("file", file);
-        fetch("/api/netsec/workbook", { method: "POST", body: fd })
-            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-            .then(function (res) {
-                if (!res.ok) throw new Error(res.data.error || "Upload failed");
-                state.uploaded = res.data.summary;
-                renderWorkbookSummary(res.data.summary);
-                renderRunNote();
-                toast("Workbook uploaded.", "success");
-            })
-            .catch(function (err) { toast(err.message || "Upload failed."); })
-            .finally(function () {
-                if (els.uploadBtn) { els.uploadBtn.disabled = false; els.uploadBtn.textContent = "Upload workbook"; }
-            });
-    }
-
-    /* ------------------------------------------------------------ */
-
-    function runPlaybook() {
-        var pb = selectedPlaybook();
-        if (!pb) return;
-        if (els.runBtn) { els.runBtn.disabled = true; els.runBtn.textContent = "Running\u2026"; }
-        if (els.results) els.results.innerHTML = '<div class="netsec-loading">Executing ' + esc(pb.title) + "\u2026</div>";
-
-        fetch("/api/netsec/playbooks/run", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ playbook_id: pb.id })
-        })
-            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-            .then(function (res) {
-                if (!res.ok) throw new Error(res.data.error || "Run failed");
-                renderRunResults(res.data);
-            })
-            .catch(function (err) {
-                if (els.results) els.results.innerHTML = "";
-                toast(err.message || "Playbook run failed.");
-            })
-            .finally(function () {
-                if (els.runBtn) { els.runBtn.textContent = "Run playbook"; renderRunNote(); }
-            });
-    }
-
-    function renderRunResults(data) {
-        if (!els.results) return;
-        var c = data.counts || {};
-        var dry = !!data.dry_run;
-        var cards = [];
-        var badgeClass = dry ? "netsec-ok" : (c.errors ? "netsec-partial" : "netsec-ok");
-        cards.push(
-            '<div class="netsec-result-card">',
-            '<div class="netsec-result-head"><span class="netsec-result-title">' + esc(data.playbook_title || data.playbook_id) + "</span>",
-            '<span class="netsec-pill ' + badgeClass + '">' + (dry ? "Dry-run" : "Applied") + "</span></div>",
-            '<div class="netsec-result-counts">',
-            countChip(c.created, "created", dry), countChip(c.updated, "updated", dry),
-            countChip(c.deleted, "deleted", dry), countChip(c.errors, "errors", true),
-            "</div>",
-            "<p class=\"netsec-result-summary\">" + esc(data.summary || "") + "</p>",
-            commitLine(data),
-            (data.host ? '<p class="netsec-result-meta">Firewall: ' + esc(data.host) + "</p>" : ""),
-            "</div>"
-        );
-        var rows = data.rows || [];
-        if (rows.length) {
-            var thead = "<tr><th>Row</th><th>Op</th><th>Object</th><th>Detail</th></tr>";
-            var body = rows.map(function (row) {
-                var op = row.op === "error" ? "error" : (row.dry_run ? "dry-run" : row.op);
-                var name = row.error ? "Error" : (row.kind ? row.kind : "");
-                var detail = row.error || row.detail || "";
-                return "<tr><td>" + esc(row.row) + "</td>" +
-                    "<td><span class=\"netsec-op netsec-op-" + op + "\">" + esc(op) + "</span></td>" +
-                    "<td>" + esc(name) + (row.name ? " <code>" + esc(row.name) + "</code>" : "") + "</td>" +
-                    "<td class=\"netsec-cell-detail\">" + esc(detail) + "</td></tr>";
-            }).join("");
-            cards.push('<div class="netsec-results-table"><table><thead>' + thead + "</thead><tbody>" + body + "</tbody></table></div>");
-        }
-        els.results.innerHTML = cards.join("");
-    }
-
-    function commitLine(data) {
-        if (data.committed) {
-            return '<p class="netsec-commit netsec-commit-ok">Changes committed to the running firewall configuration.</p>';
-        }
-        if (data.commit_error) {
-            return '<p class="netsec-commit netsec-commit-err">Commit failed: ' + esc(data.commit_error) + "</p>";
-        }
-        return "";
-    }
-
-    function countChip(n, label, emphasise) {
-        n = n || 0;
-        return '<span class="netsec-count' + (emphasise && n ? " netsec-count-warn" : "") + '">' + n + " " + label + "</span>";
-    }
-
-    /* ------------------------------------------------------------ */
-
-    function activate() {
-        grab();
-        if (!els.panel) return;
-        state = { info: null, uploaded: null };
-        loadInfo();
-        if (!bound) {
-            bound = true;
-            els.downloadBtn.addEventListener("click", downloadTemplate);
-            els.uploadBtn.addEventListener("click", uploadWorkbook);
-            if (els.file) els.file.addEventListener("change", function () {
-                els.uploadBtn.disabled = !(els.file.files && els.file.files[0]);
-            });
-            els.runBtn.addEventListener("click", runPlaybook);
-        }
+    function chat() {
+        return window.WsChat || null;
     }
 
     function isNetsecId(id) {
@@ -323,9 +97,654 @@
         return isNetsecId(agent.id) || /netsec/i.test(text);
     }
 
+    function nsSession() {
+        var bridge = chat();
+        if (!bridge) return false;
+        var agent = bridge.activeAgent();
+        if (!agent) return true;
+        return isNetsecAgent(agent);
+    }
+
+    function cardHead(title, subtitle) {
+        return '<div class="ws-mcq-head"><strong>' + esc(title) + "</strong><span>" + esc(subtitle || "") + "</span></div>";
+    }
+
+    function noteHtml(text) {
+        return '<p class="ns-note-text">' + text + "</p>";
+    }
+
+    /* ------------------------------------------------------------ info / config */
+
+    function loadInfo(force) {
+        if (state.info && !force) return Promise.resolve(state.info);
+        return fetch(URLS.info)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data && data.error) throw new Error(data.error);
+                state.info = data;
+                return data;
+            })
+            .catch(function (err) {
+                state.info = null;
+                throw (err && err.message) ? err : new Error("Could not reach the NetSec service.");
+            });
+    }
+
+    function modeNote(info) {
+        if (!info || !info.configured) return "";
+        if (info.dry_run) {
+            return '<span class="ns-pill ns-pill-warn">DRY RUN</span><span class="ns-note-text">Every change is previewed; nothing is sent to the firewall. Apply mode requires NETSEC_FW_DRY_RUN=0.</span>';
+        }
+        return '<span class="ns-pill ns-pill-apply">APPLY</span><span class="ns-note-text">Running writes changes and commits them to the firewall candidate configuration.</span>';
+    }
+
+    function connErrorHtml(info) {
+        var missing = (info && info.missing) || [];
+        var missingHtml = missing.length
+            ? "<code>" + missing.map(esc).join("</code>, <code>") + "</code>"
+            : "configuration";
+        return '<div class="ws-mcq-card">' +
+            '<div class="ws-mcq-head"><strong>Firewall not connected</strong>' +
+            "<span>The NetSec Execution agent could not reach a Palo Alto firewall.</span></div>" +
+            '<div class="ns-block">' + noteHtml(
+                "The platform is missing " + missingHtml +
+                ". Set these environment variables on the App Service, then reload this page."
+            ) + "</div></div>";
+    }
+
+    function playbookById(id) {
+        if (!state.info || !state.info.playbooks) return null;
+        for (var i = 0; i < state.info.playbooks.length; i++) {
+            if (state.info.playbooks[i].id === id) return state.info.playbooks[i];
+        }
+        return null;
+    }
+
+    function withInfo(cb) {
+        if (state.info) { cb(state.info); return; }
+        loadInfo().then(cb).catch(function () { cb(null); });
+    }
+
+    function identityFor(playbookId) {
+        return (IDENTITY[playbookId] || IDENTITY.default).slice();
+    }
+
+    /* ------------------------------------------------------------ shared helpers */
+
+    function persist(pair) {
+        var bridge = chat();
+        if (!bridge || !pair || !pair.length) return Promise.resolve();
+        return bridge.persist(pair);
+    }
+
+    function opWord(op) {
+        return { create: "Create", update: "Update", delete: "Delete" }[op] || "Change";
+    }
+
+    function primaryName(row) {
+        return (row && (row.Name || row.Interface || row["Virtual Router"] || row.Destination)) || "";
+    }
+
+    function describeRow(pb, op, row) {
+        var name = primaryName(row);
+        return opWord(op) + " " + (pb ? pb.title : "object") + (name ? ": " + name : "");
+    }
+
+    /* ------------------------------------------------------------ run results html */
+
+    function countChip(n, label, warn) {
+        n = n || 0;
+        return '<span class="netsec-count' + (warn && n ? " netsec-count-warn" : "") + '">' + n + " " + label + "</span>";
+    }
+
+    function resultsHtml(data) {
+        var c = data.counts || {};
+        var dry = !!data.dry_run;
+        var badgeClass = dry ? "netsec-ok" : (c.errors ? "netsec-partial" : "netsec-ok");
+        var pill = dry ? "Dry-run" : (c.errors ? "Applied with errors" : "Applied");
+
+        var html = '<div class="netsec-result-card">' +
+            '<div class="netsec-result-head"><span class="netsec-result-title">' + esc(data.playbook_title || data.playbook_id || "Playbook") + "</span>" +
+            '<span class="netsec-pill ' + badgeClass + '">' + esc(pill) + "</span></div>" +
+            '<div class="netsec-result-counts">' +
+            countChip(c.created, "created", false) + countChip(c.updated, "updated", false) +
+            countChip(c.deleted, "deleted", false) + countChip(c.errors, "errors", true) +
+            "</div>" +
+            (data.summary ? "<p class=\"netsec-result-summary\">" + esc(data.summary) + "</p>" : "") +
+            (data.committed
+                ? '<p class="netsec-commit netsec-commit-ok">Changes committed to the running firewall configuration.</p>'
+                : (data.commit_error
+                    ? '<p class="netsec-commit netsec-commit-err">Commit failed: ' + esc(data.commit_error) + "</p>"
+                    : "")) +
+            (data.host ? '<p class="netsec-result-meta">Firewall: ' + esc(data.host) + "</p>" : "") +
+            "</div>";
+
+        var rows = data.rows || [];
+        if (!rows.length) return html;
+
+        var head = "<tr><th>Row</th><th>Op</th><th>Object</th><th>Detail</th></tr>";
+        var body = rows.map(function (row) {
+            var op = row.op === "error" ? "error" : (row.dry_run ? "dry-run" : row.op);
+            var name = row.error ? "Error" : (row.kind ? row.kind : "");
+            var detail = row.error || row.detail || "";
+            return "<tr><td>" + esc(row.row) + "</td>" +
+                "<td><span class=\"netsec-op netsec-op-" + esc(op) + "\">" + esc(op) + "</span></td>" +
+                "<td>" + esc(name) + (row.name ? " <code>" + esc(row.name) + "</code>" : "") + "</td>" +
+                "<td class=\"netsec-cell-detail\">" + esc(detail) + "</td></tr>";
+        }).join("");
+        return html + '<div class="netsec-results-table"><table><thead>' + head + "</thead><tbody>" + body + "</tbody></table></div>";
+    }
+
+    function resultMessage(data, pb) {
+        var bridge = chat();
+        if (data && data.error) {
+            return bridge.assistantHtml(
+                '<div class="ws-mcq-card"><div class="ws-mcq-head"><strong>' + esc(describeRow(pb, (data.op || "create"), (data.row || {}))) + "</strong></div>" +
+                '<div class="ns-block">' + noteHtml(esc(data.error)) + "</div></div>",
+                pb ? pb.title : "NetSec Execution"
+            );
+        }
+        return bridge.assistantHtml(resultsHtml(data), data.playbook_title || (pb ? pb.title : "NetSec Execution"));
+    }
+
+    /* ================================================================
+     * ACTION CHOOSER (Action chip)
+     * ================================================================ */
+
+    function chooserCardHtml(info) {
+        var configured = !!(info && info.configured);
+        var html = '<div class="ws-mcq-card ns-card">' +
+            cardHead("NetSec Execution Agent", "How do you want to make firewall changes?") +
+            '<div class="ns-block"><div class="ns-mode-row">' + (configured
+                ? modeNote(info)
+                : '<span class="ns-pill ns-pill-off">OFFLINE</span><span class="ns-note-text">Firewall not configured - manual and bulk operations are unavailable until the NETSEC_FW_* environment variables are set.</span>') + "</div></div>";
+        if (!configured) {
+            html += "</div>";
+            return html;
+        }
+        html += '<div class="ws-mcq-options">' +
+            '<button type="button" class="mcq-option fw-select-btn" data-ns-flow="manual">' +
+            '<span class="mcq-option-label">Manual operation</span>' +
+            '<span class="mcq-option-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg></span>' +
+            "</button>" +
+            '<button type="button" class="mcq-option fw-select-btn" data-ns-flow="bulk">' +
+            '<span class="mcq-option-label">Bulk operation</span>' +
+            '<span class="mcq-option-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg></span>' +
+            "</button>" +
+            "</div></div>";
+        return html;
+    }
+
+    function openChooser() {
+        if (!nsSession()) return;
+        var bridge = chat();
+        if (!bridge) { toast("Chat is still loading."); return; }
+        var userMsg = bridge.user("Action");
+        loadInfo().then(function (info) {
+            var asstMsg = bridge.assistantHtml(chooserCardHtml(info), "NetSec Execution");
+            persist([userMsg, asstMsg]);
+        }).catch(function (err) {
+            var asstMsg = bridge.assistantHtml(connErrorHtml(null), "NetSec Execution");
+            persist([userMsg, asstMsg]);
+            toast(err.message, "error");
+        });
+    }
+
+    /* ================================================================
+     * MANUAL OPERATION
+     * ================================================================ */
+
+    function manualTypesCardHtml(info) {
+        var groups = {};
+        (info.playbooks || []).forEach(function (pb) {
+            (groups[pb.category || "Playbooks"] = groups[pb.category || "Playbooks"] || []).push(pb);
+        });
+
+        var html = '<div class="ws-mcq-card ns-card">' +
+            cardHead("Manual operation", "Choose an object type, then fill in the fields for one firewall change.") +
+            '<div class="ns-block"><div class="ns-mode-row">' + modeNote(info) + "</div></div>";
+        Object.keys(groups).forEach(function (category) {
+            html += '<div class="ns-opts-list ns-opts-cat">' +
+                '<div class="ns-opts-cat-label">' + esc(category) + "</div>";
+            groups[category].forEach(function (pb) {
+                html += '<button type="button" class="ns-pb-opt" data-ns-playbook="' + esc(pb.id) + '">' +
+                    '<span class="ns-pb-title">' + esc(pb.title) + "</span>" +
+                    '<span class="ns-pb-sheet">create \u00b7 update \u00b7 delete \u2014 sheet &ldquo;' + esc(pb.sheet) + "&rdquo;</span>" +
+                    "</button>";
+            });
+            html += "</div>";
+        });
+        html += "</div>";
+        return html;
+    }
+
+    function openManualTypes() {
+        if (!nsSession()) return;
+        var bridge = chat();
+        if (!bridge) { toast("Chat is still loading."); return; }
+        var userMsg = bridge.user("Manual operation");
+        loadInfo().then(function (info) {
+            if (!info.configured) {
+                var errMsg = bridge.assistantHtml(connErrorHtml(info), "NetSec Execution");
+                persist([userMsg, errMsg]);
+                return;
+            }
+            var asstMsg = bridge.assistantHtml(manualTypesCardHtml(info), "Manual operation");
+            persist([userMsg, asstMsg]);
+        }).catch(function (err) {
+            var errMsg = bridge.assistantHtml(connErrorHtml(null), "NetSec Execution");
+            persist([userMsg, errMsg]);
+            toast(err.message, "error");
+        });
+    }
+
+    function fieldControlHtml(pb, col) {
+        var opts = ENUM_FIELDS[col];
+        var multi = !!LIST_FIELDS[col];
+        var example = (pb.example && pb.example[col]) ? String(pb.example[col]) : "";
+        var identity = identityFor(pb.id).indexOf(col) !== -1;
+
+        var html = '<div class="ns-field" data-ns-col-row="' + esc(col) + '" data-ns-ident="' + (identity ? "1" : "0") + '">' +
+            "<label>" + esc(col) + (identity ? ' <em class="ns-req">required</em>' : "") + "</label>";
+
+        var ph = example || (multi ? "comma separated members" : (identity ? "" : "optional"));
+        if (opts) {
+            html += '<select class="ws-cloud-input ns-control" data-ns-col="' + esc(col) + '"><option value="">(leave blank to skip)</option>';
+            opts.forEach(function (opt) {
+                html += '<option value="' + esc(opt) + '">' + esc(opt) + "</option>";
+            });
+            html += "</select>";
+        } else {
+            html += '<input class="ws-cloud-input ns-control" type="text" data-ns-col="' + esc(col) + '" placeholder="' + esc(ph) + '" autocomplete="off">';
+        }
+        if (multi) html += '<span class="ns-hint">comma separated members</span>';
+        html += "</div>";
+        return html;
+    }
+
+    function manualFormHtml(pb) {
+        var cols = (pb.columns || []).filter(function (c) { return c !== "Action"; });
+        var fields = cols.map(function (col) { return fieldControlHtml(pb, col); }).join("");
+
+        var html = '<div class="ws-mcq-card ns-card ns-form-card" data-ns-playbook="' + esc(pb.id) + '" data-ns-op="create">' +
+            cardHead(pb.title, pb.summary || "Manual operation") +
+            '<div class="ns-block"><div class="ns-mode-row">' + modeNote(state.info) + "</div></div>" +
+            '<div class="ns-block">' +
+            '<div class="ns-ops" role="group" aria-label="Action">' +
+            '<button type="button" class="ws-cloud-run ns-op-btn is-active" data-ns-formop="create">Create</button>' +
+            '<button type="button" class="ws-cloud-run ns-op-btn" data-ns-formop="update">Update</button>' +
+            '<button type="button" class="ws-cloud-run ns-op-btn" data-ns-formop="delete">Delete</button>' +
+            "</div>" +
+            '<div class="ns-form-note" data-ns-note></div>' +
+            '<div class="ns-fields">' + fields + "</div>" +
+            "</div>" +
+            '<div class="ns-form-foot">' +
+            '<button type="button" class="ws-cloud-run ns-run" data-ns-run="manual">' + ICON_RUN + "Run on firewall</button>" +
+            "</div></div>";
+        return html;
+    }
+
+    function openManualForm(pbId) {
+        if (!nsSession()) return;
+        withInfo(function () {
+            var pb = playbookById(pbId);
+            if (!pb) { toast("Unknown object type."); return; }
+            if (!state.info || !state.info.configured) {
+                chat().assistantHtml(connErrorHtml(state.info), "NetSec Execution");
+                return;
+            }
+            var bridge = chat();
+            var userMsg = bridge.user(pb.title + " \u2014 manual operation");
+            var asstMsg = bridge.assistantHtml(manualFormHtml(pb), pb.title);
+            persist([userMsg, asstMsg]);
+            bridge.scrollBottom();
+        });
+    }
+
+    function syncOpState(card) {
+        var op = card.getAttribute("data-ns-op") || "create";
+        var identity = identityFor(card.getAttribute("data-ns-playbook")).slice();
+        card.querySelectorAll("[data-ns-formop]").forEach(function (btn) {
+            btn.classList.toggle("is-active", btn.getAttribute("data-ns-formop") === op);
+        });
+        card.querySelectorAll("[data-ns-col-row]").forEach(function (field) {
+            var ident = field.getAttribute("data-ns-ident") === "1";
+            field.style.display = (op === "delete" && !ident) ? "none" : "";
+        });
+        var note = card.querySelector("[data-ns-note]");
+        if (note) {
+            note.innerHTML = op === "delete"
+                ? noteHtml("Delete uses only <strong>" + esc(identity.join(", ")) + "</strong>; the other fields are ignored.")
+                : "";
+        }
+    }
+
+    function setOp(card, op) {
+        card.setAttribute("data-ns-op", op);
+        syncOpState(card);
+    }
+
+    function gatherRow(card) {
+        var row = { Action: card.getAttribute("data-ns-op") || "create" };
+        card.querySelectorAll("[data-ns-col]").forEach(function (field) {
+            var key = field.getAttribute("data-ns-col");
+            row[key] = (field.value || "").trim();
+        });
+        return row;
+    }
+
+    function runManual(btn) {
+        if (!nsSession()) return;
+        var bridge = chat();
+        var card = btn.closest(".ns-form-card");
+        if (!card) return;
+        var pbId = card.getAttribute("data-ns-playbook");
+        var op = card.getAttribute("data-ns-op") || "create";
+        var row = gatherRow(card);
+
+        var identity = identityFor(pbId);
+        var missing = identity.filter(function (key) { return !row[key]; });
+        if (missing.length) {
+            toast("Enter " + missing.join(", ") + (op === "delete" ? " to identify the object." : " first."), "error");
+            return;
+        }
+
+        btn.disabled = true;
+        withInfo(function () {
+            var pb = playbookById(pbId);
+            var userMsg = bridge.user(describeRow(pb, op, row));
+            var typing = bridge.typingStart();
+
+            fetch(URLS.manual, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ playbook_id: pbId, row: row })
+            })
+                .then(function (r) {
+                    return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+                })
+                .then(function (res) {
+                    if (!res.ok) throw new Error(res.data && res.data.error ? res.data.error : "Run failed");
+                    var asstMsg = resultMessage(res.data, pb);
+                    persist([userMsg, asstMsg]);
+                })
+                .catch(function (err) {
+                    var asstMsg = bridge.assistantText("The operation could not be completed. " + (err.message || "Run failed."));
+                    persist([userMsg, asstMsg]);
+                })
+                .finally(function () {
+                    bridge.typingEnd(typing);
+                    btn.disabled = false;
+                });
+        });
+    }
+
+    /* ================================================================
+     * BULK OPERATION
+     * ================================================================ */
+
+    function bulkFileCardHtml(info) {
+        var configured = !!(info && info.configured);
+        if (!configured) {
+            return '<div class="ws-mcq-card ns-card">' +
+                cardHead("Bulk operation", "Download the template and upload a filled workbook to run a sheet against the firewall.") +
+                '<div class="ns-block"><div class="ns-mode-row">' +
+                '<span class="ns-pill ns-pill-off">OFFLINE</span><span class="ns-note-text">Firewall not configured - the workbook template can still be downloaded, but playbooks can only be run once the NETSEC_FW_* environment variables are set.</span>' +
+                "</div></div>" +
+                '<div class="ns-file-grid">' +
+                '<button type="button" class="ns-file-card" data-ns-action="bulk-download">' +
+                ICON_DOWNLOAD + "<strong>Bulk Ops File</strong><span>.xlsx template with every sheet</span></button>" +
+                "</div></div>";
+        }
+        var html = '<div class="ws-mcq-card ns-card">' +
+            cardHead("Bulk operation",
+                "Download the Excel workbook template, fill in one row per firewall change, then upload it to run a sheet against the firewall.") +
+            '<div class="ns-block"><div class="ns-mode-row">' + modeNote(info) + "</div></div>" +
+            '<div class="ns-file-grid">' +
+            '<button type="button" class="ns-file-card" data-ns-action="bulk-download">' +
+            ICON_DOWNLOAD + "<strong>Bulk Ops File</strong><span>.xlsx template with every sheet</span></button>" +
+            '<label class="ns-file-card">' +
+            ICON_UPLOAD + "<strong>Upload Bulk Ops File</strong><span>filled workbook from the template</span>" +
+            '<input type="file" class="ns-file-input" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-ns-file>' +
+            "</label>" +
+            "</div></div>";
+        return html;
+    }
+
+    function openBulkFile() {
+        if (!nsSession()) return;
+        var bridge = chat();
+        if (!bridge) { toast("Chat is still loading."); return; }
+        var userMsg = bridge.user("Bulk operation");
+        loadInfo().then(function (info) {
+            var asstMsg = bridge.assistantHtml(bulkFileCardHtml(info), "Bulk operation");
+            persist([userMsg, asstMsg]);
+        }).catch(function (err) {
+            var errMsg = bridge.assistantHtml(connErrorHtml(null), "NetSec Execution");
+            persist([userMsg, errMsg]);
+            toast(err.message, "error");
+        });
+    }
+
+    function triggerDownload(blob, filename) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    }
+
+    function downloadTemplate(btn) {
+        btn.disabled = true;
+        var original = btn.innerHTML;
+        btn.textContent = "Preparing\u2026";
+        fetch(URLS.template)
+            .then(function (r) {
+                if (!r.ok) throw new Error("HTTP " + r.status);
+                return r.blob();
+            })
+            .then(function (blob) {
+                triggerDownload(blob, "netsec-playbook-template.xlsx");
+                toast("Template downloaded - open it in Excel.", "success");
+            })
+            .catch(function () { toast("Could not download the template."); })
+            .finally(function () {
+                btn.disabled = false;
+                btn.innerHTML = original;
+            });
+    }
+
+    function bulkRunCardHtml(summary) {
+        var info = state.info || {};
+        var sheets = {};
+        (summary && summary.sheets || []).forEach(function (s) {
+            sheets[String(s.sheet || "").toLowerCase().replace(/\s+/g, "")] = s;
+        });
+
+        var options = "";
+        var matched = 0;
+        (info.playbooks || []).forEach(function (pb) {
+            var key = String(pb.sheet || "").toLowerCase().replace(/\s+/g, "");
+            var sheet = sheets[key];
+            if (!sheet) return;
+            matched++;
+            options += '<option value="' + esc(pb.id) + '">' + esc(pb.title) + " (" + esc(pb.sheet) + ", " + sheet.rows + " row" + (sheet.rows === 1 ? "" : "s") + ")</option>";
+        });
+
+        var sheetChips = (summary && summary.sheets || []).map(function (s) {
+            return '<span class="ns-wb-chip">' + esc(s.sheet) + " \u00b7 " + esc(s.rows) + " row" + (s.rows === 1 ? "" : "s") + "</span>";
+        }).join("");
+
+        var html = '<div class="ws-mcq-card ns-card ns-summary-card">' +
+            cardHead("Workbook uploaded",
+                (summary && summary.total_rows != null
+                    ? summary.total_rows + " data row" + (summary.total_rows === 1 ? "" : "s") + " across " + (summary.sheets || []).length + " sheet" + ((summary.sheets || []).length === 1 ? "" : "s")
+                    : "Choose the object type to execute.")) +
+            (sheetChips ? '<div class="ns-block"><div class="ns-wb-chips">' + sheetChips + "</div></div>" : "");
+
+        if (!matched) {
+            html += '<div class="ns-block">' + noteHtml(
+                "None of the uploaded sheets match a playbook in the catalogue. Download the template and fill in its sheets, then upload it again."
+            ) + "</div></div>";
+            return html;
+        }
+
+        html += '<div class="ns-block">' +
+            '<div class="ns-mode-row">' + modeNote(info) + "</div>" +
+            '<select class="ws-cloud-input ns-select" data-ns-pb>' + options + "</select>" +
+            "</div>" +
+            '<div class="ns-form-foot">' +
+            '<button type="button" class="ws-cloud-run ns-run" data-ns-run="bulk">' + ICON_RUN + "Run playbook</button>" +
+            "</div></div>";
+        return html;
+    }
+
+    function runBulk(btn) {
+        if (!nsSession()) return;
+        var bridge = chat();
+        var card = btn.closest(".ns-summary-card");
+        if (!card) return;
+        var select = card.querySelector("[data-ns-pb]");
+        var pbId = select && select.value;
+        if (!pbId) { toast("Choose an object type to run."); return; }
+
+        btn.disabled = true;
+        withInfo(function () {
+            var pb = playbookById(pbId);
+            var userMsg = bridge.user("Run playbook \u2014 " + (pb ? pb.title : pbId));
+            var typing = bridge.typingStart();
+
+            fetch(URLS.run, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ playbook_id: pbId })
+            })
+                .then(function (r) {
+                    return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+                })
+                .then(function (res) {
+                    if (!res.ok) throw new Error(res.data && res.data.error ? res.data.error : "Run failed");
+                    var asstMsg = resultMessage(res.data, pb);
+                    persist([userMsg, asstMsg]);
+                })
+                .catch(function (err) {
+                    var asstMsg = bridge.assistantText("The playbook could not be run. " + (err.message || "Run failed."));
+                    persist([userMsg, asstMsg]);
+                })
+                .finally(function () {
+                    bridge.typingEnd(typing);
+                    btn.disabled = false;
+                });
+        });
+    }
+
+    function uploadWorkbook(input) {
+        if (state.uploading) return;
+        var file = input.files && input.files[0];
+        if (!file) return;
+        var bridge = chat();
+        state.uploading = true;
+
+        var userMsg = bridge.user("Upload workbook \u201c" + file.name + "\u201d");
+        var typing = bridge.typingStart();
+
+        var fd = new FormData();
+        fd.append("file", file);
+
+        fetch(URLS.upload, { method: "POST", body: fd })
+            .then(function (r) {
+                return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+            })
+            .then(function (res) {
+                if (!res.ok) throw new Error(res.data && res.data.error ? res.data.error : "Upload failed");
+                var asstMsg = bridge.assistantHtml(bulkRunCardHtml(res.data.summary), "Bulk operation");
+                persist([userMsg, asstMsg]);
+            })
+            .catch(function (err) {
+                var asstMsg = bridge.assistantText("The workbook could not be uploaded. " + (err.message || "Upload failed."));
+                persist([userMsg, asstMsg]);
+            })
+            .finally(function () {
+                state.uploading = false;
+                bridge.typingEnd(typing);
+            });
+    }
+
+    /* ================================================================
+     * EVENT DELEGATION (in-chat elements survive reload via these)
+     * ================================================================ */
+
+    function onDocClick(e) {
+        if (!nsSession()) return;
+        if (!e.target || !e.target.closest) return;
+        var chatWindowEl = document.getElementById("chatWindow");
+        if (chatWindowEl && !chatWindowEl.contains(e.target)) return;
+
+        var flow = e.target.closest("[data-ns-flow]");
+        if (flow) {
+            if (flow.getAttribute("data-ns-flow") === "manual") openManualTypes();
+            else openBulkFile();
+            return;
+        }
+
+        var pick = e.target.closest(".ns-pb-opt[data-ns-playbook]");
+        if (pick) {
+            openManualForm(pick.getAttribute("data-ns-playbook"));
+            return;
+        }
+
+        var opBtn = e.target.closest("[data-ns-formop]");
+        if (opBtn) {
+            var card = opBtn.closest(".ns-form-card");
+            if (card) setOp(card, opBtn.getAttribute("data-ns-formop"));
+            return;
+        }
+
+        var runBtn = e.target.closest("[data-ns-run]");
+        if (runBtn) {
+            if (runBtn.getAttribute("data-ns-run") === "manual") runManual(runBtn);
+            else runBulk(runBtn);
+            return;
+        }
+
+        var dl = e.target.closest('[data-ns-action="bulk-download"]');
+        if (dl) downloadTemplate(dl);
+    }
+
+    function onDocChange(e) {
+        if (!nsSession()) return;
+        if (!e.target || !e.target.classList) return;
+        if (e.target.classList.contains("ns-file-input") && e.target.files && e.target.files[0]) {
+            uploadWorkbook(e.target);
+        }
+    }
+
+    /* ================================================================
+     * PUBLIC SURFACE
+     * ================================================================ */
+
+    function onActivated() {
+        if (!nsSession()) return;
+        /* Warm the catalogue so the first flow renders instantly. */
+        loadInfo().catch(function () {});
+    }
+
     window.NetsecPanel = {
         agentId: NETSEC_AGENT_ID,
+        isNetsecId: isNetsecId,
         isNetsecAgent: isNetsecAgent,
-        activate: activate
+        onAgentActivated: onActivated,
+        startChat: function (action) {
+            if (action === "ns-manual") { openManualTypes(); return; }
+            if (action === "ns-bulk") { openBulkFile(); return; }
+            openChooser(); /* ns-action */
+        },
+        activate: onActivated
     };
+
+    document.addEventListener("click", onDocClick);
+    document.addEventListener("change", onDocChange);
 })();

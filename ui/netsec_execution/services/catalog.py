@@ -326,6 +326,7 @@ def list_playbooks():
     """Public catalog payload for the workspace playbook panel."""
     result = []
     for playbook in PLAYBOOKS:
+        examples = playbook.get("examples") or [{}]
         result.append(
             {
                 "id": playbook["id"],
@@ -333,6 +334,8 @@ def list_playbooks():
                 "category": playbook["category"],
                 "sheet": playbook["sheet"],
                 "summary": playbook["summary"],
+                "columns": list(playbook.get("columns") or []),
+                "example": dict(examples[0]) if examples else {},
             }
         )
     return result

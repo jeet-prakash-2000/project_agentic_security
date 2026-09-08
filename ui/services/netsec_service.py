@@ -118,3 +118,54 @@ def run_playbook(user_id, playbook_id, commit=None):
     )
     result["host"] = client.host
     return result
+
+
+def run_row(playbook_id, row, commit=None):
+    """Execute a single manual operation row against the firewall.
+
+    Unlike ``run_playbook`` this does not require an uploaded workbook: the
+    row is a plain dict keyed by the playbook's workbook columns (including an
+    ``Action`` of create/update/delete) supplied by the chat manual flow.
+
+    Raises ``ValueError`` when the firewall is unconfigured or the payload
+    does not describe a valid single-row change.
+    """
+    playbook = catalog.find_playbook(playbook_id)
+    if playbook is None:
+        raise ValueError(
+            "Unknown object type: {0}.".format(playbook_id or "none")
+        )
+    if not isinstance(row, dict) or not row:
+        raise ValueError("A row with the object fields is required.")
+    action = (row.get("Action") or "").strip().lower()
+    if action not in ("create", "update", "delete"):
+        raise ValueError(
+            "Pick an Action of create, update or delete for the operation."
+        )
+    client = PanosClient()
+    if not client.configured:
+        raise ValueError(
+            "The NetSec Execution agent is not connected to a firewall. "
+            "Missing environment configuration: {0}.".format(
+                ", ".join(client.missing_config())
+            )
+        )
+    headers = list(playbook.get("columns") or [])
+    clean = {}
+    for header in headers:
+        value = row.get(header)
+        if isinstance(value, list):
+            value = ", ".join(str(v) for v in value)
+        clean[header] = "" if value is None else str(value)
+    rows = {
+        playbook["sheet"]: {
+            "headers": headers,
+            "rows": [clean],
+            "row_count": 1,
+        }
+    }
+    result = engine.run_playbook(
+        client, playbook_id, rows=rows, row_limit=1, commit=commit
+    )
+    result["host"] = client.host
+    return result

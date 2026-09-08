@@ -1110,6 +1110,32 @@ def api_netsec_playbooks_run():
         return jsonify({"error": str(e)}), 502
 
 
+@app.route("/api/netsec/manual", methods=["POST"])
+@login_required
+def api_netsec_manual():
+    """Execute a single manual operation described by a chat row form."""
+
+    from services import netsec_service
+
+    payload = request.get_json(silent=True) or {}
+    playbook_id = (payload.get("playbook_id") or "").strip()
+    row = payload.get("row")
+    if not playbook_id:
+        return jsonify({"error": "playbook_id is required."}), 400
+    try:
+        commit_flag = payload.get("commit")
+        if commit_flag is not None:
+            commit_flag = bool(commit_flag)
+        result = netsec_service.run_row(
+            playbook_id, row or {}, commit=commit_flag
+        )
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
+
 @app.route("/api/tools")
 def api_tools():
     return jsonify(
