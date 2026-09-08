@@ -1,0 +1,40 @@
+id: network-static-routes
+title: Static Routes
+category: Network
+sheet: Static Routes
+summary: Bulk create, update or delete static IPv4/IPv6 unicast routes on a virtual router.
+handler: services.network.apply_static_routes
+columns:
+- Action
+- Name
+- Virtual Router
+- Version
+- Destination
+- Next Hop Type
+- Next Hop
+- Interface
+- Metric
+- Admin Distance
+- Description
+examples:
+- Action: create
+  Name: sample--default
+  Virtual Router: default
+  Version: ipv4
+  Destination: 0.0.0.0/0
+  Next Hop Type: ip-address
+  Next Hop: 192.0.2.1
+  Interface: ethernet1/1
+  Metric: '10'
+column_widths:
+  A: 10
+  B: 22
+  C: 18
+  D: 10
+  E: 18
+  F: 14
+  G: 18
+  H: 16
+  I: 10
+  J: 14
+  K: 26

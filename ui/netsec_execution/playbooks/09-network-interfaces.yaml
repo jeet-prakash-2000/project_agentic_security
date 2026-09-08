@@ -1,0 +1,26 @@
+id: network-interfaces
+title: Layer3 Interfaces
+category: Network
+sheet: Interfaces
+summary: Bulk assign IP addresses, an interface management profile and MTU to layer3 ethernet
+  interfaces.
+handler: services.network.apply_interfaces
+columns:
+- Action
+- Interface
+- IP Addresses
+- Management Profile
+- MTU
+- Description
+examples:
+- Action: update
+  Interface: ethernet1/1
+  IP Addresses: 10.0.0.1/24
+  Management Profile: ALLOW-PING-SSH
+column_widths:
+  A: 10
+  B: 16
+  C: 34
+  D: 26
+  E: 8
+  F: 26

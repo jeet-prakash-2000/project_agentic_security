@@ -1,0 +1,28 @@
+id: network-zones
+title: Security Zones
+category: Network
+sheet: Zones
+summary: Bulk create, update or delete zones including layer3/layer2 interface membership,
+  zone-protection and log settings.
+handler: services.network.apply_zones
+columns:
+- Action
+- Name
+- Type
+- Interfaces
+- Zone Protection Profile
+- Log Setting
+- Enable User Identification
+examples:
+- Action: create
+  Name: sample--zone
+  Type: layer3
+  Interfaces: ethernet1/2
+column_widths:
+  A: 10
+  B: 20
+  C: 12
+  D: 30
+  E: 24
+  F: 24
+  G: 20

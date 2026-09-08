@@ -1,0 +1,33 @@
+id: network-interface-mgmt
+title: Interface Management Profiles
+category: Network
+sheet: Interface Management Profiles
+summary: Bulk create, update or delete interface management profiles (ping/telnet/ssh/https/http/snmp
+  access).
+handler: services.network.apply_interface_management_profiles
+columns:
+- Action
+- Name
+- Ping
+- Telnet
+- SSH
+- HTTPS
+- HTTP
+- SNMP
+- Response Pages
+examples:
+- Action: create
+  Name: sample--mgmt
+  Ping: 'yes'
+  SSH: 'yes'
+  HTTPS: 'yes'
+column_widths:
+  A: 10
+  B: 26
+  C: 8
+  D: 8
+  E: 8
+  F: 8
+  G: 8
+  H: 8
+  I: 16

@@ -1,0 +1,50 @@
+id: policies-nat-rules
+title: NAT Policies
+category: Security & NAT
+sheet: NAT Rules
+summary: Bulk create, update or delete source / destination NAT rules (dynamic-ip-and-port,
+  dynamic-ip, static-ip).
+handler: services.policies.apply_nat_rules
+columns:
+- Action
+- Name
+- Description
+- From
+- Source
+- Destination
+- Service
+- To
+- NAT Type
+- Source Translation
+- Translated Interface
+- Source Translated Address
+- Destination Translated Address
+- Destination Translated Port
+- Disabled
+examples:
+- Action: create
+  Name: sample--snat
+  From: trust
+  To: untrust
+  Source: 198.51.100.10/32, 198.51.100.11/32
+  Destination: any
+  Service: any
+  NAT Type: source
+  Source Translation: dynamic-ip-and-port
+  Translated Interface: ethernet1/1
+column_widths:
+  A: 10
+  B: 26
+  C: 28
+  D: 14
+  E: 26
+  F: 26
+  G: 14
+  H: 14
+  I: 16
+  J: 20
+  K: 20
+  L: 26
+  M: 26
+  N: 22
+  O: 10

@@ -1,0 +1,26 @@
+id: objects-address-groups
+title: Address Groups
+category: Objects
+sheet: Address Groups
+summary: Bulk create, update or delete static address groups (member addresses or other groups).
+handler: services.objects.apply_address_groups
+columns:
+- Action
+- Name
+- Group Type
+- Members
+- Description
+- Tags
+examples:
+- Action: create
+  Name: sample-web-tier
+  Group Type: static
+  Members: sample-web, sample-api
+  Description: sample web tier group
+column_widths:
+  A: 10
+  B: 24
+  C: 12
+  D: 34
+  E: 26
+  F: 26

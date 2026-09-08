@@ -1,0 +1,27 @@
+id: objects-addresses
+title: Address Objects
+category: Objects
+sheet: Addresses
+summary: Bulk create, update or delete shared address objects (ip-netmask, ip-range or fqdn)
+  from the Addresses sheet.
+handler: services.objects.apply_addresses
+columns:
+- Action
+- Name
+- Address Type
+- Address Value
+- Description
+- Tags
+examples:
+- Action: create
+  Name: sample-web
+  Address Type: ip-netmask
+  Address Value: 198.51.100.10/32
+  Description: sample web server
+column_widths:
+  A: 10
+  B: 24
+  C: 14
+  D: 26
+  E: 26
+  F: 26

@@ -1,0 +1,21 @@
+id: network-virtual-routers
+title: Virtual Routers
+category: Network
+sheet: Virtual Routers
+summary: Bulk create, update or delete virtual routers and their layer3 interface membership.
+handler: services.network.apply_virtual_routers
+columns:
+- Action
+- Name
+- Interfaces
+- Description
+examples:
+- Action: create
+  Name: sample--vr
+  Interfaces: ethernet1/1, ethernet1/2
+  Description: sample virtual router
+column_widths:
+  A: 10
+  B: 22
+  C: 34
+  D: 26

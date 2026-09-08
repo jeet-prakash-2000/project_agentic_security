@@ -14,6 +14,9 @@ download -> fill -> upload -> run playbook panel.
 
 ```
 connector/panos.py      PAN-OS XML-API client (keygen + config get/set/delete)
+playbooks/              YAML playbook catalogue (one .yaml per playbook; the
+                        NN- filename prefix sets the catalogue order)
+run_playbook.py         CLI runner (python -m netsec_execution.run_playbook)
 services/
   common.py             shared helpers (list parsing, env access)
   objects.py            address objects, groups, services, service groups, tags
@@ -21,10 +24,43 @@ services/
   vr.py                 virtual routers and static routes
   policies.py           security pre-rules and NAT rules
   network.py            layer3 interfaces
-  catalog.py            playbook catalogue (11 playbooks, template columns)
+  loader.py             reads + validates the YAML playbooks, resolves handlers
+  catalog.py            public catalogue API over the loaded YAML playbooks
   workbook.py           .xlsx parse / summarize / template build
   engine.py             per-row execution engine with error isolation
 ```
+
+## Playbooks are YAML
+
+Each playbook is a plain YAML file in `playbooks/` named after its `id` (e.g.
+`objects-addresses.yaml`). It declares the workbook sheet it maps to, the
+template columns, example rows, column widths, and the row-execution handler:
+
+```yaml
+id: objects-addresses
+title: Address Objects
+category: Objects
+sheet: Addresses
+summary: Bulk create, update or delete shared address objects.
+handler: services.objects.apply_addresses
+columns: [Action, Name, Address Type, Address Value, Description, Tags]
+examples:
+  - Action: create
+    Name: sample-web
+    Address Type: ip-netmask
+    Address Value: 198.51.100.10/32
+```
+
+`catalog.py` no longer hard-codes playbooks: at import time
+`services/loader.py` reads every file in `playbooks/`, validates the required
+keys (`id`, `title`, `category`, `sheet`, `summary`, `handler`, `columns`) and
+resolves each `handler` reference to the `services` function that executes a
+single row. The engine, workbook builder and web service keep using the same
+public API (`catalog.PLAYBOOKS`, `catalog.list_playbooks()`,
+`catalog.find_playbook()`), so behaviour is unchanged.
+
+The loader depends on `PyYAML` (`pip install pyyaml`); the workbook features
+depend on `openpyxl` and the firewall client on `requests`.
 
 ## Environment variables
 
@@ -64,6 +100,22 @@ workbook.build_template("/tmp/workbook.xlsx", catalog.PLAYBOOKS)
 result = engine.run_playbook(client, "objects-addresses",
                              workbook_path="/tmp/workbook.xlsx")
 print(result["counts"])                      # rows/created/updated/deleted/errors
+```
+
+### Command line
+
+A runner reads an uploaded Excel workbook, matches its sheet to a YAML
+playbook and executes every row (the same path the web bulk-upload uses):
+
+```bash
+# list the available YAML playbooks
+python -m netsec_execution.run_playbook --list
+
+# execute the playbook for the rows in the workbook (dry run by default)
+python -m netsec_execution.run_playbook /tmp/workbook.xlsx objects-addresses
+
+# JSON output; exit code 0 = all rows ok, 1 = row errors, 2 = usage/config
+python -m netsec_execution.run_playbook /tmp/workbook.xlsx objects-addresses --json
 ```
 
 ## Safety model

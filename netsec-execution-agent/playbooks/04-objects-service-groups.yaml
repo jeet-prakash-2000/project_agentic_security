@@ -1,0 +1,23 @@
+id: objects-service-groups
+title: Service Groups
+category: Objects
+sheet: Service Groups
+summary: Bulk create, update or delete service groups.
+handler: services.objects.apply_service_groups
+columns:
+- Action
+- Name
+- Members
+- Description
+- Tags
+examples:
+- Action: create
+  Name: sample--web-services
+  Members: sample-https, sample-http
+  Description: sample web service group
+column_widths:
+  A: 10
+  B: 24
+  C: 34
+  D: 26
+  E: 26

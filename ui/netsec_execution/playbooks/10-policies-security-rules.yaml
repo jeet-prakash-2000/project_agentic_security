@@ -1,0 +1,47 @@
+id: policies-security-rules
+title: Security Policies
+category: Security & NAT
+sheet: Security Rules
+summary: Bulk create, update or delete security rules with zone, source/destination, application,
+  service and action columns.
+handler: services.policies.apply_security_rules
+columns:
+- Action
+- Name
+- Description
+- From
+- To
+- Source
+- Destination
+- Users
+- Applications
+- Services
+- Categories
+- Rule Action
+- Log Setting
+- Disabled
+examples:
+- Action: create
+  Name: sample--allow-web
+  From: trust
+  To: untrust
+  Source: any
+  Destination: sample-web
+  Applications: web-browsing
+  Services: application-default
+  Rule Action: allow
+column_widths:
+  A: 10
+  B: 26
+  C: 28
+  D: 14
+  E: 14
+  F: 18
+  G: 20
+  H: 18
+  I: 20
+  J: 22
+  K: 18
+  L: 12
+  M: 20
+  N: 10

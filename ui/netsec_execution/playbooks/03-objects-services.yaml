@@ -1,0 +1,28 @@
+id: objects-services
+title: Service Objects
+category: Objects
+sheet: Services
+summary: Bulk create, update or delete TCP/UDP/SCTP service objects (protocol + port).
+handler: services.objects.apply_services
+columns:
+- Action
+- Name
+- Protocol
+- Port
+- Source Port
+- Description
+- Tags
+examples:
+- Action: create
+  Name: sample--https
+  Protocol: tcp
+  Port: '443'
+  Description: sample HTTPS service
+column_widths:
+  A: 10
+  B: 24
+  C: 10
+  D: 10
+  E: 14
+  F: 26
+  G: 26
