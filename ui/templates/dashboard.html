@@ -6,17 +6,27 @@
 
 {% block content %}
 
-<div class="dash-meta">
-    <select class="fw-select" id="firewallSelect" title="Select firewall">
-        {% for fw in firewalls or ['vmpafw01', 'vmpafw02'] %}
-        <option value="{{ fw }}" {{ 'selected' if fw == firewall_id else '' }}>{{ fw }}</option>
-        {% endfor %}
-    </select>
-    <span class="hero-chip" id="dataSourceBadge">Connecting…</span>
-    <button class="hero-chip hero-chip-btn" id="refreshBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 102.6-8L1 10"/></svg>
-        Refresh
-    </button>
+<div class="dash-header">
+    <div class="dash-heading">
+        <span class="hero-eyebrow">Security Operations · Live Overview</span>
+        <h1>Dashboard</h1>
+        <p>Compliance score, findings and risk domains across your firewall estate — refreshed in real time.</p>
+    </div>
+    <div class="dash-meta">
+        <label class="fw-pick" title="Select firewall">
+            <span>Firewall</span>
+            <select id="firewallSelect">
+                {% for fw in firewalls or ['vmpafw01', 'vmpafw02'] %}
+                <option value="{{ fw }}" {{ 'selected' if fw == firewall_id else '' }}>{{ fw }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <span class="hero-chip" id="dataSourceBadge">Connecting…</span>
+        <button class="hero-chip-btn" id="refreshBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 102.6-8L1 10"/></svg>
+            Refresh
+        </button>
+    </div>
 </div>
 
 <section class="dash-grid-2">
