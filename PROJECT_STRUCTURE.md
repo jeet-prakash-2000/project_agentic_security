@@ -314,7 +314,7 @@ never stored in the database.
 | `NETSEC_FW_HOST` | firewall host/IP targeted by playbooks | — |
 | `NETSEC_FW_USERNAME` / `NETSEC_FW_PASSWORD` | admin credentials for `keygen` | — |
 | `NETSEC_FW_API_KEY` | optional pre-generated API key (skips `keygen`) | — |
-| `NETSEC_FW_DRY_RUN` | `1` previews every change, `0` applies them | `1` |
+| `NETSEC_FW_DRY_RUN` | `1` previews every change, `0` applies **and commits** them to the running config | `1` |
 | `NETSEC_WORKBOOK_DIR` | where uploaded workbooks are stored | `/tmp/netsec_uploads` |
 | `NETSEC_MAX_ROWS` | max data rows executed per run | `500` |
 | `FOUNDRY_API_KEY_NETSEC_EXECUTION_AGENT` | Foundry key for Agent Health probe of this agent | shared `FOUNDRY_API_KEY` |

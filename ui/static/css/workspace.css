@@ -2051,6 +2051,20 @@
     color: var(--text-muted);
 }
 
+.netsec-commit {
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.netsec-commit-ok {
+    color: var(--success);
+}
+
+.netsec-commit-err {
+    color: #EF4444;
+}
+
 .netsec-results-table {
     margin-top: 14px;
     overflow-x: auto;

@@ -118,7 +118,7 @@
         var info = state.info;
         var pb = selectedPlaybook();
         var parts = [];
-        if (info && info.dry_run) parts.push("DRY RUN - nothing will be written to the firewall.");
+        if (info) parts.push(info.dry_run ? "DRY RUN - nothing will be sent to the firewall." : "Apply mode - running will write changes and commit them to the running config.");
         if (pb && pb.sheet) parts.push("Executes sheet \u201c" + pb.sheet + "\u201d.");
         if (pb && pb.summary) parts.push(pb.summary);
         els.runNote.textContent = parts.join(" ");
@@ -259,6 +259,7 @@
             countChip(c.deleted, "deleted", dry), countChip(c.errors, "errors", true),
             "</div>",
             "<p class=\"netsec-result-summary\">" + esc(data.summary || "") + "</p>",
+            commitLine(data),
             (data.host ? '<p class="netsec-result-meta">Firewall: ' + esc(data.host) + "</p>" : ""),
             "</div>"
         );
@@ -277,6 +278,16 @@
             cards.push('<div class="netsec-results-table"><table><thead>' + thead + "</thead><tbody>" + body + "</tbody></table></div>");
         }
         els.results.innerHTML = cards.join("");
+    }
+
+    function commitLine(data) {
+        if (data.committed) {
+            return '<p class="netsec-commit netsec-commit-ok">Changes committed to the running firewall configuration.</p>';
+        }
+        if (data.commit_error) {
+            return '<p class="netsec-commit netsec-commit-err">Commit failed: ' + esc(data.commit_error) + "</p>";
+        }
+        return "";
     }
 
     function countChip(n, label, emphasise) {

@@ -38,11 +38,23 @@ def _count_key(op):
     return {"create": "created", "update": "updated", "delete": "deleted"}.get(op, op)
 
 
-def run_playbook(client, playbook_id, workbook_path=None, rows=None, row_limit=None):
+def run_playbook(
+    client,
+    playbook_id,
+    workbook_path=None,
+    rows=None,
+    row_limit=None,
+    commit=None,
+):
     """Execute ``playbook_id`` against workbook rows.
 
     Pass either ``workbook_path`` (parsed automatically) or already-parsed
     ``rows``. Returns a result dict safe to JSON-serialize.
+
+    ``commit`` defaults to ``not client.dry_run``: under dry run nothing is
+    sent to the firewall at all, while in apply mode (``NETSEC_FW_DRY_RUN=0``)
+    the candidate changes are committed to the running configuration after the
+    last row so they actually take effect.
     """
     playbook = catalog.find_playbook(playbook_id)
     if playbook is None:
@@ -95,7 +107,28 @@ def run_playbook(client, playbook_id, workbook_path=None, rows=None, row_limit=N
             )
         per_row.append(record)
 
+    committed = False
+    commit_error = None
+    if (commit is None and not client.dry_run) or commit is True:
+        if client.dry_run:
+            logger.info("commit skipped: dry run")
+        else:
+            try:
+                client.commit(
+                    description="netsec playbook {0}".format(playbook_id)
+                )
+                committed = True
+            except Exception as exc:  # noqa: BLE001 - surfaced on the result
+                commit_error = str(exc)[:300]
+                logger.warning("playbook %s commit failed: %s", playbook_id, exc)
+
     summary_text = _summary_text(playbook, counts, client.dry_run)
+    if committed:
+        summary_text += (
+            " Changes were committed to the running firewall configuration."
+        )
+    elif commit_error:
+        summary_text += " Commit FAILED: {0}.".format(commit_error)
     return {
         "playbook_id": playbook_id,
         "playbook_title": playbook.get("title"),
@@ -104,6 +137,8 @@ def run_playbook(client, playbook_id, workbook_path=None, rows=None, row_limit=N
         "dry_run": bool(client.dry_run),
         "counts": counts,
         "rows": per_row,
+        "committed": committed,
+        "commit_error": commit_error,
         "summary": summary_text,
     }
 

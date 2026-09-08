@@ -1097,7 +1097,12 @@ def api_netsec_playbooks_run():
     if not playbook_id:
         return jsonify({"error": "playbook_id is required."}), 400
     try:
-        result = netsec_service.run_playbook(current_user_id(), playbook_id)
+        commit_flag = payload.get("commit")
+        if commit_flag is not None:
+            commit_flag = bool(commit_flag)
+        result = netsec_service.run_playbook(
+            current_user_id(), playbook_id, commit=commit_flag
+        )
         return jsonify(result)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400

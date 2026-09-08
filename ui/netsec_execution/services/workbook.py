@@ -108,8 +108,9 @@ def build_template(path, playbooks):
         ["new lines to separate entries, e.g. web, db"],
         [],
         ["Empty rows are ignored. Running a playbook is a DRY RUN by default,"],
-        ["so nothing is changed until the platform is configured with"],
-        ["NETSEC_FW_DRY_RUN=0."],
+        ["so nothing is sent to the firewall until the platform is configured"],
+        ["with NETSEC_FW_DRY_RUN=0. In apply mode the run automatically"],
+        ["commits the changes to the running configuration at the end."],
     ]
     for line in help_lines:
         ws_help.append(line)

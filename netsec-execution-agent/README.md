@@ -70,6 +70,9 @@ print(result["counts"])                      # rows/created/updated/deleted/erro
 
 * Every mutating call honours `client.dry_run`; nothing reaches the firewall
   until `NETSEC_FW_DRY_RUN=0`.
+* In apply mode, `run_playbook` commits the candidate changes to the running
+  configuration after the last row, so playbook runs actually take effect;
+  dry-run runs never commit.
 * The engine executes each row independently - one bad row never aborts the
   rest, and every outcome (create/update/delete/error) is returned per row.
 * No credential is ever persisted or logged; the API key is held in memory.

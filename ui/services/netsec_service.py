@@ -80,8 +80,12 @@ def build_template_bytes():
     return buffer
 
 
-def run_playbook(user_id, playbook_id):
+def run_playbook(user_id, playbook_id, commit=None):
     """Execute one playbook against the firewall for the user's workbook.
+
+    When the platform runs in apply mode (``NETSEC_FW_DRY_RUN=0``) the run
+    commits the changes to the running configuration afterwards; pass
+    ``commit`` explicitly to override (e.g. preview-only staging).
 
     Raises ``ValueError`` with a user-friendly message when the firewall is
     not configured or no workbook has been uploaded.
@@ -110,6 +114,7 @@ def run_playbook(user_id, playbook_id):
         playbook_id,
         workbook_path=path,
         row_limit=row_limit,
+        commit=commit,
     )
     result["host"] = client.host
     return result
