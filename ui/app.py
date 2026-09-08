@@ -1021,9 +1021,92 @@ def api_cloudsec_action():
         return jsonify({"error": str(e)}), 502
 
 
+@app.route("/api/netsec/info")
+@login_required
+def api_netsec_info():
+    """Connection status + playbook catalogue for the NetSec panel."""
+
+    from services import netsec_service
+
+    try:
+        return jsonify(netsec_service.info())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/netsec/workbook/template")
+@login_required
+def api_netsec_workbook_template():
+    """Download the fill-in playbook template (.xlsx)."""
+
+    from services import netsec_service
+
+    try:
+        buffer = netsec_service.build_template_bytes()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name="netsec-playbook-template.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@app.route("/api/netsec/workbook", methods=["POST"])
+@login_required
+def api_netsec_workbook_upload():
+    """Store the uploaded workbook for the current user."""
+
+    from services import netsec_service
+
+    file = request.files.get("file")
+    if file is None or not file.filename:
+        return jsonify({"error": "A workbook file is required."}), 400
+    try:
+        summary = netsec_service.save_workbook(current_user_id(), file)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"uploaded": True, "summary": summary})
+
+
+@app.route("/api/netsec/workbook")
+@login_required
+def api_netsec_workbook_get():
+    """Return the summary of the user's stored workbook (if any)."""
+
+    from services import netsec_service
+
+    summary = netsec_service.workbook_summary(current_user_id())
+    if summary is None:
+        return jsonify({"summary": None}), 404
+    return jsonify({"summary": summary})
+
+
+@app.route("/api/netsec/playbooks/run", methods=["POST"])
+@login_required
+def api_netsec_playbooks_run():
+    """Execute a playbook against the firewall and return per-row results."""
+
+    from services import netsec_service
+
+    payload = request.get_json(silent=True) or {}
+    playbook_id = (payload.get("playbook_id") or "").strip()
+    if not playbook_id:
+        return jsonify({"error": "playbook_id is required."}), 400
+    try:
+        result = netsec_service.run_playbook(current_user_id(), playbook_id)
+        return jsonify(result)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+
+
 @app.route("/api/tools")
 def api_tools():
-
     return jsonify(
         {"tools": gateway.tools()}
     )

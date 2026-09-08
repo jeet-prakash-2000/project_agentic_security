@@ -21,6 +21,17 @@
       "connected": true,
       "created_at": "2026-09-03T00:00:00Z",
       "agent_id": "Incident-Response-Agent-Cloud-Security"
+    },
+    {
+      "id": "netsec-execution-agent",
+      "name": "NetSec-Execution-Agent",
+      "type": "Network Security Execution",
+      "model": "gpt-5.1",
+      "agent_endpoint": "https://network-security-agents.services.ai.azure.com/api/projects/network-security-agents-project",
+      "api_key": "PLACEHOLDER_REPLACE_WITH_YOUR_API_KEY",
+      "connected": false,
+      "created_at": "2026-09-08T00:00:00Z",
+      "agent_id": "NetSec-Execution-Agent"
     }
   ]
 }

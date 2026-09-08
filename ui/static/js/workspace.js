@@ -24,6 +24,8 @@
     var sendBtn = document.getElementById("sendBtn");
     var promptChips = document.getElementById("promptChips");
     var composerAgentBadge = document.getElementById("composerAgentBadge");
+    var composerWrap = document.querySelector(".ws-composer-wrap");
+    var netsecPanel = document.getElementById("wsNetsecPanel");
 
     var modal = document.getElementById("addAgentModal");
     var openBtn = document.getElementById("openAddAgentBtn");
@@ -1124,6 +1126,11 @@
         var text = (prompt || "").trim();
         if (!text) return;
 
+        if (isNetsecAgent(state.activeAgent)) {
+            window.showToast("Chat is disabled for the NetSec Execution Agent - use the playbook panel.", "error");
+            return;
+        }
+
         ensureActiveId();
         appendMessage({ role: "user", content: text, ts: now() });
         renderConversationList();
@@ -1200,6 +1207,28 @@
 
         renderPromptChips();
         if (chatWindow && !state.messages.length) renderEmptyState();
+        applyNetsecMode(agent);
+    }
+
+    function isNetsecAgent(agent) {
+        if (!agent) return false;
+        if (window.NetsecPanel && window.NetsecPanel.isNetsecAgent(agent)) return true;
+        var text = String(agent.id || "") + " " + String(agent.name || "") + " " + String(agent.type || "");
+        return /netsec|execution/i.test(text);
+    }
+
+    function applyNetsecMode(agent) {
+        var active = isNetsecAgent(agent);
+        if (!netsecPanel) return;
+        netsecPanel.hidden = !active;
+        if (chatWindow) chatWindow.hidden = active;
+        if (promptChips) promptChips.hidden = active;
+        if (composerWrap) composerWrap.hidden = active;
+        if (sendBtn) sendBtn.disabled = active;
+        if (promptInput) promptInput.disabled = active;
+        if (active && window.NetsecPanel && window.NetsecPanel.activate) {
+            window.NetsecPanel.activate();
+        }
     }
 
     function populateAgentSelect() {

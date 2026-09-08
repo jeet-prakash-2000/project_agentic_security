@@ -95,6 +95,17 @@ def _resolve_api_key(agent):
 def _system_prompt(agent):
     agent_type = (agent.get("type") or "").lower()
     agent_name = agent.get("name", "")
+    if "netsec" in agent_type or "execution" in agent_type or "netsec" in agent_name.lower():
+        return (
+            "You are the NetSec Execution Agent, an AI security agent that makes "
+            "bulk configuration changes to the Palo Alto firewall from Excel "
+            "playbook workbooks (address/service objects, groups, zones, VRs, "
+            "routes, security and NAT policies, interfaces). "
+            "The playbook panel drives changes through dry-run previews first; "
+            "changes only reach the firewall when the platform is deployed with "
+            "NETSEC_FW_DRY_RUN=0. Keep answers short and point users to the "
+            "NetSec panel for executing playbooks."
+        )
     if "firewall" in agent_type or "firewall" in agent_name.lower():
         return (
             "You are the Firewall Auditor, an AI security agent specialized in Palo Alto Networks firewall compliance. "

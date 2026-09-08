@@ -62,6 +62,7 @@ project_agentic_security/
 │   │   ├── sample_assessment.py     # Sample/fallback assessment data
 │   │   ├── app_insights.py          # App Insights telemetry
 │   │   ├── chat_service.py
+│   │   ├── netsec_service.py         # NetSec playbook bridge (env-config firewall)
 │   │   ├── timeutil.py
 │   │   └── dashboard_service.py
 │   ├── scripts/
@@ -69,10 +70,13 @@ project_agentic_security/
 │   │   └── test_db_connection.py         # DB connectivity check
 │   ├── static/
 │   │   ├── css/                     # main.css, dashboard.css, findings.css, workspace.css, landing.css, login.css, …
-│   │   ├── js/                      # main.js, dashboard.js, findings.js, workspace.js, finding_enrichment.js, …
+│   │   ├── js/                      # main.js, dashboard.js, findings.js, workspace.js, finding_enrichment.js, netsec.js, …
 │   │   ├── images/logo.svg          # LTM monogram shield
 │   │   ├── reports/                 # Generated PDF / XLSX artifacts
 │   │   └── vendor/                  # cytoscape.js + webfonts
+│   ├── netsec_execution/            # NetSec Execution Agent engine (bulk firewall changes)
+│   │   ├── connector/panos.py       # PAN-OS XML-API client (keygen + config ops, dry-run)
+│   │   └── services/                # catalog/objects/zones/VR/routes/security/NAT/network/engine/workbook
 │   └── templates/
 │       ├── base.html                # Shell: collapsible sidebar, topbar, toast, global agent
 │       ├── landing.html             # Public marketing page (login -> dashboard)
@@ -124,6 +128,10 @@ project_agentic_security/
         └── start_vm_service.py / stop_vm_service.py / restart_vm_service.py /
             isolate_vm_service.py / reconnect_vm_service.py
 ```
+
+> Note: `netsec_execution/` inside the UI is the deployed copy of the
+> standalone `netsec-execution-agent/` module (see its README). The two are
+> kept in sync before commit.
 
 ---
 
@@ -217,6 +225,10 @@ Entry point `ui/app.py` (run with `python3 app.py`, port `8003`).
 | `/api/system-status` | GET | Live/sample status |
 | `/api/telemetry-map` | GET | Telemetry graph |
 | `/api/telemetry-map/history` | GET | Telemetry history |
+| `/api/netsec/info` | GET | NetSec panel: connection status + playbook catalogue |
+| `/api/netsec/workbook/template` | GET | Download fill-in playbook `.xlsx` template |
+| `/api/netsec/workbook` | GET/POST | Read / store the user's playbook workbook |
+| `/api/netsec/playbooks/run` | POST | Execute a playbook against the firewall (per-row) |
 
 ### Storage (`config/storage.py` + `database/`)
 
@@ -287,6 +299,31 @@ Deployed via GitHub Actions (`.github/workflows/master_ltm-security-platform-ui.
 Deployed as Azure Function Apps (zip-deploy). Function-key auth is used by the UI
 (`services/function_client.py`) for live firewall calls; when keys are absent the UI
 degrades to sample data or the assessment snapshot.
+
+### 6.5 NetSec Execution Agent (`ui/netsec_execution` + `netsec-execution-agent/`)
+
+The NetSec Execution Agent appears in the AI Workspace as a third copilot
+(`NetSec-Execution-Agent`, `config/agents.json` -> `agents` table on boot via
+`services/bootstrap.py`). Selecting it opens the playbook panel
+(download -> fill -> upload -> run). Playbook runs talk **directly** to the
+firewall XML API from the web app; credentials are environment-only and are
+never stored in the database.
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `NETSEC_FW_HOST` | firewall host/IP targeted by playbooks | — |
+| `NETSEC_FW_USERNAME` / `NETSEC_FW_PASSWORD` | admin credentials for `keygen` | — |
+| `NETSEC_FW_API_KEY` | optional pre-generated API key (skips `keygen`) | — |
+| `NETSEC_FW_DRY_RUN` | `1` previews every change, `0` applies them | `1` |
+| `NETSEC_WORKBOOK_DIR` | where uploaded workbooks are stored | `/tmp/netsec_uploads` |
+| `NETSEC_MAX_ROWS` | max data rows executed per run | `500` |
+| `FOUNDRY_API_KEY_NETSEC_EXECUTION_AGENT` | Foundry key for Agent Health probe of this agent | shared `FOUNDRY_API_KEY` |
+
+The Agent Health card probes every registered agent, so without a Foundry key
+for the netsec agent it reports `down` (`No API key configured`) even though
+playbooks still run against `NETSEC_FW_*`; set
+`FOUNDRY_API_KEY_NETSEC_EXECUTION_AGENT` to the firewall project key to show it
+live.
 
 ### 6.3 Configuration & Secret Resolution
 

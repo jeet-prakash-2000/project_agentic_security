@@ -1,0 +1,115 @@
+"""NetSec Execution Agent service: workspace bridge to the playbook engine.
+
+The playbook engine (``netsec_execution``) talks directly to the Palo Alto
+firewall XML API. Credentials are read from the standard ``NETSEC_FW_*``
+environment variables at call time (see ``netsec_execution.connector.panos``)
+and are never stored in the application database.
+
+The per-user workbook is stored on the app server under ``NETSEC_WORKBOOK_DIR``
+(default ``/tmp/netsec_uploads``) so a user's playbook can be re-run.
+"""
+
+import io
+import logging
+import os
+import re
+
+from netsec_execution.connector.panos import PanosClient
+from netsec_execution.services import catalog
+from netsec_execution.services import engine
+from netsec_execution.services import workbook
+
+logger = logging.getLogger("netsec.service")
+
+UPLOAD_DIR = os.environ.get("NETSEC_WORKBOOK_DIR", "/tmp/netsec_uploads")
+MAX_ROWS = int(os.environ.get("NETSEC_MAX_ROWS", "500") or "500")
+
+_XLSX_MIME = (
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
+
+
+def _workbook_path(user_id):
+    safe_id = re.sub(r"[^A-Za-z0-9._-]+", "-", str(user_id or "anon"))
+    return os.path.join(UPLOAD_DIR, "{0}.xlsx".format(safe_id))
+
+
+def _ensure_dir():
+    try:
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+    except OSError as exc:
+        logger.warning("NetSec upload dir unavailable: %s", exc)
+
+
+def info():
+    """Public connection + catalogue payload for the workspace panel."""
+    client = PanosClient()
+    return {
+        "configured": bool(client.configured),
+        "missing": client.missing_config(),
+        "host": client.host or "",
+        "dry_run": bool(client.dry_run),
+        "max_rows": MAX_ROWS,
+        "playbooks": catalog.list_playbooks(),
+    }
+
+
+def save_workbook(user_id, file_storage):
+    """Persist an uploaded workbook for ``user_id`` and return its summary."""
+    _ensure_dir()
+    path = _workbook_path(user_id)
+    file_storage.save(path)
+    summary = workbook.summarize(path)
+    logger.info("Workbook saved for user %s: %s", user_id, summary)
+    return summary
+
+
+def workbook_summary(user_id):
+    """Return the summary of the user's stored workbook, or ``None``."""
+    path = _workbook_path(user_id)
+    if not os.path.exists(path):
+        return None
+    return workbook.summarize(path)
+
+
+def build_template_bytes():
+    """Build the fill-in playbook workbook and return it as a ``BytesIO``."""
+    buffer = io.BytesIO()
+    workbook.build_template(buffer, catalog.PLAYBOOKS)
+    buffer.seek(0)
+    return buffer
+
+
+def run_playbook(user_id, playbook_id):
+    """Execute one playbook against the firewall for the user's workbook.
+
+    Raises ``ValueError`` with a user-friendly message when the firewall is
+    not configured or no workbook has been uploaded.
+    """
+    client = PanosClient()
+    if not client.configured:
+        raise ValueError(
+            "The NetSec Execution agent is not connected to a firewall. "
+            "Missing environment configuration: {0}.".format(
+                ", ".join(client.missing_config())
+            )
+        )
+    path = _workbook_path(user_id)
+    if not os.path.exists(path):
+        raise ValueError(
+            "No playbook workbook uploaded yet. Download the template, fill "
+            "it in, then upload it in the panel before running a playbook."
+        )
+    summary = workbook.summarize(path)
+    total = summary.get("total_rows", 0)
+    row_limit = None
+    if total > MAX_ROWS:
+        row_limit = MAX_ROWS
+    result = engine.run_playbook(
+        client,
+        playbook_id,
+        workbook_path=path,
+        row_limit=row_limit,
+    )
+    result["host"] = client.host
+    return result

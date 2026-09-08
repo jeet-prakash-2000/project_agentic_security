@@ -94,13 +94,93 @@ def reclaim_legacy_data(user_id):
     return counts
 
 
+def seed_agents_from_config():
+    """Seed/refresh the agent registry from ``config/agents.json``.
+
+    Idempotent reconciliation: missing agents are created and field drift on
+    existing agents (name/type/model/endpoint) is corrected. A stored API key
+    is never overwritten by a placeholder from the config file, and the
+    ``connected`` flag of existing rows is left untouched so deploy-time
+    decisions survive restarts.
+    """
+    import json
+    import os
+
+    from database.repositories import AgentsRepository
+
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "config",
+        "agents.json",
+    )
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except Exception as exc:
+        log.warning("Agent registry seed skipped (agents.json unreadable): %s", exc)
+        return 0
+
+    repo = AgentsRepository(get_session())
+    seeded = 0
+    for entry in payload.get("agents") or []:
+        agent_id = (entry.get("id") or "").strip()
+        if not agent_id:
+            continue
+        endpoint = entry.get("agent_endpoint") or ""
+        api_key = entry.get("api_key") or ""
+        if not endpoint:
+            continue
+
+        existing = repo.get(agent_id)
+        if existing is None:
+            repo.create(
+                {
+                    "id": agent_id,
+                    "name": entry.get("name") or agent_id,
+                    "type": entry.get("type") or "Custom Agent",
+                    "model": entry.get("model") or "gpt-5.1",
+                    "agent_endpoint": endpoint,
+                    "api_key": api_key,
+                    "connected": bool(entry.get("connected", False)),
+                    "created_at": entry.get("created_at") or time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "agent_id": entry.get("agent_id") or entry.get("name") or agent_id,
+                }
+            )
+            seeded += 1
+            log.info("Seeded agent %s from config.", agent_id)
+            continue
+
+        updates = {}
+        if (existing.name or "") != (entry.get("name") or agent_id):
+            updates["name"] = entry.get("name") or agent_id
+        if (existing.type or "") != (entry.get("type") or "Custom Agent"):
+            updates["type"] = entry.get("type") or "Custom Agent"
+        if (existing.model or "") != (entry.get("model") or "gpt-5.1"):
+            updates["model"] = entry.get("model") or "gpt-5.1"
+        if (existing.agent_endpoint or "") != endpoint:
+            updates["agent_endpoint"] = endpoint
+        current_key = existing.api_key or ""
+        if not current_key or current_key.startswith("PLACEHOLDER"):
+            if api_key and (existing.api_key or "") != api_key:
+                updates["api_key"] = api_key
+        if updates:
+            repo.update(agent_id, **updates)
+            seeded += 1
+    return seeded
+
+
 def run_bootstrap():
-    """Seed the administrator and reclaim legacy rows. Never raises."""
+    """Seed the administrator, agent registry and reclaim legacy rows."""
     try:
         admin_id = ensure_admin_user()
     except Exception as exc:
         log.warning("Admin seed failed: %s", exc)
         return
+
+    try:
+        seed_agents_from_config()
+    except Exception as exc:
+        log.warning("Agent registry seed failed: %s", exc)
 
     try:
         counts = reclaim_legacy_data(admin_id)

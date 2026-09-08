@@ -1743,3 +1743,368 @@
     .ws-cloud-fields-duo { flex-direction: column; }
 }
 
+/* ============================================================
+   NETSEC EXECUTION PANEL
+   ============================================================ */
+
+.ws-netsec[hidden],
+.ws-messages[hidden],
+.ws-prompt-chips[hidden],
+.ws-composer-wrap[hidden] {
+    display: none !important;
+}
+
+.ws-netsec {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 22px 24px 28px;
+    box-sizing: border-box;
+}
+
+.netsec-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.netsec-title {
+    margin: 0 0 4px;
+    font-size: 20px;
+    line-height: 1.3;
+    color: var(--text);
+}
+
+.netsec-subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-muted);
+    max-width: 560px;
+}
+
+.netsec-badge {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid;
+}
+
+.netsec-badge[data-state="ok"] {
+    color: var(--success);
+    border-color: rgba(22, 163, 74, 0.4);
+    background: rgba(22, 163, 74, 0.08);
+}
+
+.netsec-badge[data-state="down"],
+.netsec-badge[data-state="error"] {
+    color: #EF4444;
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.netsec-badge[data-state="unknown"] {
+    color: var(--text-muted);
+    border-color: var(--glass-border);
+    background: rgba(127, 127, 127, 0.08);
+}
+
+.netsec-badge[data-state="ok"]::before,
+.netsec-badge[data-state="down"]::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.netsec-alert {
+    margin: 6px 0 14px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    border: 1px solid;
+}
+
+.netsec-alert code {
+    background: rgba(127, 127, 127, 0.14);
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-size: 12px;
+}
+
+.netsec-alert-warn {
+    color: #B45309;
+    border-color: rgba(217, 119, 6, 0.35);
+    background: var(--warning-soft);
+}
+
+.netsec-alert-info {
+    color: #0369A1;
+    border-color: rgba(3, 105, 161, 0.3);
+    background: rgba(3, 105, 161, 0.06);
+}
+
+.netsec-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.netsec-step {
+    display: flex;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--glass-border);
+    background: rgba(127, 127, 127, 0.05);
+    border-radius: 14px;
+}
+
+.netsec-step-num {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: #fff;
+    background: var(--gradient-red);
+    box-shadow: 0 5px 12px rgba(228, 0, 43, 0.25);
+}
+
+.netsec-step-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.netsec-step-main h3 {
+    margin: 0 0 5px;
+    font-size: 15px;
+    color: var(--text);
+}
+
+.netsec-step-main p {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.netsec-step-main code {
+    background: rgba(127, 127, 127, 0.14);
+    padding: 1px 5px;
+    border-radius: 5px;
+    font-size: 12px;
+}
+
+.netsec-upload-row,
+.netsec-run-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.netsec-file-input {
+    font-size: 13px;
+    color: var(--text);
+    max-width: 320px;
+}
+
+.netsec-select {
+    min-width: 260px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--glass-border);
+    background: var(--glass);
+    color: var(--text);
+    font-size: 13px;
+}
+
+.netsec-run-note {
+    margin: 8px 0 0 !important;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.netsec-wb-summary {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(22, 163, 74, 0.07);
+    border: 1px solid rgba(22, 163, 74, 0.25);
+}
+
+.netsec-wb-total {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--success);
+}
+
+.netsec-wb-sheets {
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.netsec-wb-sheets li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(127, 127, 127, 0.1);
+    font-size: 12px;
+}
+
+.netsec-wb-sheet {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.netsec-wb-count {
+    color: var(--text-muted);
+}
+
+.netsec-loading {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.netsec-result-card {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: rgba(127, 127, 127, 0.06);
+}
+
+.netsec-result-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.netsec-result-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text);
+}
+
+.netsec-pill {
+    padding: 3px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.netsec-ok { color: var(--success); background: rgba(22, 163, 74, 0.12); }
+.netsec-partial { color: #D97706; background: rgba(217, 119, 6, 0.14); }
+
+.netsec-result-counts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.netsec-count {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(127, 127, 127, 0.1);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.netsec-count-warn {
+    color: #EF4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.netsec-result-summary {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.netsec-result-meta {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.netsec-results-table {
+    margin-top: 14px;
+    overflow-x: auto;
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+}
+
+.netsec-results-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+
+.netsec-results-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--glass-border);
+    background: rgba(127, 127, 127, 0.05);
+}
+
+.netsec-results-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid rgba(127, 127, 127, 0.08);
+    color: var(--text);
+    vertical-align: top;
+}
+
+.netsec-results-table tr:last-child td {
+    border-bottom: none;
+}
+
+.netsec-cell-detail {
+    color: var(--text-muted);
+    min-width: 180px;
+}
+
+.netsec-op {
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.netsec-op-created,
+.netsec-op-update,
+.netsec-op-updated { color: var(--success); background: rgba(22, 163, 74, 0.12); }
+.netsec-op-delete,
+.netsec-op-deleted { color: #EF4444; background: rgba(239, 68, 68, 0.1); }
+.netsec-op-dry-run { color: #0369A1; background: rgba(3, 105, 161, 0.1); }
+.netsec-op-error { color: #EF4444; background: rgba(239, 68, 68, 0.14); }
+
+
