@@ -417,18 +417,26 @@
             .replace(/"/g, "&quot;");
     }
 
-    function statusHtml(connected) {
-        var cls = connected ? "status-on" : "status-idle";
-        var label = connected ? "Connected" : "Not connected";
-        return '<span class="status-chip ' + cls + '">' + label + "</span>";
+    function statusHtml(agent) {
+        var live = agent.status === "live";
+        var cls = live ? "live" : "down";
+        var label = live ? "Live" : "Down";
+        var detail = agent.detail || "";
+        var latency = "";
+        if (live && typeof agent.latency_ms === "number") {
+            latency = " · " + agent.latency_ms + " ms";
+        }
+        var title = detail + latency;
+        return '<span class="fw-status" title="' + escapeHtml(title) + '"><span class="status-dot ' + cls + '"></span>' +
+            label + "</span>";
     }
 
     function renderAgents(agents) {
         var rows = agents.map(function (agent) {
             return "<tr data-id=\"" + escapeHtml(agent.id || "") + "\">" +
                 "<td>" + escapeHtml(agent.name || "") + "</td>" +
-                "<td>" + escapeHtml(agent.type || "") + "</td>" +
-                "<td>" + statusHtml(!!agent.connected) + "</td>" +
+                "<td>" + escapeHtml(agent.type || "Custom Agent") + "</td>" +
+                "<td>" + statusHtml(agent) + "</td>" +
                 '<td class="users-actions">' +
                 '<button class="btn btn-sm btn-danger" data-action="remove" data-id="' + escapeHtml(agent.id || "") + '">Remove</button>' +
                 "</td>" +
@@ -442,8 +450,8 @@
     }
 
     function loadAgents() {
-        fetch("/api/agents", { headers: { "Accept": "application/json" } })
-            .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error("Failed to load agents")); })
+        fetch("/api/agent-status", { headers: { "Accept": "application/json" } })
+            .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error("Failed to load agent status")); })
             .then(function (data) { renderAgents(data.agents || []); })
             .catch(function (err) {
                 body.innerHTML = '<tr><td colspan="4" class="users-empty">' + escapeHtml(err.message) + "</td></tr>";
@@ -491,21 +499,18 @@
     if (addBtn) {
         addBtn.addEventListener("click", function () {
             var name = (document.getElementById("agentName").value || "").trim();
-            var type = document.getElementById("agentType").value || "Custom Agent";
             var endpoint = (document.getElementById("agentEndpoint").value || "").trim();
-            var model = (document.getElementById("agentModel").value || "").trim() || "gpt-5.1";
             var key = document.getElementById("agentKey").value || "";
 
             if (!name || !endpoint || !key) {
                 window.showToast("Agent name, endpoint, and API key are required.", "error");
                 return;
             }
-            postJson("/api/agents", { name: name, type: type, endpoint: endpoint, model: model, api_key: key })
+            postJson("/api/agents", { name: name, endpoint: endpoint, api_key: key })
                 .then(function () {
                     window.showToast("Agent added to the workspace.", "success");
                     document.getElementById("agentName").value = "";
                     document.getElementById("agentEndpoint").value = "";
-                    document.getElementById("agentModel").value = "gpt-5.1";
                     document.getElementById("agentKey").value = "";
                     loadAgents();
                 })

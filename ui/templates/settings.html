@@ -153,19 +153,11 @@
                 <strong>Add an agent</strong>
                 <div class="invite-user-row invite-user-row--agent">
                     <input type="text" id="agentName" placeholder="Agent name, e.g. Cloud Workload Guardian" autocomplete="off">
-                    <select id="agentType">
-                        <option value="Firewall Auditor">Firewall Auditor</option>
-                        <option value="Network Sentinel">Network Sentinel</option>
-                        <option value="Compliance Reviewer">Compliance Reviewer</option>
-                        <option value="Cloud Workload Guardian">Cloud Workload Guardian</option>
-                        <option value="Custom Agent">Custom Agent</option>
-                    </select>
                     <input type="url" id="agentEndpoint" placeholder="Agent endpoint URL" autocomplete="off">
-                    <input type="text" id="agentModel" placeholder="Model, e.g. gpt-5.1" value="gpt-5.1" autocomplete="off">
                     <input type="password" id="agentKey" placeholder="API key" autocomplete="off">
                     <button class="btn btn-primary" id="agentAddBtn" type="button">Add Agent</button>
                 </div>
-                <p class="users-hint">Agents appear in the AI Workspace where team members can switch to them. The status reflects whether the agent is currently connected. Use <strong>Remove</strong> to take an agent out of the workspace — the record stays in the database but is hidden from chat.</p>
+                <p class="users-hint">Agents appear in the AI Workspace where team members can switch to them. Status shows whether the agent endpoint is currently reachable (Live), probed the same way as Agent Insights. Use <strong>Remove</strong> to take an agent out of the workspace — the record stays in the database but is hidden from chat.</p>
             </div>
         </div>
     </div>
@@ -176,5 +168,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/settings.js') }}?v=6"></script>
+<script src="{{ url_for('static', filename='js/settings.js') }}?v=7"></script>
 {% endblock %}
