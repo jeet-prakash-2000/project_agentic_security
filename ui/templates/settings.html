@@ -24,12 +24,12 @@
             </span>
             <div>
                 <h3>User Accounts &amp; Approvals</h3>
-                <p>Approve registration requests and manage account access</p>
+                <p>Provision accounts and control who can sign in</p>
             </div>
             <span class="status-chip status-on" id="pendingCountChip">Pending 0</span>
         </div>
         <div class="settings-body">
-            <div class="users-table-wrap">
+            <div class="users-table-wrap" id="userAccountsCard" data-self-user="{{ current_user.id if current_user else '' }}">
                 <table class="users-table">
                     <thead>
                         <tr>
@@ -61,7 +61,7 @@
                     <input type="password" id="invitePassword" placeholder="Temporary password" autocomplete="off">
                     <button class="btn btn-primary" id="inviteBtn" type="button">Add User</button>
                 </div>
-                <p class="users-hint">New accounts created here are approved immediately. Self-registered accounts appear as Pending until approved.</p>
+                <p class="users-hint">Accounts are created here by an administrator and can sign in right away. Self-registration on the sign-in page is disabled. Use <strong>Remove</strong> to stop a user from signing in — the account and its data are retained in the database but stay hidden from the workspace, reports and insights.</p>
             </div>
         </div>
     </div>
@@ -75,7 +75,7 @@
             </span>
             <div>
                 <h3>Firewall Inventory</h3>
-                <p>Registered firewalls with live status — clone any device to model a similar one</p>
+                <p>Registered firewalls with live status — clone an original device to model a similar one</p>
             </div>
             <span class="status-chip status-on" id="fwCountChip">Total 0</span>
         </div>
@@ -105,7 +105,7 @@
                     <input type="password" id="fwHostKey" placeholder="Host key" autocomplete="off">
                     <button class="btn btn-primary" id="fwAddBtn" type="button">Add Firewall</button>
                 </div>
-                <p class="users-hint">Device name is the firewall's logical name. Live/down is checked automatically against the host IP. Use <strong>Clone</strong> on a row to register a copy under a new device name.</p>
+                <p class="users-hint">Device name is the firewall's logical name. Live/down is checked automatically against the host IP. Use <strong>Clone</strong> on an original device to register a copy under a new device name — the clone name is entered right here in the list. Cloned firewalls cannot be cloned again.</p>
             </div>
         </div>
     </div>
@@ -130,5 +130,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/settings.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='js/settings.js') }}?v=4"></script>
 {% endblock %}

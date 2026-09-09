@@ -195,6 +195,11 @@ def clone_firewall(source_id, clone_device_name):
         source = repo.get(source_id)
         if source is None:
             raise ValueError("Firewall inventory entry not found.")
+        if source.clone_of:
+            raise ValueError(
+                "A cloned firewall cannot be cloned. Clone an original "
+                "firewall only."
+            )
         if repo.by_device_name(clone_device_name):
             raise ValueError(
                 "A firewall with this device name already exists."

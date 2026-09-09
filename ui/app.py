@@ -227,7 +227,10 @@ def _login_notice():
 
 @app.route("/login", methods=["GET", "POST"], endpoint="login")
 def login():
-    mode = "login" if (request.args.get("mode") or "login") == "login" else "signup"
+    # Self-registration is disabled: accounts are created by administrators
+    # from Settings > User Accounts. The sign-in page only signs in approved
+    # users (a legacy ?mode=signup link is treated as plain sign-in).
+    mode = "login"
     explicit_mode = (request.args.get("mode") or "").strip() in ("login", "signup")
     next_url = (request.args.get("next") or "").strip()
     if next_url and not (next_url.startswith("/") and not next_url.startswith("//")):
@@ -285,49 +288,6 @@ def login():
         signup_roles=users_service.SIGNUP_ROLES,
         authenticated_user=authenticated,
     )
-
-
-@app.route("/signup", methods=["POST"], endpoint="signup")
-def signup():
-    name = (request.form.get("name") or "").strip()
-    email = (request.form.get("email") or "").strip().lower()
-    password = request.form.get("password") or ""
-    role = (request.form.get("role") or "").strip() or "Security Analyst"
-
-    if role not in users_service.SIGNUP_ROLES:
-        role = "Security Analyst"
-
-    try:
-        user = users_service.create_user(
-            name,
-            email,
-            password,
-            role=role,
-            status="pending",
-        )
-    except ValueError as exc:
-        return render_template(
-            "login.html",
-            mode="signup",
-            error=str(exc),
-            notice=None,
-            signup_roles=users_service.SIGNUP_ROLES,
-        )
-
-    # Notify administrators; the approval ticket also surfaces under
-    # Settings > Users when e-mail transport is unavailable.
-    delivery = mailer.send_approval_ticket(
-        user,
-        base_url=platform_settings.APP_BASE_URL,
-    )
-    if not delivery.get("delivered"):
-        app.logger.warning(
-            "Approval e-mail not sent for %s: %s",
-            user.get("email"),
-            delivery.get("reason"),
-        )
-
-    return redirect(url_for("login", mode="login", notice="pending"))
 
 
 @app.route("/logout")
@@ -1301,6 +1261,26 @@ def api_admin_user_reject(user_id):
 
     try:
         user = users_service.set_status(user_id, "rejected")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+    return jsonify({"user": user})
+
+
+@app.route("/api/admin/users/<user_id>/remove", methods=["POST"])
+@admin_required
+def api_admin_user_remove(user_id):
+    """Remove a user: sign-in is disabled but the account row is retained.
+
+    The account is flagged ``disabled`` so ``authenticate()`` refuses any
+    further sign-in. Because conversations, reports and agent insights are
+    scoped per user id, the removed user's data stays in the database but is
+    never listed on the workspace, reports or insights pages.
+    """
+
+    if user_id == (current_user() or {}).get("id"):
+        return jsonify({"error": "You cannot remove your own account."}), 400
+    try:
+        user = users_service.set_status(user_id, "disabled")
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 404
     return jsonify({"user": user})

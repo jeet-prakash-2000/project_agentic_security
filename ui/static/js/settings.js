@@ -6,6 +6,8 @@
     var usersBody = document.getElementById("usersBody");
     if (!usersBody) return;
 
+    var selfCard = document.getElementById("userAccountsCard");
+    var selfUserId = selfCard ? (selfCard.getAttribute("data-self-user") || "") : "";
     var pendingChip = document.getElementById("pendingCountChip");
 
     function chipClass(status) {
@@ -14,31 +16,32 @@
         return "status-chip status-on";
     }
 
+    function chipLabel(status) {
+        if (status === "disabled") return "Removed";
+        return capitalize(status || "approved");
+    }
+
     function renderUsers(users) {
         var pending = 0;
         var rows = users.map(function (user) {
             if (user.status === "pending") pending += 1;
-            var role = (user.role || "").toLowerCase();
-            var selfAdmin = (user.status === "approved") && (
-                user.role === "Admin" || user.role === "Administrator"
-            );
             var actions = "";
             if (user.status === "pending") {
                 actions =
                     '<button class="btn btn-sm btn-primary" data-action="approve" data-id="' + user.id + '">Approve</button>' +
                     '<button class="btn btn-sm btn-danger" data-action="reject" data-id="' + user.id + '">Reject</button>';
-            } else if (selfAdmin) {
-                actions = '<span class="users-none">Administrator</span>';
-            } else if (role !== "admin" && role !== "administrator") {
+            } else if (selfUserId && user.id === selfUserId) {
+                actions = '<span class="users-none">This is you</span>';
+            } else {
                 actions =
-                    '<button class="btn btn-sm btn-ghost" data-action="approve" data-id="' + user.id + '">Re-enable</button>';
+                    '<button class="btn btn-sm btn-danger" data-action="remove" data-id="' + user.id + '">Remove</button>';
             }
             return (
                 "<tr>" +
                 "<td>" + escapeHtml(user.name || "") + "</td>" +
                 "<td>" + escapeHtml(user.email || "") + "</td>" +
                 "<td>" + escapeHtml(user.role || "") + "</td>" +
-                "<td><span class=\"" + chipClass(user.status) + "\">" + escapeHtml(capitalize(user.status || "approved")) + "</span></td>" +
+                "<td><span class=\"" + chipClass(user.status) + "\">" + escapeHtml(chipLabel(user.status)) + "</span></td>" +
                 "<td class=\"users-actions\">" + actions + "</td>" +
                 "</tr>"
             );
@@ -89,6 +92,25 @@
         if (!button) return;
         var action = button.getAttribute("data-action");
         var userId = button.getAttribute("data-id");
+        var row = button.closest("tr");
+        var userName = row ? row.cells[0].textContent.trim() : "account";
+
+        if (action === "remove") {
+            if (!window.confirm(
+                "Remove \"" + userName + "\"? They will no longer be able to sign in. " +
+                "The account and its data are retained in the database but hidden from the platform."
+            )) return;
+            postJson("/api/admin/users/" + encodeURIComponent(userId) + "/remove")
+                .then(function () {
+                    window.showToast("Account removed. Sign-in is disabled.", "success");
+                    loadUsers();
+                })
+                .catch(function (err) {
+                    window.showToast(err.message, "error");
+                });
+            return;
+        }
+
         var verb = action === "approve" ? "approve" : "reject";
         postJson("/api/admin/users/" + encodeURIComponent(userId) + "/" + verb)
             .then(function () {
@@ -162,15 +184,23 @@
         return name;
     }
 
+    function removeCloneRows() {
+        var rows = body.querySelectorAll("tr.fw-clone-row");
+        for (var i = 0; i < rows.length; i += 1) rows[i].remove();
+    }
+
     function renderFirewalls(firewalls) {
         var rows = firewalls.map(function (fw) {
+            var cloneButton = fw.clone_of
+                ? ""
+                : '<button class="btn btn-sm btn-ghost" data-action="clone" data-id="' + fw.id + '">Clone</button>';
             return (
-                "<tr>" +
+                "<tr data-id=\"" + fw.id + "\">" +
                 "<td>" + deviceHtml(fw) + "</td>" +
                 "<td class=\"fw-ip\">" + escapeHtml(fw.host_ip || "—") + "</td>" +
                 "<td>" + statusHtml(fw.status) + "</td>" +
                 "<td class=\"users-actions\">" +
-                '<button class="btn btn-sm btn-ghost" data-action="clone" data-id="' + fw.id + '">Clone</button>' +
+                cloneButton +
                 '<button class="btn btn-sm btn-danger" data-action="remove" data-id="' + fw.id + '">Remove</button>' +
                 "</td>" +
                 "</tr>"
@@ -181,6 +211,69 @@
             '<tr><td colspan="4" class="users-empty">No firewalls registered yet.</td></tr>';
 
         if (countChip) countChip.textContent = "Total " + firewalls.length;
+    }
+
+    function beginClone(fw, anchorRow) {
+        removeCloneRows();
+        var tr = document.createElement("tr");
+        tr.className = "fw-clone-row";
+        tr.setAttribute("data-source-id", fw.id);
+        tr.innerHTML =
+            '<td colspan="4">' +
+            '<div class="fw-clone-form">' +
+            '<span class="fw-clone-form-label">Clone of <strong>' + escapeHtml(fw.device_name || "") + "</strong></span>" +
+            '<input type="text" class="fw-clone-input" placeholder="Enter a device name for the clone" autocomplete="off" value="' + escapeHtml(fw.device_name + "-clone") + '">' +
+            '<button type="button" class="btn btn-sm btn-primary" data-clone-confirm>Clone</button>' +
+            '<button type="button" class="btn btn-sm btn-ghost" data-clone-cancel>Cancel</button>' +
+            "</div>" +
+            "</td>";
+
+        var confirmBtn = tr.querySelector("[data-clone-confirm]");
+        var cancelBtn = tr.querySelector("[data-clone-cancel]");
+        var input = tr.querySelector(".fw-clone-input");
+
+        confirmBtn.addEventListener("click", function () {
+            var name = (input.value || "").trim();
+            if (!name) {
+                window.showToast("A device name is required to clone.", "error");
+                input.focus();
+                return;
+            }
+            confirmBtn.disabled = true;
+            postJson("/api/admin/firewalls/" + encodeURIComponent(fw.id) + "/clone", { device_name: name })
+                .then(function () {
+                    window.showToast("Firewall cloned as " + name + ".", "success");
+                    removeCloneRows();
+                    loadFirewalls();
+                })
+                .catch(function (err) {
+                    confirmBtn.disabled = false;
+                    window.showToast(err.message, "error");
+                    input.focus();
+                });
+        });
+
+        cancelBtn.addEventListener("click", function () {
+            removeCloneRows();
+        });
+
+        input.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                confirmBtn.click();
+            } else if (event.key === "Escape") {
+                event.preventDefault();
+                removeCloneRows();
+            }
+        });
+
+        if (anchorRow && anchorRow.nextSibling) {
+            anchorRow.parentNode.insertBefore(tr, anchorRow.nextSibling);
+        } else {
+            body.appendChild(tr);
+        }
+        input.focus();
+        input.select();
     }
 
     function loadFirewalls() {
@@ -240,27 +333,27 @@
         if (!button) return;
         var action = button.getAttribute("data-action");
         var id = button.getAttribute("data-id");
-        var deviceName = button.closest("tr").cells[0].textContent.trim().replace(/\s+clone of.*$/, "");
+        var anchorRow = button.closest("tr");
+        var deviceName = anchorRow && anchorRow.querySelector(".fw-device")
+            ? anchorRow.querySelector(".fw-device").textContent.trim()
+            : "";
 
         if (action === "clone") {
-            var cloneName = window.prompt(
-                "Clone \"" + deviceName + "\" — enter a device name for the clone:",
-                deviceName + "-clone"
+            var firewalls = Array.prototype.map.call(
+                body.querySelectorAll("tr[data-id]"),
+                function (tr) {
+                    return {
+                        id: tr.getAttribute("data-id"),
+                        device_name: tr.querySelector(".fw-device") ? tr.querySelector(".fw-device").textContent.trim() : ""
+                    };
+                }
             );
-            if (cloneName === null) return;
-            cloneName = (cloneName || "").trim();
-            if (!cloneName) {
-                window.showToast("A device name is required to clone.", "error");
-                return;
+            var fw = null;
+            for (var i = 0; i < firewalls.length; i += 1) {
+                if (firewalls[i].id === id) { fw = firewalls[i]; break; }
             }
-            postJson("/api/admin/firewalls/" + encodeURIComponent(id) + "/clone", { device_name: cloneName })
-                .then(function () {
-                    window.showToast("Firewall cloned as " + cloneName + ".", "success");
-                    loadFirewalls();
-                })
-                .catch(function (err) {
-                    window.showToast(err.message, "error");
-                });
+            if (!fw) return;
+            beginClone(fw, anchorRow);
             return;
         }
 
