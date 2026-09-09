@@ -1187,33 +1187,48 @@
 }
 
 .agent-health-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
     margin-top: 16px;
 }
 
 .agent-health-empty {
+    grid-column: 1 / -1;
     color: var(--muted);
     font-size: 13px;
     padding: 18px 4px;
     margin: 0;
 }
 
-.agent-health-row {
+.agent-health-card {
     display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-    padding: 14px 16px;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
     background: var(--bg-elevated, var(--card));
     border: 1px solid var(--border);
     border-radius: var(--radius-md, 10px);
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+}
+
+.agent-health-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.agent-health-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
 }
 
 .agent-status-dot {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     flex: none;
     background: var(--muted);
@@ -1229,12 +1244,52 @@
     animation: agentBlinkDown 1.4s ease-in-out infinite;
 }
 
-.agent-health-agent {
+.agent-health-latency {
+    font-size: 11.5px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.agent-health-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.agent-health-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--text);
+    background: var(--bg-elevated, var(--card));
+    border: 1px solid var(--border);
+}
+
+.agent-health-avatar.live {
+    color: #16A34A;
+    border-color: rgba(22, 163, 74, 0.45);
+    background: rgba(22, 163, 74, 0.1);
+}
+
+.agent-health-avatar.down {
+    color: #DC2626;
+    border-color: rgba(220, 38, 38, 0.45);
+    background: rgba(220, 38, 38, 0.1);
+}
+
+.agent-health-id {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     min-width: 0;
-    flex: 1 1 200px;
 }
 
 .agent-health-name {
@@ -1254,11 +1309,41 @@
     white-space: nowrap;
 }
 
-.agent-health-state {
+.agent-health-cstats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: auto;
+}
+
+.agent-health-cstat {
     display: flex;
     flex-direction: column;
     gap: 3px;
-    align-items: flex-start;
+    padding: 9px 11px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    min-width: 0;
+}
+
+.agent-health-cstat small {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-health-cstat b {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .agent-health-label {
@@ -1283,37 +1368,10 @@
 .agent-health-detail {
     font-size: 11px;
     color: var(--muted);
-    max-width: 240px;
+    margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.agent-health-stats {
-    display: flex;
-    gap: 18px;
-    flex-wrap: wrap;
-    margin-left: auto;
-}
-
-.agent-health-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    text-align: right;
-}
-
-.agent-health-stat small {
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
-.agent-health-stat b {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
 }
 
 @keyframes agentBlinkLive {
@@ -1347,16 +1405,12 @@
 }
 
 @media (max-width: 720px) {
-    .agent-health-row {
-        gap: 10px;
+    .agent-health-card {
+        aspect-ratio: auto;
+        min-height: 220px;
     }
 
-    .agent-health-stats {
-        margin-left: 0;
-        gap: 12px;
-    }
-
-    .agent-health-stat {
-        text-align: left;
+    .agent-health-cstats {
+        grid-template-columns: 1fr;
     }
 }

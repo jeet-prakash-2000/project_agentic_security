@@ -353,24 +353,31 @@
         list.forEach(function (a) {
             if (a.checked_at > checkedAt) checkedAt = a.checked_at;
             var live = a.status === "live";
-            var latency = a.latency_ms == null ? "-" : fmtLatency(a.latency_ms);
+            var latency = a.latency_ms == null ? "—" : fmtLatency(a.latency_ms);
             var lastActive = a.last_active ? fmtRelative(a.last_active) : "No telemetry";
+            var initial = escapeHtml((a.name || "A").trim().charAt(0).toUpperCase());
+            var detail = a.detail || (live ? "Reachable" : "Unreachable");
             html +=
-                '<div class="agent-health-row">' +
+                '<div class="agent-health-card ' + (live ? "is-live" : "is-down") + '">' +
+                '<div class="agent-health-card-top">' +
+                '<div class="agent-health-pill">' +
                 '<span class="agent-status-dot ' + (live ? "live" : "down") + '" aria-hidden="true"></span>' +
-                '<div class="agent-health-agent">' +
+                '<span class="agent-health-label ' + (live ? "live" : "down") + '">' + (live ? "Live" : "Down") + "</span>" +
+                "</div>" +
+                '<span class="agent-health-latency" title="Probe latency">' + latency + "</span>" +
+                "</div>" +
+                '<div class="agent-health-meta">' +
+                '<span class="agent-health-avatar ' + (live ? "live" : "down") + '">' + initial + "</span>" +
+                '<div class="agent-health-id">' +
                 '<span class="agent-health-name">' + escapeHtml(a.name) + "</span>" +
                 '<span class="agent-health-type">' + escapeHtml(a.type || "Agent") + " \u00b7 " + escapeHtml(a.model || "-") + "</span>" +
                 "</div>" +
-                '<div class="agent-health-state">' +
-                '<span class="agent-health-label ' + (live ? "live" : "down") + '">' + (live ? "Live" : "Down") + "</span>" +
-                '<span class="agent-health-detail" title="' + escapeHtml(a.detail || "") + '">' + escapeHtml(a.detail || (live ? "Reachable" : "Unreachable")) + "</span>" +
                 "</div>" +
-                '<div class="agent-health-stats">' +
-                '<span class="agent-health-stat"><small>Latency</small><b>' + latency + "</b></span>" +
-                '<span class="agent-health-stat"><small>Last active</small><b>' + lastActive + "</b></span>" +
-                '<span class="agent-health-stat"><small>Convos</small><b>' + fmtNumber(a.conversations) + "</b></span>" +
+                '<div class="agent-health-cstats">' +
+                '<span class="agent-health-cstat"><small>Last active</small><b>' + lastActive + "</b></span>" +
+                '<span class="agent-health-cstat"><small>Convos</small><b>' + fmtNumber(a.conversations) + "</b></span>" +
                 "</div>" +
+                '<p class="agent-health-detail" title="' + escapeHtml(detail) + '">' + escapeHtml(detail) + "</p>" +
                 "</div>";
         });
         agentHealthList.innerHTML = html;
