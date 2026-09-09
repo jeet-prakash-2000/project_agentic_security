@@ -35,10 +35,7 @@
         <div class="ws-conv-list" id="convList"></div>
 
         <div class="ws-sidebar-foot">
-            <button class="ws-manage-agents" id="openAddAgentBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-                Connect Agent
-            </button>
+            <span class="ws-sidebar-hint">Agents are managed by administrators from <strong>Settings &gt; AI Agents</strong>.</span>
         </div>
     </aside>
 
@@ -121,64 +118,10 @@
 
 </div>
 
-<!-- ============================================================
-     ADD AGENT MODAL (functionality preserved)
-     ============================================================ -->
-<div class="modal-backdrop" id="addAgentModal" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addAgentTitle">
-        <div class="modal-head">
-            <div>
-                <h3 id="addAgentTitle">Connect New Agent</h3>
-                <p>Register a security copilot in your AI Workspace.</p>
-            </div>
-            <button class="icon-btn" id="closeAddAgentBtn" aria-label="Close">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-            </button>
-        </div>
-        <form id="addAgentForm" class="modal-body">
-            <div class="form-group">
-                <label for="agentName">Agent Name</label>
-                <input type="text" id="agentName" name="agentName" placeholder="e.g. Cloud Workload Guardian" required>
-            </div>
-            <div class="form-group">
-                <label for="agentType">Agent Type</label>
-                <select id="agentType" name="agentType">
-                    <option value="Firewall Auditor">Firewall Auditor</option>
-                    <option value="Network Sentinel">Network Sentinel</option>
-                    <option value="Compliance Reviewer">Compliance Reviewer</option>
-                    <option value="Cloud Workload Guardian">Cloud Workload Guardian</option>
-                    <option value="Custom Agent">Custom Agent</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="agentEndpoint">Agent Endpoint</label>
-                <input type="url" id="agentEndpoint" name="agentEndpoint" placeholder="https://your-resource.services.ai.azure.com/api/projects/your-project" required>
-            </div>
-            <div class="form-group">
-                <label for="agentModel">Model</label>
-                <input type="text" id="agentModel" name="agentModel" value="gpt-5.1" placeholder="gpt-5.1">
-            </div>
-            <div class="form-group">
-                <label for="agentKey">API Key</label>
-                <div class="input-with-toggle">
-                    <input type="password" id="agentKey" name="agentKey" placeholder="Enter function access key" autocomplete="off" required>
-                    <button type="button" class="toggle-key" data-target="agentKey" aria-label="Toggle key visibility">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-                    </button>
-                </div>
-            </div>
-            <div class="modal-foot">
-                <button type="button" class="btn btn-ghost" id="cancelAddAgentBtn">Cancel</button>
-                <button type="submit" class="btn btn-primary">Connect</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=7"></script>
 <script src="{{ url_for('static', filename='js/netsec.js') }}?v=4"></script>
-<script src="{{ url_for('static', filename='js/workspace.js') }}?v=15"></script>
+<script src="{{ url_for('static', filename='js/workspace.js') }}?v=17"></script>
 {% endblock %}

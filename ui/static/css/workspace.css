@@ -2333,4 +2333,183 @@ button.ns-file-card { width: 100%; }
     .ns-ops { flex-direction: column; }
 }
 
+/* ------------------------------------------------------------
+   Estate / full-inventory cards (AI Workspace)
+   ------------------------------------------------------------ */
+.ws-estate-devices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.ws-estate-dev {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+.ws-estate-dev.is-clone {
+    background: #faf5ff;
+    border-color: #ede9fe;
+}
+.ws-estate-dev-name {
+    font-weight: 600;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.ws-estate-dev-meta {
+    color: #475569;
+    font-size: 12px;
+    margin-top: 4px;
+    line-height: 1.5;
+}
+.ws-estate-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+.ws-estate-run {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #c7d2fe;
+    background: #eef2ff;
+    color: #4338ca;
+    font-weight: 600;
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+.ws-estate-run svg {
+    width: 14px;
+    height: 14px;
+}
+.ws-estate-run:hover {
+    background: #e0e7ff;
+}
+.ws-estate-run[data-estate-action="excel"] {
+    border-color: #99f6e4;
+    background: #f0fdfa;
+    color: #0f766e;
+}
+.ws-estate-run[data-estate-action="excel"]:hover {
+    background: #ccfbf1;
+}
+
+/* ------------------------------------------------------------
+   Simplified firewall picker (search + arrow)
+   ------------------------------------------------------------ */
+.fw-picker-card .fw-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #d7dce5;
+    border-radius: 10px;
+    padding: 2px 6px 2px 10px;
+    margin-bottom: 8px;
+}
+.fw-picker-card .fw-search-box svg {
+    width: 16px;
+    height: 16px;
+    color: #94a3b8;
+    flex: none;
+    margin-right: 6px;
+}
+.fw-picker-card .fw-search-input {
+    border: 0;
+    outline: 0;
+    padding: 8px 0;
+    width: 100%;
+    flex: 1 1 auto;
+    font-size: 13px;
+    color: #0f172a;
+    background: transparent;
+}
+.fw-search-go {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    margin-left: 4px;
+    border: 0;
+    border-radius: 8px;
+    background: #4338ca;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+.fw-search-go:hover {
+    background: #3730a3;
+}
+.fw-search-go svg {
+    width: 15px;
+    height: 15px;
+    color: #fff;
+    margin: 0;
+}
+.fw-search-hint {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #b91c1c;
+    margin-top: 2px;
+}
+.fw-search-hint.is-error {
+    color: #b91c1c;
+}
+
+/* ------------------------------------------------------------
+   Back-to-options control on result cards
+   ------------------------------------------------------------ */
+.ws-fw-back-wrap {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #eef1f6;
+}
+.ws-back-run {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid #d7dce5;
+    color: #475569;
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 600;
+    font-size: 12px;
+    padding: 7px 12px;
+    cursor: pointer;
+}
+.ws-back-run svg {
+    width: 13px;
+    height: 13px;
+}
+.ws-back-run:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+/* ------------------------------------------------------------
+   Sidebar footer hint
+   ------------------------------------------------------------ */
+.ws-sidebar-hint {
+    display: block;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #94a3b8;
+    padding: 10px 12px;
+    border-top: 1px solid rgba(148, 163, 184, 0.15);
+}
+.ws-sidebar-hint strong {
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
 

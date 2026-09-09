@@ -26,29 +26,41 @@
     var composerAgentBadge = document.getElementById("composerAgentBadge");
     var composerWrap = document.querySelector(".ws-composer-wrap");
 
-    var modal = document.getElementById("addAgentModal");
-    var openBtn = document.getElementById("openAddAgentBtn");
-    var closeBtn = document.getElementById("closeAddAgentBtn");
-    var cancelBtn = document.getElementById("cancelAddAgentBtn");
-    var form = document.getElementById("addAgentForm");
-
     var insightMessages = document.getElementById("insightMessages");
     var insightTokens = document.getElementById("insightTokens");
     var insightCost = document.getElementById("insightCost");
 
     // ============================================================
-    // CONSTANTS — actions, prompts, tool metadata
+    // CONSTANTS — firewall actions, prompts, tool metadata
     // ============================================================
 
-    var ACTIONS = {
-        assess: { label: "Compliance Assessment", tool: "assess", prompt: "Run a full compliance assessment of the firewall estate." }
+    var FIREWALL_ACTIONS = {
+        assess: { label: "Compliance Assessment" },
+        summary: { label: "Executive Summary" },
+        excel: { label: "Report Generation" },
+        ha: { label: "HA Configuration" }
     };
 
-    var COMPOSER_CHIPS = ["assess"];
+    var FIREWALL_CHIP_ORDER = ["assess"];
 
-    var SUGGESTIONS = [
-        { label: "Run Compliance Assessment", action: "assess" }
-    ];
+    function fwActionIcon(action) {
+        if (TOOL_META[action] && TOOL_META[action].icon) return TOOL_META[action].icon;
+        if (action === "ha") {
+            return '<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>';
+        }
+        return '<path d="M12 5v14M5 12h14"/>';
+    }
+
+    function fwChipEntries() {
+        return FIREWALL_CHIP_ORDER.map(function (action) {
+            var meta = FIREWALL_ACTIONS[action] || {};
+            return { action: action, label: meta.label, icon: fwActionIcon(action) };
+        });
+    }
+
+    var SUGGESTIONS = FIREWALL_CHIP_ORDER.map(function (action) {
+        return { label: (FIREWALL_ACTIONS[action] || {}).label || action, action: action };
+    });
 
     // Cloud Incident Response agent entries (Incidents + Virtual Machine).
     var CLOUD_CHIPS = [
@@ -160,6 +172,12 @@
 
     var COPY_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>';
     var ARROW_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>';
+
+    var BACK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>';
+
+    function backButtonHtml() {
+        return '<div class="ws-fw-back-wrap"><button type="button" class="ws-back-run" data-fw-back="1">' + BACK_ICON + "Back to options</button></div>";
+    }
     var DEFAULT_TOOL_ICON = '<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><path d="M18.5 15.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z"/>';
     var LOGO_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>';
 
@@ -428,7 +446,8 @@
         }
         if (msg.tool && TOOL_META[msg.tool]) {
             var meta = TOOL_META[msg.tool];
-            return toolCardHtml(meta.name, formatAgentReply(msg.content), meta.link, meta.icon);
+            var link = msg.link || meta.link;
+            return toolCardHtml(meta.name, formatAgentReply(msg.content), link, meta.icon);
         }
         return '<div class="ws-msg-text">' + formatAgentReply(msg.content || "") + "</div>";
     }
@@ -572,7 +591,7 @@
         promptChips.innerHTML = "";
         var entries = [];
         if (isFirewallAgent(state.activeAgent)) {
-            entries = COMPOSER_CHIPS.map(function (id) { return ACTIONS[id]; }).filter(Boolean);
+            entries = fwChipEntries();
         } else if (isCloudAgent(state.activeAgent)) {
             entries = CLOUD_CHIPS;
         } else if (isNetsecAgent(state.activeAgent)) {
@@ -582,14 +601,14 @@
             var b = document.createElement("button");
             b.className = "ws-chip";
             b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + (a.icon || '<path d="M12 5v14M5 12h14"/>') + "</svg>" + escapeHtml(a.label);
-            b.addEventListener("click", function () { runAction(a.id || a.action); });
+            b.addEventListener("click", function () { runAction(a.action || a.id); });
             promptChips.appendChild(b);
         });
     }
 
     function runAction(action) {
-        if (action === "assess") {
-            showFirewallSelection();
+        if (FIREWALL_ACTIONS[action]) {
+            startFirewallFlow(action);
             return;
         }
         if (action === "incidents") {
@@ -604,9 +623,6 @@
             window.NetsecPanel.startChat(action);
             return;
         }
-        var a = ACTIONS[action];
-        if (!a) return;
-        sendPrompt(a.prompt, { tool: a.tool });
     }
 
     // ============================================================
@@ -615,26 +631,371 @@
 
     var selectedFirewall = "vmpafw01";
     var assessmentCache = {};
+    var estateCache = null;
+    var inventoryPromise = null;
 
-    function showFirewallSelection() {
+    // ------------------------------------------------------------
+    // Inventory search + device-first flow (works for every action)
+    // ------------------------------------------------------------
+
+    function fetchFirewallInventory() {
+        if (inventoryPromise) return inventoryPromise;
+        inventoryPromise = fetch("/api/firewall-inventory")
+            .then(function (r) { return r.json(); })
+            .then(function (data) { return (data && data.firewalls) || []; })
+            .catch(function () { return []; });
+        return inventoryPromise;
+    }
+
+    function intentLabel(intent) {
+        var meta = FIREWALL_ACTIONS[intent];
+        return meta ? meta.label : "Firewall operation";
+    }
+
+    function fwPickerCardHtml(intent) {
+        return '<div class="ws-mcq-card fw-picker-card">' +
+            '<div class="ws-mcq-head"><strong>Select Firewall</strong>' +
+            "<span>" + escapeHtml(intentLabel(intent)) + " \u2014 type a device name or IP, or enter \u201cfull inventory\u201d to assess every managed firewall.</span></div>" +
+            '<form class="fw-search-box" data-fw-go="1">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>' +
+            '<input type="text" class="fw-search-input" placeholder="Search device name / IP, or type full inventory" autocomplete="off" aria-label="Search firewall inventory">' +
+            '<button type="submit" class="fw-search-go" title="Run assessment for selection" aria-label="Go">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>' +
+            "</button>" +
+            "</form>" +
+            '<div class="fw-search-hint" role="status"></div>' +
+            "</div>";
+    }
+
+    function startFirewallFlow(intent) {
         ensureActiveId();
-        appendMessage({ role: "user", content: "Compliance Assessment", ts: now() });
+        appendMessage({ role: "user", content: intentLabel(intent), ts: now() });
         renderConversationList();
+        openFwPicker(intent);
+    }
 
-        var buttons = ["vmpafw01", "vmpafw02"].map(function (fw) {
-            return '<button class="mcq-option fw-select-btn" type="button" data-firewall="' + fw + '">' +
-                '<span class="mcq-option-label">' + escapeHtml(fw) + '</span>' +
-                '<span class="mcq-option-arrow">' + ARROW_ICON + '</span>' +
-                '</button>';
+    // Re-open the Select Firewall search card without adding a duplicate user
+    // message (used by the "Back" control on result cards).
+    function reopenFwPicker() {
+        openFwPicker("assess");
+    }
+
+    function openFwPicker(intent) {
+        ensureActiveId();
+        fetchFirewallInventory().then(function (list) {
+            if (!list || !list.length) {
+                appendMessage({
+                    role: "assistant",
+                    content: "No firewalls are registered in the inventory yet. An administrator can add devices from Settings > Firewall Inventory.",
+                    agentName: "Firewall Auditor",
+                    ts: now()
+                });
+                renderConversationList();
+                return;
+            }
+            appendMessage({ role: "assistant", content: "", html: fwPickerCardHtml(intent), cardTitle: "Select Firewall", agentName: "Firewall Auditor", ts: now() });
+            renderConversationList();
+            scrollToBottom();
+
+            var bodies = chatWindow.querySelectorAll(".ws-msg-body");
+            var last = bodies[bodies.length - 1];
+            var card = last ? last.querySelector(".fw-picker-card") : null;
+            if (card) wireFwPicker(card, list, intent);
+        });
+    }
+
+    function resolveFwQuery(list, rawQuery) {
+        var q = String(rawQuery || "").trim().toLowerCase();
+        if (!q) {
+            return { kind: "none", reason: "Type a firewall device name or IP, or enter \u201cfull inventory\u201d to assess every device." };
+        }
+        if (q === "all" || q === "full" || q === "estate" || q === "all devices" ||
+            q === "full inventory" || q.indexOf("inventory") !== -1) {
+            return { kind: "all" };
+        }
+        var exact = [], partial = [];
+        list.forEach(function (fw) {
+            var name = fw.device_name || "";
+            var hay = (name + " " + (fw.host_ip || "") + " " + (fw.clone_of || "")).toLowerCase();
+            if (name.toLowerCase() === q) { exact.push(fw); return; }
+            if (hay.indexOf(q) !== -1) partial.push(fw);
+        });
+        if (exact.length === 1) return { kind: "device", name: exact[0].device_name };
+        if (exact.length > 1) return { kind: "device", name: exact[0].device_name };
+        if (partial.length === 1) return { kind: "device", name: partial[0].device_name };
+        if (partial.length > 1) {
+            var names = partial.slice(0, 3).map(function (f) { return f.device_name; }).join(", ");
+            if (partial.length > 3) names += ", \u2026";
+            return { kind: "none", reason: "Multiple firewalls match \u201c" + String(rawQuery).trim() + "\u201d (" + names + "). Type a full device name, or enter \u201cfull inventory\u201d for all devices." };
+        }
+        return { kind: "none", reason: "No firewall matches \u201c" + String(rawQuery).trim() + "\u201d. Check the device name or IP, or enter \u201cfull inventory\u201d to assess every device." };
+    }
+
+    function wireFwPicker(card, list, intent) {
+        var input = card.querySelector(".fw-search-input");
+        var hint = card.querySelector(".fw-search-hint");
+        var form = card.querySelector('[data-fw-go="1"]');
+        if (!input || !form) return;
+
+        function go() {
+            var res = resolveFwQuery(list, input.value);
+            if (hint) {
+                hint.textContent = "";
+                hint.classList.remove("is-error");
+            }
+            if (res.kind === "all") { handleFwPick(intent, { all: true }); return; }
+            if (res.kind === "device") { handleFwPick(intent, { name: res.name }); return; }
+            if (hint) {
+                hint.textContent = res.reason || "";
+                hint.classList.add("is-error");
+            }
+            input.focus();
+        }
+
+        form.addEventListener("submit", function (e) { e.preventDefault(); go(); });
+        if (hint) {
+            input.addEventListener("input", function () {
+                hint.textContent = "";
+                hint.classList.remove("is-error");
+            });
+        }
+        setTimeout(function () { if (input) input.focus(); }, 80);
+    }
+
+    function busy(node) {
+        if (sendBtn) sendBtn.disabled = true;
+        return node || appendTyping("Firewall Auditor");
+    }
+
+    function idle(node) {
+        if (node) removeTyping(node);
+        if (sendBtn) sendBtn.disabled = false;
+        if (promptInput) promptInput.focus();
+    }
+
+    function handleFwPick(intent, pick) {
+        if (pick.all) { loadEstateCard(); return; }
+        selectedFirewall = pick.name || selectedFirewall;
+        if (intent === "summary") { runSummaryForDevice(selectedFirewall); return; }
+        if (intent === "excel") { runReportForDevice(selectedFirewall); return; }
+        if (intent === "ha") { showSectionForDevice("ha", selectedFirewall); return; }
+        showMcqCard(selectedFirewall, true);
+    }
+
+    function runSummaryForDevice(device) {
+        selectedFirewall = device || selectedFirewall;
+        var node = busy();
+        fetch("/executive-summary?firewall=" + encodeURIComponent(selectedFirewall))
+            .then(function (r) { return r.ok; })
+            .then(function (ok) {
+                idle(node);
+                if (!ok) throw new Error("failed");
+                appendMessage({ role: "assistant", content: "Executive summary for **" + selectedFirewall + "** generated and stored in Reports.", tool: "summary", ts: now() });
+                loadConversations();
+            })
+            .catch(function () {
+                idle(node);
+                appendMessage({ role: "assistant", content: "Executive summary generation failed.", ts: now() });
+            });
+    }
+
+    function runReportForDevice(device) {
+        selectedFirewall = device || selectedFirewall;
+        var node = busy();
+        fetch("/api/excel?firewall=" + encodeURIComponent(selectedFirewall))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                idle(node);
+                if (data && data.error) throw new Error(data.error);
+                appendMessage({ role: "assistant", content: "Assessment workbook for **" + selectedFirewall + "** generated and stored in Reports.", tool: "excel", ts: now() });
+                loadConversations();
+            })
+            .catch(function () {
+                idle(node);
+                appendMessage({ role: "assistant", content: "Report generation failed.", ts: now() });
+            });
+    }
+
+    function showSectionForDevice(sectionId, device) {
+        var section = null;
+        for (var i = 0; i < ASSESSMENT_SECTIONS.length; i++) {
+            if (ASSESSMENT_SECTIONS[i].id === sectionId) { section = ASSESSMENT_SECTIONS[i]; break; }
+        }
+        if (!section) return;
+        selectedFirewall = device || selectedFirewall;
+        if (section.action === "report") { runReportForDevice(selectedFirewall); return; }
+        if (section.action === "summary") { runSummaryForDevice(selectedFirewall); return; }
+        loadSectionData(section, true);
+    }
+
+    // ------------------------------------------------------------
+    // Full Inventory (estate) assessment
+    // ------------------------------------------------------------
+
+    function estateKpiHtml(c) {
+        var rows = [
+            { label: "Compliant", sub: "Avg across " + c.device_count + " device" + (c.device_count === 1 ? "" : "s"), value: (c.avg_compliance_pct == null ? "-" : c.avg_compliance_pct + "%") },
+            { label: "Non-Compliant", sub: "Average", value: (c.avg_non_compliant_pct == null ? "-" : c.avg_non_compliant_pct + "%") },
+            { label: "Not Assessed", sub: "Average", value: (c.avg_not_assessed_pct == null ? "-" : c.avg_not_assessed_pct + "%") },
+            { label: "Findings", sub: "Full inventory", value: c.total_findings }
+        ];
+        return '<div class="ws-kpi-row">' + rows.map(function (k) { return kpiCard(k.label, k.sub, k.value); }).join("") + "</div>";
+    }
+
+    function estateStatusPill(status) {
+        return '<span class="fw-status ' + (status === "live" ? "is-live" : "is-down") + '">' + escapeHtml(status === "live" ? "Live" : "Down") + "</span>";
+    }
+
+    function estateDeviceRows(devices) {
+        var html = devices.map(function (d) {
+            var sev = d.severity || {};
+            var tag = d.is_clone ? '<span class="fw-badge-clone">Clone of ' + escapeHtml(d.clone_of || "parent") + "</span>" : "";
+            return '<div class="ws-estate-dev">' +
+                '<div class="ws-estate-dev-name">' + escapeHtml(d.device) + " " + tag + " " + estateStatusPill(d.status) + "</div>" +
+                '<div class="ws-estate-dev-meta">' +
+                d.compliance_pct + "% compliant \u00b7 " + d.compliant + "/" + d.total_controls + " controls \u00b7 " +
+                d.non_compliant + " non-compliant \u00b7 " + d.not_assessed + " not assessed \u00b7 " + d.findings_count + " findings" +
+                " (C:" + sev.critical + " H:" + sev.high + " M:" + sev.medium + " L:" + sev.low + ")" +
+                "</div>" +
+                "</div>";
         }).join("");
+        return '<div class="ws-estate-devices">' + html + "</div>";
+    }
 
-        var html = '<div class="ws-mcq-card">' +
-            '<div class="ws-mcq-head"><strong>Select Firewall</strong><span>Choose a firewall to assess</span></div>' +
-            '<div class="ws-mcq-options">' + buttons + '</div>' +
-            '</div>';
+    function estateActionsHtml(c) {
+        var count = (c && c.device_count) || 0;
+        return '<div class="ws-estate-actions">' +
+            '<button type="button" class="ws-estate-run" data-estate-action="summary">' + ARROW_ICON + "Executive Summary (all " + count + ")</button>" +
+            '<button type="button" class="ws-estate-run" data-estate-action="excel">' + ARROW_ICON + "Generate Report (all " + count + ")</button>" +
+            "</div>";
+    }
 
-        appendMessage({ role: "assistant", content: "", html: html, cardTitle: "Select Firewall", agentName: "Firewall Auditor", ts: now() });
+    function estateCardHtml(data) {
+        var c = data.cumulative || {};
+        return estateKpiHtml(c) +
+            '<div class="ws-mcq-head"><strong>Devices Assessed</strong><span>Per-device compliance across the managed inventory.</span></div>' +
+            estateDeviceRows(data.devices || []) +
+            '<div class="ws-mcq-head"><strong>Full Inventory Outputs</strong><span>Generate a summary or workbook that covers every firewall.</span></div>' +
+            estateActionsHtml(c) +
+            backButtonHtml();
+    }
+
+    function loadEstateCard() {
+        ensureActiveId();
+        var node = busy();
+        fetch("/api/estate/assessment?refresh=1")
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                idle(node);
+                if (!data || data.error) throw new Error((data && data.error) || "Full inventory assessment failed.");
+                estateCache = data;
+                appendMessage({
+                    role: "assistant",
+                    content: "",
+                    html: estateCardHtml(data),
+                    cardTitle: "Full Inventory \u2014 Cumulative Compliance",
+                    agentName: "Firewall Auditor",
+                    ts: now()
+                });
+                renderConversationList();
+            })
+            .catch(function (err) {
+                idle(node);
+                appendMessage({
+                    role: "assistant",
+                    content: (err && err.message) || "Full inventory assessment failed. Try again.",
+                    agentName: "Firewall Auditor",
+                    ts: now()
+                });
+                renderConversationList();
+            });
+    }
+
+    function estateSummaryHtml(data) {
+        var c = data.cumulative || {};
+        var html = estateKpiHtml(c);
+        html += '<div class="ws-mcq-head"><strong>Device-by-device details</strong><span>Compliance and key remediation actions for every managed firewall.</span></div>';
+        (data.devices || []).forEach(function (d) {
+            var tone = d.compliance_pct >= 80 ? "good" : (d.compliance_pct >= 50 ? "warn" : "bad");
+            html += '<div class="ws-section-card">' +
+                '<div class="ws-section-title">' + escapeHtml(d.device) +
+                (d.is_clone ? ' <span class="fw-badge-clone">Clone of ' + escapeHtml(d.clone_of || "parent") + "</span>" : "") +
+                " " + estateStatusPill(d.status) + "</div>";
+            html += '<div class="ws-section-compliance"><span class="ws-comp-badge ' + tone + '">' + d.compliant + " / " + d.total_controls + " compliant</span>" +
+                '<span class="ws-comp-pct">' + d.compliance_pct + "%</span></div>";
+            var recs = remediationList(d.findings || []);
+            if (recs.length) {
+                html += '<div class="ws-section-recs"><strong>Key remediations</strong><ul>' +
+                    recs.map(function (r) { return "<li>" + escapeHtml(r) + "</li>"; }).join("") +
+                    "</ul></div>";
+            } else if (d.compliance_pct >= 80) {
+                html += '<div class="ws-section-recs"><strong>All compliant</strong> \u2014 no recommendations needed.</div>';
+            }
+            html += "</div>";
+        });
+        return html + backButtonHtml();
+    }
+
+    function remediationList(findings) {
+        var recs = [];
+        var seen = {};
+        (findings || []).forEach(function (f) {
+            var r = f.remediation || (typeof FINDING_ENRICHMENT !== "undefined" && FINDING_ENRICHMENT[(f.control || "").toUpperCase()] ? FINDING_ENRICHMENT[(f.control || "").toUpperCase()].remediation : "") || "";
+            if (r && !seen[r]) { seen[r] = true; recs.push(r); }
+        });
+        return recs.slice(0, 5);
+    }
+
+    function showEstateSummary() {
+        if (!estateCache) { loadEstateCard(); return; }
+        ensureActiveId();
+        appendMessage({ role: "user", content: "Executive Summary \u2014 Full Inventory", ts: now() });
         renderConversationList();
+        appendMessage({
+            role: "assistant",
+            content: "",
+            html: estateSummaryHtml(estateCache),
+            cardTitle: "Executive Summary \u2014 Full Inventory",
+            agentName: "Firewall Auditor",
+            ts: now()
+        });
+        renderConversationList();
+    }
+
+    function generateEstateWorkbook() {
+        if (!estateCache) { loadEstateCard(); return; }
+        ensureActiveId();
+        appendMessage({ role: "user", content: "Report Generation \u2014 Full Inventory", ts: now() });
+        renderConversationList();
+        var node = busy();
+        fetch("/api/estate/excel?refresh=1")
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                idle(node);
+                if (!data || data.error) throw new Error((data && data.error) || "Workbook generation failed.");
+                appendMessage({
+                    role: "assistant",
+                    content: "Full inventory assessment workbook generated and stored in Reports.",
+                    tool: "excel",
+                    link: { label: "Download workbook", href: data.download_url || "/download-workbook" },
+                    ts: now()
+                });
+                loadConversations();
+            })
+            .catch(function (err) {
+                idle(node);
+                appendMessage({
+                    role: "assistant",
+                    content: (err && err.message) || "Full inventory workbook generation failed.",
+                    agentName: "Firewall Auditor",
+                    ts: now()
+                });
+            });
+    }
+
+    function runEstateAction(action) {
+        if (action === "summary") { showEstateSummary(); return; }
+        if (action === "excel") { generateEstateWorkbook(); return; }
     }
 
     function loadAssessmentData() {
@@ -667,11 +1028,13 @@
             .catch(function () { return '<div class="ws-kpi-row"></div>'; });
     }
 
-    function showMcqCard(firewall) {
+    function showMcqCard(firewall, skipUser) {
         if (firewall) selectedFirewall = firewall;
         ensureActiveId();
-        appendMessage({ role: "user", content: "Compliance Assessment \u2014 " + selectedFirewall, ts: now() });
-        renderConversationList();
+        if (!skipUser) {
+            appendMessage({ role: "user", content: "Compliance Assessment \u2014 " + selectedFirewall, ts: now() });
+            renderConversationList();
+        }
 
         loadKpiCards().then(function (kpiHtml) {
             var options = ASSESSMENT_SECTIONS.map(function (s) {
@@ -685,6 +1048,7 @@
                 kpiHtml +
                 '<div class="ws-mcq-head"><strong>Compliance Assessment</strong><span>Select a section to review</span></div>' +
                 '<div class="ws-mcq-options">' + options + '</div>' +
+                backButtonHtml() +
                 '</div>';
 
             appendMessage({ role: "assistant", content: "", html: html, cardTitle: "Compliance Assessment", agentName: "Firewall Auditor", ts: now() });
@@ -746,10 +1110,12 @@
             .finally(function () { sendBtn.disabled = false; promptInput.focus(); });
     }
 
-    function loadSectionData(section) {
+    function loadSectionData(section, skipUser) {
         ensureActiveId();
-        appendMessage({ role: "user", content: section.label, ts: now() });
-        renderConversationList();
+        if (!skipUser) {
+            appendMessage({ role: "user", content: section.label, ts: now() });
+            renderConversationList();
+        }
         var typing = appendTyping("Firewall Auditor");
         sendBtn.disabled = true;
 
@@ -1317,89 +1683,6 @@
     }
 
     // ============================================================
-    // ADD AGENT MODAL
-    // ============================================================
-
-    function openModal() {
-        if (modal) modal.hidden = false;
-        document.body.style.overflow = "hidden";
-        setTimeout(function () { var f = document.getElementById("agentName"); if (f) f.focus(); }, 120);
-    }
-
-    function closeModal() {
-        if (modal) modal.hidden = true;
-        document.body.style.overflow = "";
-    }
-
-    function bindModal() {
-        if (openBtn) openBtn.addEventListener("click", openModal);
-        if (closeBtn) closeBtn.addEventListener("click", closeModal);
-        if (cancelBtn) cancelBtn.addEventListener("click", closeModal);
-        if (modal) modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
-        document.addEventListener("keydown", function (e) { if (e.key === "Escape" && modal && !modal.hidden) closeModal(); });
-
-        if (form) {
-            form.addEventListener("submit", function (event) {
-                event.preventDefault();
-                var name = document.getElementById("agentName").value.trim();
-                var type = document.getElementById("agentType").value;
-                var endpoint = document.getElementById("agentEndpoint").value.trim();
-                var model = document.getElementById("agentModel").value.trim() || "gpt-5.1";
-                var key = document.getElementById("agentKey").value.trim();
-
-                if (!name || !endpoint || !key) {
-                    window.showToast("Agent name, endpoint, and API key are required.", "error");
-                    return;
-                }
-
-                ensureActiveId();
-                var userMsg = { role: "user", content: "Connect the " + name + " agent for " + type + ".", ts: now() };
-                appendMessage(userMsg);
-                renderConversationList();
-
-                var typing = appendTyping();
-                var connectBtn = form.querySelector('button[type="submit"]');
-                if (connectBtn) connectBtn.disabled = true;
-
-                var finish = function (asstMsg) {
-                    persistMessages([userMsg, asstMsg]);
-                    loadConversations();
-                };
-
-                fetch("/api/agents", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name: name, type: type, endpoint: endpoint, model: model, api_key: key })
-                })
-                    .then(function (r) { return r.json(); })
-                    .then(function (data) {
-                        removeTyping(typing);
-                        if (data && data.error) throw new Error(data.error);
-                        if (data.agent && data.agent.connected) setActiveAgent(data.agent);
-                        var asstMsg = { role: "assistant", content: "Agent **" + name + "** has been connected successfully. It can now assess, monitor, and report on your " + type.toLowerCase() + " estate.", agentName: name, ts: now() };
-                        appendMessage(asstMsg);
-                        renderConversationList();
-                        loadAgents();
-                        finish(asstMsg);
-                        window.showToast(name + " connected successfully.", "success");
-                    })
-                    .catch(function (error) {
-                        removeTyping(typing);
-                        var asstMsg = { role: "assistant", content: "**Failed to connect " + name + ".** " + (error.message || "Backend unavailable."), agentName: name, ts: now() };
-                        appendMessage(asstMsg);
-                        renderConversationList();
-                        finish(asstMsg);
-                        window.showToast("Connection failed.", "error");
-                    })
-                    .finally(function () { if (connectBtn) connectBtn.disabled = false; });
-
-                form.reset();
-                closeModal();
-            });
-        }
-    }
-
-    // ============================================================
     // HELPERS — text formatting
     // ============================================================
 
@@ -1587,10 +1870,15 @@
                 }
                 return;
             }
-            var fwBtn = e.target.closest(".fw-select-btn");
-            if (fwBtn) {
-                var fw = fwBtn.getAttribute("data-firewall");
-                if (fw) showMcqCard(fw);
+            var estateBtn = e.target.closest(".ws-estate-run");
+            if (estateBtn) {
+                var estateAction = estateBtn.getAttribute("data-estate-action");
+                if (estateAction) runEstateAction(estateAction);
+                return;
+            }
+            var backBtn = e.target.closest("[data-fw-back]");
+            if (backBtn) {
+                reopenFwPicker();
                 return;
             }
             var option = e.target.closest(".mcq-option");
@@ -1669,14 +1957,6 @@
                 });
         });
     }
-
-    document.querySelectorAll(".toggle-key").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-            var target = document.getElementById(btn.getAttribute("data-target"));
-            if (!target) return;
-            target.type = target.type === "password" ? "text" : "password";
-        });
-    });
 
     document.addEventListener("agent-changed", function (e) {
         var agent = e.detail;
@@ -1757,7 +2037,6 @@
     // INIT
     // ============================================================
 
-    bindModal();
     renderPromptChips();
 
     renderConversationList();

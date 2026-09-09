@@ -41,7 +41,9 @@
         customViews: [],
         reviewed: {},
         assignees: {},
-        collapsed: {}
+        collapsed: {},
+        inventory: [],
+        loadedFirewall: null
     };
 
     function escapeHtml(v) {
@@ -351,7 +353,7 @@
     }
 
     function actionsHtml(rec, isReviewed, isAssigned) {
-        var assignee = state.assignees[rec.control];
+        var assignee = state.assignees[recKey(rec)];
         return '<div class="finding-actions">' +
             '<button class="action-btn ai" data-act="copilot" type="button">' + ICONS.spark + ' Copilot</button>' +
             '<button class="action-btn" data-act="device" type="button">View Firewall</button>' +
@@ -373,14 +375,14 @@
         var fw = escapeHtml(rec._firewall);
         var statusKey = rec.status;
         var statusClass = rec._compliant ? "compliant" : "non-compliant";
-        var isReviewed = !!state.reviewed[rec.control];
-        var assignee = state.assignees[rec.control];
+        var isReviewed = !!state.reviewed[recKey(rec)];
+        var assignee = state.assignees[recKey(rec)];
 
         var summary = rec._compliant
             ? "Observed value '" + formatVal(rec.observed) + "' meets the expected baseline."
             : (rec._gap || rec._finding || "Finding requires attention.");
 
-        return '<div class="finding-card" data-control="' + cid + '" role="button" tabindex="0" aria-expanded="false">' +
+        return '<div class="finding-card" data-control="' + cid + '" data-fw="' + fw + '" role="button" tabindex="0" aria-expanded="false">' +
             '<span class="finding-card-accent ' + sev + '"></span>' +
             '<div class="finding-card-inner">' +
             '<div class="finding-card-head">' +
@@ -480,15 +482,135 @@
         el.innerHTML = chips;
     }
 
+    function firewallOptionNames() {
+        var names = [];
+        (state.inventory || []).forEach(function (e) {
+            if (e && e.device_name && names.indexOf(e.device_name) === -1) names.push(e.device_name);
+        });
+        if (state.data && state.data.firewalls) {
+            (state.data.firewalls || []).forEach(function (f) {
+                if (f && f.hostname && names.indexOf(f.hostname) === -1) names.push(f.hostname);
+            });
+        }
+        return names;
+    }
+
     function populateFirewallSelect(firewalls) {
         var el = document.getElementById("firewallSelect");
         if (!el) return;
+        var names = firewallOptionNames();
         var html = '<option value="all">All</option>';
-        (firewalls || []).forEach(function (f) {
-            html += '<option value="' + escapeHtml(f.hostname) + '">' + escapeHtml(f.hostname + (f.model ? " \u00b7 " + f.model : "")) + '</option>';
+        names.forEach(function (n) {
+            html += '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + "</option>";
         });
         el.innerHTML = html;
-        if (el.getAttribute("data-value")) el.value = el.getAttribute("data-value");
+    }
+
+    function fwComboSource() {
+        var inv = (state.inventory || []).filter(function (e) { return e && e.device_name; });
+        if (inv.length) return inv;
+        return firewallOptionNames().map(function (n) { return { device_name: n }; });
+    }
+
+    function fwComboRows(query) {
+        var q = String(query || "").trim().toLowerCase();
+        var out = "";
+        if (!q || q.indexOf("all") !== -1 || q.indexOf("device") !== -1 || q.indexOf("inventory") !== -1) {
+            out += '<li class="fw-combo-row" role="option" data-value="all">' +
+                '<span class="fw-combo-name">All devices</span>' +
+                '<span class="fw-combo-sub">Every managed firewall in the inventory</span></li>';
+        }
+        fwComboSource().forEach(function (fw) {
+            var name = fw.device_name || "";
+            if (!name) return;
+            var hay = (name + " " + (fw.host_ip || "") + " " + (fw.clone_of || "")).toLowerCase();
+            if (q && hay.indexOf(q) === -1) return;
+            var bits = [fw.host_ip || "", fw.status ? (fw.status === "live" ? "Live" : "Down") : ""];
+            if (fw.clone_of) bits.push("Clone of " + fw.clone_of);
+            var sub = bits.filter(Boolean).join(" \u00b7 ") || "Managed device";
+            var badge = fw.clone_of ? '<span class="fw-badge-clone">Clone</span>' : "";
+            out += '<li class="fw-combo-row" role="option" data-value="' + escapeHtml(name) + '">' +
+                '<span class="fw-combo-name">' + escapeHtml(name) + "</span>" +
+                '<span class="fw-combo-sub">' + escapeHtml(sub) + "</span>" + badge +
+                "</li>";
+        });
+        return out;
+    }
+
+    function reflectFirewallUI() {
+        var input = document.getElementById("fwSearchInput");
+        var clear = document.getElementById("fwSearchClear");
+        var loaded = state.loadedFirewall || "all";
+        if (!input) return;
+        if (loaded === "all") {
+            input.value = "";
+            input.placeholder = "All devices \u2014 search inventory";
+        } else {
+            input.value = loaded;
+            input.placeholder = "";
+        }
+        if (clear) clear.hidden = loaded === "all";
+        var el = document.getElementById("firewallSelect");
+        if (el) el.value = loaded;
+    }
+
+    function handleFirewallChange(value) {
+        value = value || "all";
+        state.filters.firewall = value;
+        if (value === (state.loadedFirewall || "all")) {
+            applyFilters();
+            return;
+        }
+        loadData(value);
+    }
+
+    function bindFirewallCombo() {
+        var input = document.getElementById("fwSearchInput");
+        var list = document.getElementById("fwSearchList");
+        var clear = document.getElementById("fwSearchClear");
+        var wrap = document.getElementById("fwCombobox");
+        if (!input || !list || !wrap) return;
+
+        function close() {
+            list.hidden = true;
+            input.setAttribute("aria-expanded", "false");
+            document.removeEventListener("click", outside);
+        }
+        function outside(e) {
+            if (!wrap.contains(e.target)) close();
+        }
+        function open() {
+            document.removeEventListener("click", outside);
+            list.innerHTML = fwComboRows(input.value);
+            list.hidden = false;
+            input.setAttribute("aria-expanded", "true");
+            document.addEventListener("click", outside);
+        }
+
+        input.addEventListener("focus", open);
+        input.addEventListener("input", open);
+        list.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        list.addEventListener("click", function (e) {
+            var row = e.target.closest(".fw-combo-row");
+            if (!row) return;
+            handleFirewallChange(row.getAttribute("data-value") || "all");
+            close();
+        });
+        if (clear) {
+            clear.addEventListener("click", function () {
+                handleFirewallChange("all");
+                close();
+            });
+        }
+        input.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") { close(); return; }
+            if (e.key === "Enter") {
+                e.preventDefault();
+                var first = list.querySelector(".fw-combo-row");
+                if (first) handleFirewallChange(first.getAttribute("data-value") || "all");
+                close();
+            }
+        });
     }
 
     function populateDateSelect(history) {
@@ -575,10 +697,12 @@
 
     function resetFilters() {
         state.filters = defaultFilters();
-        if (sortSelect) sortSelect.value = "severity";
+        state.filters.firewall = state.loadedFirewall || "all";
+        if (sortSelect) sortSelect.value = state.filters.sort;
         if (searchInput) searchInput.value = "";
         if (viewSelect) viewSelect.value = "all";
         applyFilters();
+        reflectFirewallUI();
     }
 
     // ============================================================
@@ -805,14 +929,15 @@
     }
 
     function assignOwner(rec) {
-        var current = state.assignees[rec.control] || "";
-        var name = window.prompt(current ? "Reassign owner for " + rec.control + ":" : "Assign owner for " + rec.control + ":", current);
+        var key = recKey(rec);
+        var current = state.assignees[key] || "";
+        var name = window.prompt(current ? "Reassign owner for " + rec.control + " on " + rec._firewall + ":" : "Assign owner for " + rec.control + " on " + rec._firewall + ":", current);
         if (name === null) return;
         name = (name || "").trim();
         if (name) {
-            state.assignees[rec.control] = name;
+            state.assignees[key] = name;
         } else {
-            delete state.assignees[rec.control];
+            delete state.assignees[key];
         }
         saveAssignees();
         renderAll();
@@ -841,8 +966,8 @@
             firewall: { hostname: rec._firewall, model: rec._model, version: rec._version },
             detected_at: rec._detected,
             run_id: rec._run_id,
-            assignee: state.assignees[rec.control] || null,
-            reviewed: !!state.reviewed[rec.control]
+            assignee: state.assignees[recKey(rec)] || null,
+            reviewed: !!state.reviewed[recKey(rec)]
         };
     }
 
@@ -888,10 +1013,11 @@
     }
 
     function toggleReview(rec) {
-        if (state.reviewed[rec.control]) {
-            delete state.reviewed[rec.control];
+        var key = recKey(rec);
+        if (state.reviewed[key]) {
+            delete state.reviewed[key];
         } else {
-            state.reviewed[rec.control] = true;
+            state.reviewed[key] = true;
         }
         saveReviewed();
         renderAll();
@@ -919,7 +1045,7 @@
                 e.stopPropagation();
                 var card = actionBtn.closest(".finding-card");
                 var cid = card.getAttribute("data-control");
-                var rec = findRecord(cid);
+                var rec = findRecord(cid, card.getAttribute("data-fw"));
                 if (!rec) return;
                 var act = actionBtn.getAttribute("data-act");
                 if (act === "copilot") {
@@ -985,8 +1111,7 @@
         var fwSelect = document.getElementById("firewallSelect");
         if (fwSelect) {
             fwSelect.addEventListener("change", function () {
-                state.filters.firewall = fwSelect.value;
-                applyFilters();
+                handleFirewallChange(fwSelect.value);
             });
         }
 
@@ -1044,8 +1169,18 @@
         });
     }
 
-    function findRecord(cid) {
-        return state.records.find(function (r) { return r.control === cid; });
+    function findRecord(cid, fw) {
+        return state.records.find(function (r) {
+            return r.control === cid && (!fw || !isEstateView() || r._firewall === fw);
+        });
+    }
+
+    function isEstateView() {
+        return (state.loadedFirewall || "all") === "all";
+    }
+
+    function recKey(rec) {
+        return (isEstateView() ? (rec._firewall || "?") + "::" : "") + rec.control;
     }
 
     // ============================================================
@@ -1076,41 +1211,113 @@
     // ============================================================
 
     function load() {
-        var params = new URLSearchParams(window.location.search);
-        var fw = params.get("firewall") || "vmpafw01";
-        fetch("/api/findings?firewall=" + encodeURIComponent(fw))
+        fetch("/api/firewall-inventory")
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                state.inventory = (data && data.firewalls) || [];
+                var names = (state.inventory || []).map(function (e) { return e.device_name; }).filter(Boolean);
+                var params = new URLSearchParams(window.location.search);
+                var stored = (state.filters.firewall && state.filters.firewall !== "all") ? state.filters.firewall : null;
+                var fw = params.get("firewall") || stored || names[0] || "vmpafw01";
+                if (fw !== "all" && names.length && names.indexOf(fw) === -1) fw = "all";
+                return loadData(fw);
+            })
+            .catch(function () {
+                state.inventory = [];
+                var params = new URLSearchParams(window.location.search);
+                return loadData(params.get("firewall") || "all");
+            });
+    }
+
+    function loadData(fw) {
+        state.loadedFirewall = fw || "all";
+        state.filters.firewall = state.loadedFirewall;
+        var req = state.loadedFirewall === "all"
+            ? "/api/estate/assessment"
+            : "/api/findings?firewall=" + encodeURIComponent(state.loadedFirewall);
+        fetch(req)
             .then(function (r) { return r.json(); })
             .then(function (data) {
                 if (!data || data.error) {
                     if (root) root.innerHTML = '<div class="empty-state card"><h4>No findings available</h4><p>Run an assessment from the AI Workspace to populate findings.</p></div>';
+                    reflectFirewallUI();
                     return;
                 }
-                state.data = data;
-                var posture = data.posture || {};
-                var ctx = {
-                    detected: data._collected_at ? String(data._collected_at).slice(0, 10) : new Date().toISOString().slice(0, 10),
-                    collected_at: data._collected_at || posture.collected_at,
-                    run_id: posture.run_id || "\u2014",
-                    firewall: data.firewall || { hostname: "edge-fw-01", model: "", version: "" }
-                };
-                var findingMap = {};
-                (data.findings || []).forEach(function (f) { findingMap[(f.control || "").toUpperCase()] = f; });
-                state.records = (data.assessment || []).map(function (r) {
-                    return enrich(r, findingMap[(r.control || "").toUpperCase()], null, ctx);
-                });
-
-                renderDomainChips();
-                populateFirewallSelect(data.firewalls);
-                populateDateSelect(data.history);
-                populateViewSelect();
-                if (sortSelect) sortSelect.value = state.filters.sort;
-                if (searchInput) searchInput.value = state.filters.search || "";
-                syncFilterChips();
-                renderAll();
+                if (state.loadedFirewall === "all") renderEstateFindings(data);
+                else renderPostureFindings(data);
             })
             .catch(function () {
                 if (root) root.innerHTML = '<div class="empty-state card"><h4>Unable to load findings</h4></div>';
+                reflectFirewallUI();
             });
+    }
+
+    function renderPostureFindings(data) {
+        state.data = data;
+        var posture = data.posture || {};
+        var ctx = {
+            detected: data._collected_at ? String(data._collected_at).slice(0, 10) : new Date().toISOString().slice(0, 10),
+            collected_at: data._collected_at || posture.collected_at,
+            run_id: posture.run_id || "\u2014",
+            firewall: data.firewall || { hostname: "edge-fw-01", model: "", version: "" }
+        };
+        var findingMap = {};
+        (data.findings || []).forEach(function (f) { findingMap[(f.control || "").toUpperCase()] = f; });
+        state.records = (data.assessment || []).map(function (r) {
+            return enrich(r, findingMap[(r.control || "").toUpperCase()], null, ctx);
+        });
+        finishFindingsRender();
+    }
+
+    function renderEstateFindings(data) {
+        var devices = data.devices || [];
+        var cumulative = data.cumulative || {};
+        var detected = data._collected_at ? String(data._collected_at).slice(0, 10) : new Date().toISOString().slice(0, 10);
+        var records = [];
+        devices.forEach(function (dev) {
+            var ctx = {
+                detected: detected,
+                collected_at: dev.collected_at,
+                run_id: "Estate",
+                firewall: { hostname: dev.device, model: "", version: "" }
+            };
+            var map = {};
+            (dev.findings || []).forEach(function (f) { map[(f.control || "").toUpperCase()] = f; });
+            (dev.assessment || []).forEach(function (r) {
+                records.push(enrich(r, map[(r.control || "").toUpperCase()], null, ctx));
+            });
+        });
+        state.records = records;
+        state.data = {
+            posture: {
+                run_id: "Estate",
+                compliance_pct: cumulative.compliance_score_pct,
+                compliant: cumulative.total_compliant,
+                non_compliant: cumulative.total_non_compliant,
+                not_assessed: cumulative.total_not_assessed,
+                total_controls: cumulative.total_controls
+            },
+            firewall: { hostname: "All devices", model: "", version: "" },
+            firewalls: devices.map(function (d) { return { hostname: d.device, model: "", version: "" }; }),
+            findings: [],
+            assessment: [],
+            history: [],
+            _collected_at: data._collected_at
+        };
+        finishFindingsRender();
+    }
+
+    function finishFindingsRender() {
+        renderDomainChips();
+        populateFirewallSelect(state.data ? state.data.firewalls : []);
+        populateDateSelect((state.data && state.data.history) || []);
+        populateViewSelect();
+        if (sortSelect) sortSelect.value = state.filters.sort;
+        if (searchInput) searchInput.value = state.filters.search || "";
+        syncFilterChips();
+        saveFilters();
+        reflectFirewallUI();
+        renderAll();
     }
 
     loadFilters();
@@ -1119,5 +1326,6 @@
     bindChips("statusChips", "status");
     bindChips("domainChips", "domain");
     bindEvents();
+    bindFirewallCombo();
     load();
 })();

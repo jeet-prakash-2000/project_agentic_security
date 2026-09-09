@@ -398,3 +398,122 @@
 
     loadFirewalls();
 })();
+
+// ---- AI Agents (administrators only) ----
+
+(function () {
+    "use strict";
+
+    var body = document.getElementById("agentsBody");
+    if (!body) return;
+
+    var countChip = document.getElementById("agentCountChip");
+
+    function escapeHtml(value) {
+        return String(value == null ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function statusHtml(connected) {
+        var cls = connected ? "status-on" : "status-idle";
+        var label = connected ? "Connected" : "Not connected";
+        return '<span class="status-chip ' + cls + '">' + label + "</span>";
+    }
+
+    function renderAgents(agents) {
+        var rows = agents.map(function (agent) {
+            return "<tr data-id=\"" + escapeHtml(agent.id || "") + "\">" +
+                "<td>" + escapeHtml(agent.name || "") + "</td>" +
+                "<td>" + escapeHtml(agent.type || "") + "</td>" +
+                "<td>" + statusHtml(!!agent.connected) + "</td>" +
+                '<td class="users-actions">' +
+                '<button class="btn btn-sm btn-danger" data-action="remove" data-id="' + escapeHtml(agent.id || "") + '">Remove</button>' +
+                "</td>" +
+                "</tr>";
+        }).join("");
+
+        body.innerHTML = rows ||
+            '<tr><td colspan="4" class="users-empty">No agents configured yet.</td></tr>';
+
+        if (countChip) countChip.textContent = "Total " + agents.length;
+    }
+
+    function loadAgents() {
+        fetch("/api/agents", { headers: { "Accept": "application/json" } })
+            .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error("Failed to load agents")); })
+            .then(function (data) { renderAgents(data.agents || []); })
+            .catch(function (err) {
+                body.innerHTML = '<tr><td colspan="4" class="users-empty">' + escapeHtml(err.message) + "</td></tr>";
+            });
+    }
+
+    function postJson(url, payload, method) {
+        return fetch(url, {
+            method: method || "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify(payload || {})
+        }).then(function (res) {
+            return res.json().then(function (data) {
+                if (!res.ok) throw new Error(data.error || "Request failed");
+                return data;
+            });
+        });
+    }
+
+    body.addEventListener("click", function (event) {
+        var button = event.target.closest("[data-action]");
+        if (!button || button.getAttribute("data-action") !== "remove") return;
+        var id = button.getAttribute("data-id") || "";
+        var row = button.closest("tr");
+        var agentName = row ? row.cells[0].textContent.trim() : "agent";
+
+        if (!window.confirm("Remove \"" + agentName + "\" from the AI Workspace? It will no longer appear in chat.")) return;
+        fetch("/api/agents/" + encodeURIComponent(id), { method: "DELETE", headers: { "Accept": "application/json" } })
+            .then(function (res) {
+                return res.json().then(function (data) {
+                    if (!res.ok) throw new Error(data.error || "Request failed");
+                    return data;
+                });
+            })
+            .then(function () {
+                window.showToast("Agent removed from the workspace.", "success");
+                loadAgents();
+            })
+            .catch(function (err) {
+                window.showToast(err.message, "error");
+            });
+    });
+
+    var addBtn = document.getElementById("agentAddBtn");
+    if (addBtn) {
+        addBtn.addEventListener("click", function () {
+            var name = (document.getElementById("agentName").value || "").trim();
+            var type = document.getElementById("agentType").value || "Custom Agent";
+            var endpoint = (document.getElementById("agentEndpoint").value || "").trim();
+            var model = (document.getElementById("agentModel").value || "").trim() || "gpt-5.1";
+            var key = document.getElementById("agentKey").value || "";
+
+            if (!name || !endpoint || !key) {
+                window.showToast("Agent name, endpoint, and API key are required.", "error");
+                return;
+            }
+            postJson("/api/agents", { name: name, type: type, endpoint: endpoint, model: model, api_key: key })
+                .then(function () {
+                    window.showToast("Agent added to the workspace.", "success");
+                    document.getElementById("agentName").value = "";
+                    document.getElementById("agentEndpoint").value = "";
+                    document.getElementById("agentModel").value = "gpt-5.1";
+                    document.getElementById("agentKey").value = "";
+                    loadAgents();
+                })
+                .catch(function (err) {
+                    window.showToast(err.message, "error");
+                });
+        });
+    }
+
+    loadAgents();
+})();

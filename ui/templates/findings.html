@@ -96,9 +96,17 @@
             <span class="filter-label">Domain</span>
             <div class="filter-chips" id="domainChips"></div>
         </div>
-        <div class="filter-group">
-            <label class="filter-label" for="firewallSelect">Firewall</label>
-            <select id="firewallSelect" class="filter-select"><option value="all">All</option></select>
+        <div class="filter-group fw-combo-group">
+            <span class="filter-label">Firewall</span>
+            <div class="fw-combobox" id="fwCombobox">
+                <svg class="fw-combo-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                <input type="text" id="fwSearchInput" class="fw-combo-input" placeholder="All devices — search inventory" autocomplete="off" role="combobox" aria-expanded="false" aria-label="Search firewall inventory">
+                <button type="button" class="fw-combo-clear" id="fwSearchClear" hidden aria-label="Clear firewall filter">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <ul class="fw-combo-list" id="fwSearchList" role="listbox" hidden></ul>
+            </div>
+            <select id="firewallSelect" class="filter-select" hidden><option value="all">All</option></select>
         </div>
         <div class="filter-group">
             <label class="filter-label" for="riskRangeSelect">Risk Score</label>
@@ -161,6 +169,6 @@
 {% block scripts %}
 {% if not assessment_blocked %}
 <script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=7"></script>
-<script src="{{ url_for('static', filename='js/findings.js') }}?v=12"></script>
+<script src="{{ url_for('static', filename='js/findings.js') }}?v=13"></script>
 {% endif %}
 {% endblock %}

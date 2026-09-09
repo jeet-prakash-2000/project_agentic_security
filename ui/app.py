@@ -907,6 +907,7 @@ def api_agent_status():
 
 
 @app.route("/api/agents", methods=["POST"])
+@admin_required
 def api_agents_add():
 
     payload = request.get_json(silent=True) or {}
@@ -929,6 +930,19 @@ def api_agents_add():
     )
 
     return jsonify({"status": "connected", "agent": agent}), 201
+
+
+@app.route("/api/agents/<agent_id>", methods=["DELETE"])
+@admin_required
+def api_agents_remove(agent_id):
+
+    removed = agents_service.remove_agent(agent_id)
+    if not removed:
+        return jsonify(
+            {"error": "Agent not found."}
+        ), 404
+
+    return jsonify({"status": "removed", "agent_id": agent_id})
 
 
 @app.route("/api/chat", methods=["POST"])
@@ -1416,6 +1430,91 @@ def api_admin_firewalls_clone(firewall_id):
         code = 404 if "not found" in str(exc) else 400
         return jsonify({"error": str(exc)}), code
     return jsonify({"firewall": entry}), 201
+
+
+# --------------------------------------------------
+# FIREWALL INVENTORY SEARCH + FULL INVENTORY (ESTATE)
+# --------------------------------------------------
+
+@app.route("/api/firewall-inventory")
+@login_required
+def api_managed_firewall_inventory():
+    """Return the managed firewall inventory for search pickers.
+
+    Any signed-in user may search the inventory (AI Workspace firewall audit
+    agent and the Security Operations Centre). Exposes device name, host IP,
+    live/down status and clone lineage only - never host keys.
+    """
+
+    entries = managed_firewalls_service.list_firewalls()
+    return jsonify({
+        "firewalls": [
+            {
+                "id": entry["id"],
+                "device_name": entry["device_name"],
+                "host_name": entry.get("host_name"),
+                "host_ip": entry["host_ip"],
+                "status": entry["status"],
+                "clone_of": entry.get("clone_of"),
+                "is_clone": bool(entry.get("clone_of")),
+            }
+            for entry in entries
+        ]
+    })
+
+
+@app.route("/api/estate/assessment")
+@login_required
+def api_estate_assessment():
+    """Assess the full managed inventory and return cumulative statistics."""
+
+    force = (
+        request.args.get("refresh", "0")
+        == "1"
+    )
+    try:
+        return jsonify(
+            assessment_service.get_estate_assessment(force=force)
+        )
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/estate/excel")
+@login_required
+def api_estate_excel():
+    """Generate the aggregated full-inventory Excel workbook."""
+
+    force = (
+        request.args.get("refresh", "0")
+        == "1"
+    )
+    try:
+        result = assessment_service.get_estate_excel(force=force)
+
+        payload = dict(result)
+
+        if result.get("local_file"):
+            payload["download_url"] = url_for(
+                "static",
+                filename=result["download_url"]
+            )
+
+        agent = agents_service.get_connected_agent()
+        report_history_service.append_report({
+            "name": result.get("filename", "").replace(".xlsx", ""),
+            "type": "Workbook",
+            "generated_by": (agent or {}).get("name", "Firewall Auditor"),
+            "ts": time.time(),
+            "status": "Completed",
+            "size": file_size_label(result.get("local_file")),
+            "download_url": result.get("download_url"),
+        }, user_id=current_user_id())
+
+        return jsonify(payload)
+
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 # --------------------------------------------------

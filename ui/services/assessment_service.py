@@ -685,3 +685,323 @@ def get_excel_report(firewall_id="vmpafw01", force=False):
             ),
         "firewall_id": firewall_id,
     }
+
+
+# ------------------------------------------------------------
+# ESTATE (FULL INVENTORY) ASSESSMENT
+# ------------------------------------------------------------
+
+def _pct(n, total):
+    return round(n / total * 100.0, 1) if total else 0.0
+
+
+def _device_payload(entry, data):
+    """Summarise one managed device (registry row + assessment snapshot).
+
+    Clones share the underlying system with their parent (``clone_of``), so a
+    clone's snapshot is the parent's data relabelled with the clone's name.
+    """
+    summary = data.get("summary") or {}
+    results = data.get("assessment") or []
+    findings = data.get("findings") or []
+    total = summary.get("total_controls", 0) or len(results)
+    compliant = int(summary.get("compliant", 0))
+    non_compliant = int(summary.get("non_compliant", 0))
+    not_assessed = int(summary.get("not_assessed", 0))
+    return {
+        "id": entry.get("id"),
+        "device": entry.get("device_name"),
+        "host_ip": entry.get("host_ip"),
+        "status": entry.get("status") or "down",
+        "clone_of": entry.get("clone_of"),
+        "is_clone": bool(entry.get("clone_of")),
+        "compliance_pct": _pct(compliant, total),
+        "compliant": compliant,
+        "non_compliant": non_compliant,
+        "not_assessed": not_assessed,
+        "total_controls": total,
+        "findings_count": len(findings),
+        "severity": _severity_breakdown(findings),
+        "source": data.get("_source", "sample"),
+        "collected_at": data.get("_collected_at"),
+        "summary": summary,
+        "assessment": results,
+        "findings": findings,
+    }
+
+
+def get_estate_assessment(force=False):
+    """Assess every managed firewall in the inventory together.
+
+    Returns cumulative compliance statistics (average compliant / non
+    compliant / not assessed percentages across all registered devices)
+    plus a per-device payload that includes each device's control rows and
+    findings, so reports and the Security Operations Centre can render the
+    full estate.
+
+    The estate is computed from a single underlying assessment snapshot that
+    is then relabelled per registered device (originals and clones).
+    """
+    from services import managed_firewalls_service
+
+    entries = managed_firewalls_service.list_firewalls()
+    devices = []
+    if entries:
+        names = [entry["device_name"] for entry in entries]
+        prime = "vmpafw01" if "vmpafw01" in names else names[0]
+        base = get_full_assessment(prime, force=force)
+        import copy
+
+        for entry in entries:
+            name = entry.get("device_name")
+            if name == prime:
+                data = base
+            else:
+                data = copy.deepcopy(base)
+                data = _apply_firewall(data, name)
+                _cache["assessment"][name] = data
+                _cache["ts"][name] = time.time()
+            devices.append(_device_payload(entry, data))
+
+    device_count = len(devices)
+    cumulative = {
+        "device_count": device_count,
+        "total_controls": sum(d["total_controls"] for d in devices),
+        "total_compliant": sum(d["compliant"] for d in devices),
+        "total_non_compliant": sum(d["non_compliant"] for d in devices),
+        "total_not_assessed": sum(d["not_assessed"] for d in devices),
+        "total_findings": sum(d["findings_count"] for d in devices),
+    }
+    cumulative["avg_compliance_pct"] = (
+        round(sum(d["compliance_pct"] for d in devices) / device_count, 1)
+        if device_count
+        else 0.0
+    )
+    cumulative["avg_non_compliant_pct"] = (
+        round(
+            sum(_pct(d["non_compliant"], d["total_controls"]) for d in devices)
+            / device_count,
+            1,
+        )
+        if device_count
+        else 0.0
+    )
+    cumulative["avg_not_assessed_pct"] = (
+        round(
+            sum(_pct(d["not_assessed"], d["total_controls"]) for d in devices)
+            / device_count,
+            1,
+        )
+        if device_count
+        else 0.0
+    )
+    cumulative["compliance_score_pct"] = _pct(
+        cumulative["total_compliant"], cumulative["total_controls"]
+    )
+
+    base_meta = {}
+    if devices:
+        base_meta = {
+            "_source": devices[0].get("source"),
+            "_collected_at": devices[0].get("collected_at"),
+        }
+
+    return {
+        "cumulative": cumulative,
+        "devices": devices,
+        "_firewall_id": "estate",
+        **base_meta,
+    }
+
+
+def _unique_sheet_name(device, used):
+    clean = "".join(
+        ch for ch in device if ch.isalnum() or ch in (" ", "-", "_")
+    ).strip()
+    name = ("Controls - {0}".format(clean or "device"))[:31]
+    base = name
+    suffix = 1
+    while name in used:
+        name = "{0}-{1}".format(base[:28], suffix)
+        suffix += 1
+    used.add(name)
+    return name
+
+
+def _estate_excel_file(estate, output_file):
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+
+    cumulative = estate.get("cumulative") or {}
+    devices = estate.get("devices") or []
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Estate Summary"
+
+    title = Font(bold=True, size=15, color="1f2937")
+    sub = Font(size=10, color="6b7280")
+    section = Font(bold=True, size=11, color="1f2937")
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="6366f1")
+    alt_fill = PatternFill("solid", fgColor="f1f5f9")
+
+    ws["A1"] = "Full Inventory Compliance Assessment"
+    ws["A1"].font = title
+    ws["A2"] = "All managed firewalls \u00b7 generated {0}".format(
+        (estate.get("_collected_at") or "").split("T")[0]
+    )
+    ws["A2"].font = sub
+
+    row = 4
+    ws.cell(row=row, column=1, value="Cumulative posture").font = section
+    row += 1
+    summary_rows = [
+        ("Average compliant", "{0}%".format(cumulative.get("avg_compliance_pct", 0.0))),
+        ("Average non-compliant", "{0}%".format(cumulative.get("avg_non_compliant_pct", 0.0))),
+        ("Average not assessed", "{0}%".format(cumulative.get("avg_not_assessed_pct", 0.0))),
+        ("Devices assessed", cumulative.get("device_count", 0)),
+        ("Total controls", cumulative.get("total_controls", 0)),
+        ("Compliant controls", cumulative.get("total_compliant", 0)),
+        ("Non-compliant controls", cumulative.get("total_non_compliant", 0)),
+        ("Not assessed controls", cumulative.get("total_not_assessed", 0)),
+        ("Open findings", cumulative.get("total_findings", 0)),
+    ]
+    for label, value in summary_rows:
+        ws.cell(row=row, column=1, value=label).font = Font(bold=True)
+        ws.cell(row=row, column=2, value=value)
+        row += 1
+
+    row += 1
+    headers = [
+        "Device",
+        "Status",
+        "Compliance %",
+        "Compliant",
+        "Non-Compliant",
+        "Not Assessed",
+        "Controls",
+        "Findings",
+        "Clone of",
+        "Host IP",
+    ]
+    for col, label in enumerate(headers, start=1):
+        cell = ws.cell(row=row, column=col, value=label)
+        cell.font = header_font
+        cell.fill = header_fill
+    header_row = row
+    row += 1
+    for i, dev in enumerate(devices):
+        values = [
+            dev.get("device"),
+            (dev.get("status") or "down").title(),
+            "{0}%".format(dev.get("compliance_pct", 0.0)),
+            dev.get("compliant", 0),
+            dev.get("non_compliant", 0),
+            dev.get("not_assessed", 0),
+            dev.get("total_controls", 0),
+            dev.get("findings_count", 0),
+            dev.get("clone_of") or "\u2014",
+            dev.get("host_ip") or "\u2014",
+        ]
+        for col, value in enumerate(values, start=1):
+            cell = ws.cell(row=row, column=col, value=value)
+            if i % 2 == 1:
+                cell.fill = alt_fill
+        row += 1
+
+    for col, width in enumerate(
+        [20, 12, 14, 12, 14, 14, 10, 10, 16, 18], start=1
+    ):
+        ws.column_dimensions[chr(64 + col)].width = width
+
+    used = {"Estate Summary"}
+    for dev in devices:
+        device = dev.get("device") or "device"
+        sheet = wb.create_sheet(title=_unique_sheet_name(device, used))
+        r = 1
+        sheet.cell(
+            row=r, column=1, value="Compliance Controls \u2014 {0}".format(device)
+        ).font = Font(bold=True, size=12)
+        r += 2
+        for col, label in enumerate(
+            ["Control", "Status", "Risk", "Metric", "Observed", "Expected"],
+            start=1,
+        ):
+            cell = sheet.cell(row=r, column=col, value=label)
+            cell.font = header_font
+            cell.fill = header_fill
+        r += 1
+        for result in dev.get("assessment") or []:
+            expected = result.get("expected")
+            if isinstance(expected, list):
+                expected = ", ".join(str(item) for item in expected)
+            values = [
+                result.get("control"),
+                result.get("status"),
+                result.get("risk"),
+                result.get("metric"),
+                result.get("observed"),
+                expected,
+            ]
+            for col, value in enumerate(values, start=1):
+                sheet.cell(row=r, column=col, value=value)
+            r += 1
+        r += 1
+        sheet.cell(
+            row=r, column=1, value="Findings and remediation \u2014 {0}".format(device)
+        ).font = Font(bold=True, size=11)
+        r += 1
+        for col, label in enumerate(
+            ["Control", "Risk", "Finding", "Remediation"], start=1
+        ):
+            cell = sheet.cell(row=r, column=col, value=label)
+            cell.font = header_font
+            cell.fill = header_fill
+        r += 1
+        for finding in dev.get("findings") or []:
+            values = [
+                finding.get("control"),
+                finding.get("risk"),
+                finding.get("finding"),
+                finding.get("remediation"),
+            ]
+            for col, value in enumerate(values, start=1):
+                sheet.cell(row=r, column=col, value=value).alignment = Alignment(
+                    wrap_text=True, vertical="top"
+                )
+            r += 1
+        for col, width in enumerate([12, 10, 12, 60, 60, 40], start=1):
+            letter = chr(64 + col)
+            sheet.column_dimensions[letter].width = width
+        sheet.freeze_panes = "A3"
+
+    os.makedirs(EXCEL_DIR, exist_ok=True)
+    wb.save(output_file)
+    return output_file
+
+
+def get_estate_excel(force=False):
+    """Generate the aggregated full-inventory workbook.
+
+    Produces an ``.xlsx`` with an estate summary tab (cumulative averages and
+    a per-device table) plus a controls + findings tab for every managed
+    device in the inventory.
+    """
+    estate = get_estate_assessment(force=force)
+
+    month = timeutil.ist_now().strftime("%b_%Y")
+    filename = "Full_Inventory_Assessment_Workbook_{0}.xlsx".format(month)
+    output_file = os.path.join(EXCEL_DIR, filename)
+
+    _estate_excel_file(estate, output_file)
+
+    return {
+        "status": "SUCCESS",
+        "message": "Full inventory workbook generated successfully.",
+        "summary": estate.get("cumulative") or {},
+        "local_file": output_file,
+        "download_url": "reports/{0}".format(filename),
+        "_source": estate.get("_source", "sample"),
+        "firewall_id": "estate",
+    }
