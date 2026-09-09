@@ -221,3 +221,22 @@ class DemoRequest(Base):
     message = Column(Text, default="")
     status = Column(String(32), default="new")
     created = Column(Float, index=True)
+
+
+class ManagedFirewall(Base):
+    """Admin-registered firewall connection inventory.
+
+    Distinct from the live ``firewall_inventory`` collector snapshots: this
+    table holds the static registry of firewalls the platform manages, entered
+    under Settings > Firewall Inventory (host name, host key, host IP and the
+    logical device name of the firewall).
+    """
+
+    __tablename__ = "managed_firewalls"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    device_name = Column(String(64), unique=True, nullable=False)
+    host_name = Column(String(255), nullable=False)
+    host_ip = Column(String(64), nullable=False)
+    host_key = Column(String(1024))
+    created = Column(Float, index=True)

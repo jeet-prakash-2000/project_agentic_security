@@ -143,3 +143,132 @@
 
     loadUsers();
 })();
+
+// ---- Firewall inventory (administrators only) ----
+
+(function () {
+    "use strict";
+
+    var body = document.getElementById("fwInventoryBody");
+    if (!body) return;
+
+    var countChip = document.getElementById("fwCountChip");
+
+    function escapeHtml(value) {
+        return String(value == null ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function formatDate(ts) {
+        if (!ts) return "—";
+        try {
+            return new Date(ts * 1000).toISOString().slice(0, 10);
+        } catch (err) {
+            return "—";
+        }
+    }
+
+    function renderFirewalls(firewalls) {
+        var rows = firewalls.map(function (fw) {
+            var key = fw.host_key
+                ? '<span class="fw-key-masked">' + escapeHtml(fw.host_key) + "</span>"
+                : '<span class="users-none">—</span>';
+            return (
+                "<tr>" +
+                "<td class=\"fw-device\">" + escapeHtml(fw.device_name || "") + "</td>" +
+                "<td>" + escapeHtml(fw.host_name || "") + "</td>" +
+                "<td>" + escapeHtml(fw.host_ip || "") + "</td>" +
+                "<td>" + key + "</td>" +
+                "<td>" + formatDate(fw.created) + "</td>" +
+                "<td class=\"users-actions\"><button class=\"btn btn-sm btn-danger\" data-action=\"remove\" data-id=\"" + fw.id + "\">Remove</button></td>" +
+                "</tr>"
+            );
+        }).join("");
+
+        body.innerHTML = rows ||
+            '<tr><td colspan="6" class="users-empty">No firewalls registered yet.</td></tr>';
+
+        if (countChip) countChip.textContent = "Total " + firewalls.length;
+    }
+
+    function loadFirewalls() {
+        fetch("/api/admin/firewalls", { headers: { "Accept": "application/json" } })
+            .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error("Failed to load firewall inventory")); })
+            .then(function (data) { renderFirewalls(data.firewalls || []); })
+            .catch(function (err) {
+                body.innerHTML = '<tr><td colspan="6" class="users-empty">' + escapeHtml(err.message) + '</td></tr>';
+            });
+    }
+
+    function postJson(url, payload) {
+        return fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Accept": "application/json" },
+            body: JSON.stringify(payload || {})
+        }).then(function (res) {
+            return res.json().then(function (data) {
+                if (!res.ok) throw new Error(data.error || "Request failed");
+                return data;
+            });
+        });
+    }
+
+    var addBtn = document.getElementById("fwAddBtn");
+    if (addBtn) {
+        addBtn.addEventListener("click", function () {
+            var deviceName = (document.getElementById("fwDeviceName").value || "").trim();
+            var hostName = (document.getElementById("fwHostName").value || "").trim();
+            var hostIp = (document.getElementById("fwHostIp").value || "").trim();
+            var hostKey = document.getElementById("fwHostKey").value || "";
+
+            if (!deviceName || !hostName || !hostIp || !hostKey) {
+                window.showToast("Device name, host name, host IP, and host key are required.", "error");
+                return;
+            }
+            postJson("/api/admin/firewalls", {
+                device_name: deviceName,
+                host_name: hostName,
+                host_ip: hostIp,
+                host_key: hostKey
+            }).then(function () {
+                window.showToast("Firewall added to the inventory.", "success");
+                document.getElementById("fwDeviceName").value = "";
+                document.getElementById("fwHostName").value = "";
+                document.getElementById("fwHostIp").value = "";
+                document.getElementById("fwHostKey").value = "";
+                loadFirewalls();
+            }).catch(function (err) {
+                window.showToast(err.message, "error");
+            });
+        });
+    }
+
+    body.addEventListener("click", function (event) {
+        var button = event.target.closest("[data-action]");
+        if (!button || button.getAttribute("data-action") !== "remove") return;
+        var id = button.getAttribute("data-id");
+        var deviceName = button.closest("tr").cells[0].textContent.trim();
+
+        if (!window.confirm("Remove \"" + deviceName + "\" from the firewall inventory?")) return;
+
+        fetch("/api/admin/firewalls/" + encodeURIComponent(id), { method: "DELETE" })
+            .then(function (res) {
+                return res.json().then(function (data) {
+                    if (!res.ok) throw new Error(data.error || "Request failed");
+                    return data;
+                });
+            })
+            .then(function () {
+                window.showToast("Firewall removed from the inventory.", "success");
+                loadFirewalls();
+            })
+            .catch(function (err) {
+                window.showToast(err.message, "error");
+            });
+    });
+
+    loadFirewalls();
+})();

@@ -21,6 +21,7 @@ from services import dashboard_service
 from services import demo_request_service
 from services import insights_service
 from services import mailer
+from services import managed_firewalls_service
 from services import report_history_service
 from services import system_status_service
 from services import telemetry_map_service
@@ -1337,6 +1338,47 @@ def api_admin_user_role(user_id):
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify({"user": user})
+
+
+# --------------------------------------------------
+# FIREWALL INVENTORY API
+# --------------------------------------------------
+
+@app.route("/api/admin/firewalls")
+@admin_required
+def api_admin_firewalls():
+
+    return jsonify(
+        {"firewalls": managed_firewalls_service.list_firewalls()}
+    )
+
+
+@app.route("/api/admin/firewalls", methods=["POST"])
+@admin_required
+def api_admin_firewalls_add():
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        entry = managed_firewalls_service.add_firewall(
+            payload.get("device_name") or "",
+            payload.get("host_name") or "",
+            payload.get("host_ip") or "",
+            payload.get("host_key") or "",
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"firewall": entry}), 201
+
+
+@app.route("/api/admin/firewalls/<int:firewall_id>", methods=["DELETE"])
+@admin_required
+def api_admin_firewalls_delete(firewall_id):
+
+    try:
+        managed_firewalls_service.remove_firewall(firewall_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 404
+    return jsonify({"deleted": True, "id": firewall_id})
 
 
 # --------------------------------------------------

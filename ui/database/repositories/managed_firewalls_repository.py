@@ -1,0 +1,53 @@
+"""Managed firewalls repository (table ``managed_firewalls``).
+
+Holds the admin-registered firewall inventory entered under
+Settings > Firewall Inventory (device name, host name, host IP, host key).
+"""
+
+from database.models import ManagedFirewall
+from database.repositories.base import BaseRepository
+
+
+class ManagedFirewallsRepository(BaseRepository):
+    model = ManagedFirewall
+
+    def list_all(self):
+        return (
+            self.session.query(ManagedFirewall)
+            .order_by(ManagedFirewall.device_name.asc())
+            .all()
+        )
+
+    def by_device_name(self, device_name):
+        return (
+            self.session.query(ManagedFirewall)
+            .filter(ManagedFirewall.device_name == device_name)
+            .first()
+        )
+
+    def by_host_ip(self, host_ip):
+        return (
+            self.session.query(ManagedFirewall)
+            .filter(ManagedFirewall.host_ip == host_ip)
+            .first()
+        )
+
+    def create(self, data):
+        entry = ManagedFirewall(
+            device_name=(data.get("device_name") or "").strip(),
+            host_name=(data.get("host_name") or "").strip(),
+            host_ip=(data.get("host_ip") or "").strip(),
+            host_key=(data.get("host_key") or "").strip(),
+            created=data.get("created"),
+        )
+        self.session.add(entry)
+        self.session.commit()
+        return entry
+
+    def delete_id(self, pk):
+        entry = self.session.get(ManagedFirewall, pk)
+        if entry is None:
+            return None
+        self.session.delete(entry)
+        self.session.commit()
+        return pk

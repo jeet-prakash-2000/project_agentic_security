@@ -32,6 +32,7 @@ REQUIRED_TABLES = [
     "telemetry_history",
     "telemetry_metrics",
     "agent_activity_logs",
+    "managed_firewalls",
 ]
 
 

@@ -94,6 +94,11 @@
     color: var(--gold);
 }
 
+.settings-icon-cyan {
+    background: rgba(6, 182, 212, 0.12);
+    color: #22d3ee;
+}
+
 .settings-body {
     flex: 1;
 }
@@ -240,6 +245,22 @@
 .invite-user-row select option {
     background: #151826;
     color: #e8ecf4;
+}
+
+.invite-user-row--fw {
+    grid-template-columns: 1fr 1.2fr 0.9fr 1.25fr auto;
+}
+
+.fw-key-masked {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    letter-spacing: 0.4px;
+    color: var(--muted);
+}
+
+.fw-device {
+    font-weight: 700;
+    color: var(--text-0);
 }
 
 @media (max-width: 1100px) {
