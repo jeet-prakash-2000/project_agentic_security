@@ -162,34 +162,38 @@
             .replace(/"/g, "&quot;");
     }
 
-    function formatDate(ts) {
-        if (!ts) return "—";
-        try {
-            return new Date(ts * 1000).toISOString().slice(0, 10);
-        } catch (err) {
-            return "—";
+    function statusHtml(status) {
+        var live = status === "live";
+        var cls = live ? "live" : "down";
+        var label = live ? "Live" : "Down";
+        return '<span class="fw-status"><span class="status-dot ' + cls + '"></span>' + label + "</span>";
+    }
+
+    function deviceHtml(fw) {
+        var name = '<span class="fw-device">' + escapeHtml(fw.device_name || "") + "</span>";
+        if (fw.clone_of) {
+            name += '<span class="fw-clone-tag">clone of ' + escapeHtml(fw.clone_of) + "</span>";
         }
+        return name;
     }
 
     function renderFirewalls(firewalls) {
         var rows = firewalls.map(function (fw) {
-            var key = fw.host_key
-                ? '<span class="fw-key-masked">' + escapeHtml(fw.host_key) + "</span>"
-                : '<span class="users-none">—</span>';
             return (
                 "<tr>" +
-                "<td class=\"fw-device\">" + escapeHtml(fw.device_name || "") + "</td>" +
-                "<td>" + escapeHtml(fw.host_name || "") + "</td>" +
-                "<td>" + escapeHtml(fw.host_ip || "") + "</td>" +
-                "<td>" + key + "</td>" +
-                "<td>" + formatDate(fw.created) + "</td>" +
-                "<td class=\"users-actions\"><button class=\"btn btn-sm btn-danger\" data-action=\"remove\" data-id=\"" + fw.id + "\">Remove</button></td>" +
+                "<td>" + deviceHtml(fw) + "</td>" +
+                "<td class=\"fw-ip\">" + escapeHtml(fw.host_ip || "—") + "</td>" +
+                "<td>" + statusHtml(fw.status) + "</td>" +
+                "<td class=\"users-actions\">" +
+                '<button class="btn btn-sm btn-ghost" data-action="clone" data-id="' + fw.id + '">Clone</button>' +
+                '<button class="btn btn-sm btn-danger" data-action="remove" data-id="' + fw.id + '">Remove</button>' +
+                "</td>" +
                 "</tr>"
             );
         }).join("");
 
         body.innerHTML = rows ||
-            '<tr><td colspan="6" class="users-empty">No firewalls registered yet.</td></tr>';
+            '<tr><td colspan="4" class="users-empty">No firewalls registered yet.</td></tr>';
 
         if (countChip) countChip.textContent = "Total " + firewalls.length;
     }
@@ -199,7 +203,7 @@
             .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error("Failed to load firewall inventory")); })
             .then(function (data) { renderFirewalls(data.firewalls || []); })
             .catch(function (err) {
-                body.innerHTML = '<tr><td colspan="6" class="users-empty">' + escapeHtml(err.message) + '</td></tr>';
+                body.innerHTML = '<tr><td colspan="4" class="users-empty">' + escapeHtml(err.message) + '</td></tr>';
             });
     }
 
@@ -248,26 +252,50 @@
 
     body.addEventListener("click", function (event) {
         var button = event.target.closest("[data-action]");
-        if (!button || button.getAttribute("data-action") !== "remove") return;
+        if (!button) return;
+        var action = button.getAttribute("data-action");
         var id = button.getAttribute("data-id");
-        var deviceName = button.closest("tr").cells[0].textContent.trim();
+        var deviceName = button.closest("tr").cells[0].textContent.trim().replace(/\s+clone of.*$/, "");
 
-        if (!window.confirm("Remove \"" + deviceName + "\" from the firewall inventory?")) return;
-
-        fetch("/api/admin/firewalls/" + encodeURIComponent(id), { method: "DELETE" })
-            .then(function (res) {
-                return res.json().then(function (data) {
-                    if (!res.ok) throw new Error(data.error || "Request failed");
-                    return data;
+        if (action === "clone") {
+            var cloneName = window.prompt(
+                "Clone \"" + deviceName + "\" — enter a device name for the clone:",
+                deviceName + "-clone"
+            );
+            if (cloneName === null) return;
+            cloneName = (cloneName || "").trim();
+            if (!cloneName) {
+                window.showToast("A device name is required to clone.", "error");
+                return;
+            }
+            postJson("/api/admin/firewalls/" + encodeURIComponent(id) + "/clone", { device_name: cloneName })
+                .then(function () {
+                    window.showToast("Firewall cloned as " + cloneName + ".", "success");
+                    loadFirewalls();
+                })
+                .catch(function (err) {
+                    window.showToast(err.message, "error");
                 });
-            })
-            .then(function () {
-                window.showToast("Firewall removed from the inventory.", "success");
-                loadFirewalls();
-            })
-            .catch(function (err) {
-                window.showToast(err.message, "error");
-            });
+            return;
+        }
+
+        if (action === "remove") {
+            if (!window.confirm("Remove \"" + deviceName + "\" from the firewall inventory?")) return;
+            fetch("/api/admin/firewalls/" + encodeURIComponent(id), { method: "DELETE" })
+                .then(function (res) {
+                    return res.json().then(function (data) {
+                        if (!res.ok) throw new Error(data.error || "Request failed");
+                        return data;
+                    });
+                })
+                .then(function () {
+                    window.showToast("Firewall removed from the inventory.", "success");
+                    loadFirewalls();
+                })
+                .catch(function (err) {
+                    window.showToast(err.message, "error");
+                });
+        }
     });
 
     loadFirewalls();

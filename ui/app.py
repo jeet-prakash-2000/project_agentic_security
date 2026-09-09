@@ -1381,6 +1381,22 @@ def api_admin_firewalls_delete(firewall_id):
     return jsonify({"deleted": True, "id": firewall_id})
 
 
+@app.route("/api/admin/firewalls/<int:firewall_id>/clone", methods=["POST"])
+@admin_required
+def api_admin_firewalls_clone(firewall_id):
+
+    payload = request.get_json(silent=True) or {}
+    try:
+        entry = managed_firewalls_service.clone_firewall(
+            firewall_id,
+            (payload.get("device_name") or "").strip(),
+        )
+    except ValueError as exc:
+        code = 404 if "not found" in str(exc) else 400
+        return jsonify({"error": str(exc)}), code
+    return jsonify({"firewall": entry}), 201
+
+
 # --------------------------------------------------
 # STARTUP VALIDATION
 # --------------------------------------------------

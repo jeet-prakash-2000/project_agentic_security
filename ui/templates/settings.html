@@ -75,7 +75,7 @@
             </span>
             <div>
                 <h3>Firewall Inventory</h3>
-                <p>Register the firewalls the platform manages (host, key, IP, device name)</p>
+                <p>Registered firewalls with live status — clone any device to model a similar one</p>
             </div>
             <span class="status-chip status-on" id="fwCountChip">Total 0</span>
         </div>
@@ -85,15 +85,13 @@
                     <thead>
                         <tr>
                             <th>Device Name</th>
-                            <th>Host Name</th>
-                            <th>Host IP</th>
-                            <th>Host Key</th>
-                            <th>Added</th>
+                            <th>IP</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="fwInventoryBody">
-                        <tr><td colspan="6" class="users-empty">Loading firewall inventory…</td></tr>
+                        <tr><td colspan="4" class="users-empty">Loading firewall inventory…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -107,7 +105,7 @@
                     <input type="password" id="fwHostKey" placeholder="Host key" autocomplete="off">
                     <button class="btn btn-primary" id="fwAddBtn" type="button">Add Firewall</button>
                 </div>
-                <p class="users-hint">Device name is the firewall's logical name. Host name, host IP, and host key let agents connect to it. New entries are stored in the platform database.</p>
+                <p class="users-hint">Device name is the firewall's logical name. Live/down is checked automatically against the host IP. Use <strong>Clone</strong> on a row to register a copy under a new device name.</p>
             </div>
         </div>
     </div>
@@ -318,5 +316,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/settings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/settings.js') }}?v=2"></script>
 {% endblock %}

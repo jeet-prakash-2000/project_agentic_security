@@ -183,6 +183,13 @@ def run_bootstrap():
         log.warning("Agent registry seed failed: %s", exc)
 
     try:
+        from services import managed_firewalls_service
+
+        managed_firewalls_service.ensure_defaults()
+    except Exception as exc:
+        log.warning("Firewall inventory seed failed: %s", exc)
+
+    try:
         counts = reclaim_legacy_data(admin_id)
     except Exception as exc:
         log.warning("Legacy data reclaim failed: %s", exc)

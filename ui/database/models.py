@@ -19,6 +19,8 @@ Tables map to the pre-migration JSON documents as follows:
 Additional tables:
 * ``findings``             - per-assessment finding rows
 * ``agent_activity_logs``  - audit trail for agent/function actions
+* ``managed_firewalls``    - admin firewall registry (Settings > Firewall Inventory)
+* ``firewall_inventory``   - live collector snapshots (managed by the collector)
 """
 
 from sqlalchemy import (
@@ -228,8 +230,10 @@ class ManagedFirewall(Base):
 
     Distinct from the live ``firewall_inventory`` collector snapshots: this
     table holds the static registry of firewalls the platform manages, entered
-    under Settings > Firewall Inventory (host name, host key, host IP and the
-    logical device name of the firewall).
+    under Settings > Firewall Inventory (device name, host name, host IP and
+    host key). ``clone_of`` records the source device when a row is a clone.
+    ``status``/``last_checked`` persist the last live/down reachability probe
+    result for the host IP.
     """
 
     __tablename__ = "managed_firewalls"
@@ -239,4 +243,7 @@ class ManagedFirewall(Base):
     host_name = Column(String(255), nullable=False)
     host_ip = Column(String(64), nullable=False)
     host_key = Column(String(1024))
+    clone_of = Column(String(64))
+    status = Column(String(16), default="down")
+    last_checked = Column(Float)
     created = Column(Float, index=True)
