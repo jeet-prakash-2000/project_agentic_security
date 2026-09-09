@@ -876,12 +876,18 @@ def api_agents():
 
 
 @app.route("/api/agent-status")
+@login_required
 def api_agent_status():
 
     force = request.args.get("refresh", "0") == "1"
     try:
         return jsonify(
-            {"agents": agent_status_service.get_agent_statuses(force=force)}
+            {
+                "agents": agent_status_service.get_agent_statuses(
+                    force=force,
+                    user_id=current_user_id(),
+                )
+            }
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500

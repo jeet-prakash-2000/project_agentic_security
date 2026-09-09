@@ -12,6 +12,10 @@ state:
 The probe mirrors ``gateway.foundry_client`` key resolution so it honours
 per-agent ``FOUNDRY_API_KEY_<AGENT_ID>`` environment variables exactly like
 real chat traffic does. No API key is ever returned by this service.
+
+Probe state is shared across users (the agent estate is platform-wide), but
+the ``last_active``/``conversations`` activity shown on the health card is
+scoped to the signed-in user so each user only sees their own usage.
 """
 
 import threading
@@ -30,12 +34,16 @@ _lock = threading.Lock()
 _cache = {"ts": 0.0, "agents": []}
 
 
-def _last_activity_by_agent():
-    """Per-agent last telemetry timestamp + conversation count (from insights)."""
+def _last_activity_by_agent(user_id=None):
+    """Per-agent last telemetry timestamp + conversation count.
+
+    Activity is scoped to the requesting ``user_id`` so the Agent Health
+    card never reveals another user's conversation volume or recency.
+    """
     by_name = {}
     session = get_session()
     try:
-        rows = InsightsRepository(session).list_conversations()
+        rows = InsightsRepository(session).list_conversations(user_id=user_id)
         for row in rows:
             data = row.data or {}
             name = row.agent_name or row.agent_id or ""
@@ -123,10 +131,13 @@ def _probe_agent(agent):
     return _post_probe(url, api_key, payload)
 
 
-def get_agent_statuses(force=False):
+def get_agent_statuses(force=False, user_id=None):
     """Return the live/down status of every registered agent.
 
-    Response is a list of agent dicts (never includes API keys).
+    Probe results are cached ``STATUS_TTL`` seconds (they reflect the shared
+    agent estate); the per-agent ``last_active``/``conversations`` activity is
+    merged per request and scoped to ``user_id`` so each user only sees their
+    own usage. Never includes API keys.
     """
     now = time.time()
     with _lock:
@@ -135,38 +146,43 @@ def get_agent_statuses(force=False):
             and _cache["agents"]
             and now - _cache["ts"] < STATUS_TTL
         ):
-            return _cache["agents"]
+            base = _cache["agents"]
+        else:
+            base = None
 
-    from services import agents_service
+    if base is None:
+        from services import agents_service
 
-    # include_key=True so the probe resolves the real secret (env override or
-    # stored value); the key is never placed on the returned dicts.
-    registered = agents_service.list_agents(include_key=True)
-    activity = _last_activity_by_agent()
+        # include_key=True so the probe resolves the real secret (env override
+        # or stored value); the key is never placed on the returned dicts.
+        registered = agents_service.list_agents(include_key=True)
+        base = []
+        for agent in registered:
+            name = agent.get("name") or agent.get("id") or "Unknown"
+            probe = _probe_agent(agent)
+            base.append(
+                {
+                    "id": agent.get("id"),
+                    "name": name,
+                    "type": agent.get("type") or "Agent",
+                    "model": agent.get("model") or "-",
+                    "connected": bool(agent.get("connected")),
+                    "status": "live" if probe["live"] else "down",
+                    "detail": probe["detail"],
+                    "latency_ms": probe["latency_ms"],
+                    "checked_at": now,
+                }
+            )
+        with _lock:
+            _cache["agents"] = base
+            _cache["ts"] = now
 
+    activity = _last_activity_by_agent(user_id=user_id)
     result = []
-    for agent in registered:
-        name = agent.get("name") or agent.get("id") or "Unknown"
-        probe = _probe_agent(agent)
-        record = activity.get(name) or {}
-        result.append(
-            {
-                "id": agent.get("id"),
-                "name": name,
-                "type": agent.get("type") or "Agent",
-                "model": agent.get("model") or "-",
-                "connected": bool(agent.get("connected")),
-                "status": "live" if probe["live"] else "down",
-                "detail": probe["detail"],
-                "latency_ms": probe["latency_ms"],
-                "last_active": record.get("last_active") or 0,
-                "conversations": record.get("conversations") or 0,
-                "checked_at": now,
-            }
-        )
-
-    with _lock:
-        _cache["agents"] = result
-        _cache["ts"] = now
-
+    for entry in base:
+        row = dict(entry)
+        record = activity.get(entry["name"]) or {}
+        row["last_active"] = record.get("last_active") or 0
+        row["conversations"] = record.get("conversations") or 0
+        result.append(row)
     return result
