@@ -622,10 +622,6 @@ def settings():
     return render_with_css(
         "settings.html",
 
-        azure_function_url=platform_settings.BASE_URL,
-
-        live_mode=platform_settings.LIVE_ENABLED,
-
         is_admin=_is_admin(current_user()),
     )
 
