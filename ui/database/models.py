@@ -116,6 +116,7 @@ class ReportHistory(Base):
     name = Column(String(255))
     type = Column(String(64))
     generated_by = Column(String(255))
+    firewall = Column(String(64), index=True)
     ts = Column(Float, index=True)
     status = Column(String(32))
     size = Column(String(32))

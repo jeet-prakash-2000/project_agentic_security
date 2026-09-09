@@ -34,6 +34,7 @@ class ReportsRepository(BaseRepository):
             name=data.get("name"),
             type=data.get("type"),
             generated_by=data.get("generated_by"),
+            firewall=data.get("firewall"),
             ts=data.get("ts"),
             status=data.get("status") or "Completed",
             size=data.get("size"),
