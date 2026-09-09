@@ -1181,6 +1181,23 @@ def api_conversation_clear(conversation_id):
     return jsonify({"status": "ok"})
 
 
+@app.route("/api/conversations/<conversation_id>/truncate", methods=["POST"])
+def api_conversation_truncate(conversation_id):
+
+    payload = request.get_json(silent=True) or {}
+    keep = int(payload.get("keep") or 0)
+    if keep < 0:
+        keep = 0
+    truncated = session_manager.truncate_conversation(
+        conversation_id,
+        keep,
+        user_id=current_user_id(),
+    )
+    if not truncated:
+        return jsonify({"error": "Conversation not found."}), 403
+    return jsonify({"status": "ok"})
+
+
 @app.route("/api/me")
 def api_me():
 

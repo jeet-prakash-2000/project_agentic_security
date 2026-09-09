@@ -84,6 +84,28 @@ class ConversationsRepository(BaseRepository):
         self.session.commit()
         return conversation
 
+    def truncate_messages(self, conversation_id, keep):
+        """Delete trailing messages so only the newest ``keep`` rows remain.
+
+        Preserves the conversation row (title/updated untouched). Returns the
+        number of messages removed, or ``None`` when the conversation is
+        missing.
+        """
+        conversation = self.session.get(Conversation, conversation_id)
+        if conversation is None:
+            return None
+        rows = self.messages(conversation_id)
+        keep = max(0, int(keep or 0))
+        if len(rows) <= keep:
+            return 0
+        remove = [row.id for row in rows[keep:]]
+        if remove:
+            self.session.query(Message).filter(
+                Message.id.in_(remove)
+            ).delete(synchronize_session=False)
+            self.session.commit()
+        return len(remove)
+
     def claim_anonymous(self, user_id, legacy=("anonymous", "demo")):
         if not user_id:
             return 0

@@ -68,6 +68,11 @@
     var ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>';
     var ICON_UPLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>';
     var ICON_RUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>';
+    var ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>';
+
+    function backControlHtml() {
+        return '<div class="ws-fw-back-wrap"><button type="button" class="ws-back-run" data-fw-back="1">' + ICON_BACK + "Back</button></div>";
+    }
 
     /* ---------------------------------------------------------------- utils */
 
@@ -259,7 +264,7 @@
                 ? modeNote(info)
                 : '<span class="ns-pill ns-pill-off">OFFLINE</span><span class="ns-note-text">Firewall not configured - manual and bulk operations are unavailable until the NETSEC_FW_* environment variables are set.</span>') + "</div></div>";
         if (!configured) {
-            html += "</div>";
+            html += backControlHtml() + "</div>";
             return html;
         }
         html += '<div class="ws-mcq-options">' +
@@ -271,7 +276,7 @@
             '<span class="mcq-option-label">Bulk operation</span>' +
             '<span class="mcq-option-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg></span>' +
             "</button>" +
-            "</div></div>";
+            "</div>" + backControlHtml() + "</div>";
         return html;
     }
 
@@ -314,7 +319,7 @@
             });
             html += "</div>";
         });
-        html += "</div>";
+        html += backControlHtml() + "</div>";
         return html;
     }
 
@@ -380,7 +385,8 @@
             "</div>" +
             '<div class="ns-form-foot">' +
             '<button type="button" class="ws-cloud-run ns-run" data-ns-run="manual">' + ICON_RUN + "Run on firewall</button>" +
-            "</div></div>";
+            "</div>" +
+            backControlHtml() + "</div>";
         return html;
     }
 
@@ -494,7 +500,7 @@
                 '<div class="ns-file-grid">' +
                 '<button type="button" class="ns-file-card" data-ns-action="bulk-download">' +
                 ICON_DOWNLOAD + "<strong>Bulk Ops File</strong><span>.xlsx template with every sheet</span></button>" +
-                "</div></div>";
+                "</div>" + backControlHtml() + "</div>";
         }
         var html = '<div class="ws-mcq-card ns-card">' +
             cardHead("Bulk operation",
@@ -507,7 +513,7 @@
             ICON_UPLOAD + "<strong>Upload Bulk Ops File</strong><span>filled workbook from the template</span>" +
             '<input type="file" class="ns-file-input" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-ns-file>' +
             "</label>" +
-            "</div></div>";
+            "</div>" + backControlHtml() + "</div>";
         return html;
     }
 
@@ -598,7 +604,7 @@
             "</div>" +
             '<div class="ns-form-foot">' +
             '<button type="button" class="ws-cloud-run ns-run" data-ns-run="bulk">' + ICON_RUN + "Run playbook</button>" +
-            "</div></div>";
+            "</div>" + backControlHtml() + "</div>";
         return html;
     }
 

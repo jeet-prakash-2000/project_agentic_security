@@ -228,6 +228,19 @@ def clear_conversation(conversation_id, user_id=None):
         return True
 
 
+def truncate_conversation(conversation_id, keep, user_id=None):
+    """Drop trailing messages so the newest ``keep`` rows remain."""
+    with _lock:
+        repo = _repo()
+        conversation = repo.get(conversation_id)
+        if conversation is None:
+            return False
+        if user_id and conversation.user_id != user_id:
+            return False
+        removed = repo.truncate_messages(conversation_id, keep)
+        return removed is not None
+
+
 def claim_anonymous_conversations(user_id):
     """Reassign legacy conversations that have no owner to the given user.
 

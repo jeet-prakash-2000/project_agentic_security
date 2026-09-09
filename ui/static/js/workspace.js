@@ -176,7 +176,64 @@
     var BACK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>';
 
     function backButtonHtml() {
-        return '<div class="ws-fw-back-wrap"><button type="button" class="ws-back-run" data-fw-back="1">' + BACK_ICON + "Back to options</button></div>";
+        return '<div class="ws-fw-back-wrap"><button type="button" class="ws-back-run" data-fw-back="1">' + BACK_ICON + "Back</button></div>";
+    }
+
+    function isInteractiveCardMessage(msg) {
+        return !!(msg && msg.role === "assistant" && msg.html);
+    }
+
+    function findCardMessageIndex(index) {
+        for (var i = index - 1; i >= 0; i--) {
+            if (isInteractiveCardMessage(state.messages[i])) return i;
+        }
+        return -1;
+    }
+
+    function goBackFromCard(row) {
+        if (!row || !state.activeId) return;
+        var idx = parseInt(row.getAttribute("data-index"), 10);
+        if (isNaN(idx)) return;
+        var parentIndex = findCardMessageIndex(idx);
+        if (parentIndex === -1) {
+            clearConversationToStart();
+            return;
+        }
+        var keep = parentIndex + 1;
+        var removed = state.messages.slice(keep);
+        if (!removed.length) return;
+        state.messages = state.messages.slice(0, keep);
+        if (chatWindow) {
+            Array.prototype.forEach.call(chatWindow.querySelectorAll(".ws-message[data-index]"), function (node) {
+                var nodeIndex = parseInt(node.getAttribute("data-index"), 10);
+                if (nodeIndex >= keep && node.parentNode) node.parentNode.removeChild(node);
+            });
+        }
+        fetch("/api/conversations/" + encodeURIComponent(state.activeId) + "/truncate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ keep: keep })
+        }).catch(function () {}).then(function () {
+            loadConversations();
+            loadConversationInsights();
+        });
+        updateSessionMetrics();
+        scrollToBottom();
+    }
+
+    function clearConversationToStart() {
+        if (!state.activeId) return;
+        var id = state.activeId;
+        fetch("/api/conversations/" + encodeURIComponent(id) + "/clear", { method: "POST" })
+            .then(function (r) { return r.json(); })
+            .then(function () {
+                if (state.activeId !== id) return;
+                state.messages = [];
+                renderActiveConversation();
+                loadConversations();
+                loadConversationInsights();
+            })
+            .catch(function () {});
     }
     var DEFAULT_TOOL_ICON = '<path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/><path d="M18.5 15.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z"/>';
     var LOGO_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6 4.6 1.9-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"/></svg>';
@@ -406,8 +463,9 @@
         return row;
     }
 
-    function renderUserMessage(msg) {
+    function renderUserMessage(msg, index) {
         var row = buildRow("user");
+        if (typeof index === "number") row.dataset.index = String(index);
         var avatar = document.createElement("div");
         avatar.className = "ws-msg-avatar";
         avatar.innerHTML = '<span class="ws-user-avatar">You</span>';
@@ -452,8 +510,9 @@
         return '<div class="ws-msg-text">' + formatAgentReply(msg.content || "") + "</div>";
     }
 
-    function renderAssistantMessage(msg) {
+    function renderAssistantMessage(msg, index) {
         var row = buildRow("assistant");
+        if (typeof index === "number") row.dataset.index = String(index);
         var agentName = msg.agentName || (state.activeAgent ? state.activeAgent.name : "Firewall Auditor");
         var avatar = document.createElement("div");
         avatar.className = "ws-msg-avatar";
@@ -484,10 +543,10 @@
         chatWindow.appendChild(row);
     }
 
-    function renderMessage(msg) {
+    function renderMessage(msg, index) {
         if (!chatWindow) return;
-        if (msg.role === "user") renderUserMessage(msg);
-        else renderAssistantMessage(msg);
+        if (msg.role === "user") renderUserMessage(msg, index);
+        else renderAssistantMessage(msg, index);
         scrollToBottom();
     }
 
@@ -505,7 +564,7 @@
 
     function appendMessage(msg) {
         state.messages.push(msg);
-        renderMessage(msg);
+        renderMessage(msg, state.messages.length - 1);
         updateSessionMetrics();
     }
 
@@ -664,6 +723,7 @@
             "</button>" +
             "</form>" +
             '<div class="fw-search-hint" role="status"></div>' +
+            backButtonHtml() +
             "</div>";
     }
 
@@ -672,12 +732,6 @@
         appendMessage({ role: "user", content: intentLabel(intent), ts: now() });
         renderConversationList();
         openFwPicker(intent);
-    }
-
-    // Re-open the Select Firewall search card without adding a duplicate user
-    // message (used by the "Back" control on result cards).
-    function reopenFwPicker() {
-        openFwPicker("assess");
     }
 
     function openFwPicker(intent) {
@@ -1204,7 +1258,7 @@
             html += '</div></div>';
         }
         html += '</div>';
-        return html;
+        return html + backButtonHtml();
     }
 
     // ============================================================
@@ -1324,6 +1378,8 @@
             "</div>" +
             '<button class="ws-cloud-run ws-cloud-run-danger" type="button" data-cloud-action="isolate">' + ARROW_ICON + "Isolate VM</button>" +
             "</div>" +
+            "</div>" +
+            backButtonHtml() +
             "</div>";
     }
 
@@ -1400,6 +1456,7 @@
             "</div>" +
             '<div class="ws-cloud-actions">' + vmBtns + "</div>" +
             "</div>" +
+            backButtonHtml() +
             "</div>";
 
         var panelMsg = cloudPanelMsg(html, "Virtual Machine");
@@ -1878,7 +1935,8 @@
             }
             var backBtn = e.target.closest("[data-fw-back]");
             if (backBtn) {
-                reopenFwPicker();
+                var backRow = backBtn.closest(".ws-message[data-index]");
+                goBackFromCard(backRow);
                 return;
             }
             var option = e.target.closest(".mcq-option");
