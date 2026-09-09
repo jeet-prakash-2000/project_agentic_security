@@ -24,6 +24,22 @@
     </div>
 </div>
 
+{% if assessment_blocked and error %}
+<div class="assessment-unavailable card">
+    <span class="assessment-unavailable-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M12 8v4"/><path d="M12 15.5v.5"/></svg>
+    </span>
+    <div class="assessment-unavailable-body">
+        <h3>{{ firewall_name or 'Firewall' }} is unreachable</h3>
+        <p>{{ error }}</p>
+    </div>
+    <div class="assessment-unavailable-actions">
+        <a href="{{ url_for('run_assessment') }}" class="btn btn-primary">Try Again</a>
+        <a href="{{ url_for('dashboard') }}" class="btn btn-ghost">Back to Dashboard</a>
+    </div>
+</div>
+{% else %}
+
 {% if error %}
 <div class="alert alert-error"><strong>Error</strong><span>{{ error }}</span></div>
 {% endif %}
@@ -138,9 +154,13 @@
     <div class="copilot-body" id="copilotBody"><p class="copilot-placeholder">Select an action to get AI assistance for this finding.</p></div>
 </div>
 
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}
+{% if not assessment_blocked %}
 <script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=7"></script>
 <script src="{{ url_for('static', filename='js/findings.js') }}?v=12"></script>
+{% endif %}
 {% endblock %}

@@ -397,7 +397,8 @@ def run_assessment():
             assessment_service
             .get_full_assessment(
                 firewall_id=_firewall_param(),
-                force=True
+                force=True,
+                require_reachable=True,
             )
         )
 
@@ -408,6 +409,18 @@ def run_assessment():
                 data.get("_source", "live")
             ),
             firewall_id=_firewall_param()
+        )
+
+    except assessment_service.AssessmentUnavailableError as e:
+
+        # Firewall is down (e.g. the VM is stopped): tell the user clearly and
+        # render a lightweight page that does not keep polling for findings.
+        return render_with_css(
+            "findings.html",
+
+            assessment_blocked=True,
+            firewall_name=_firewall_param(),
+            error=str(e),
         )
 
     except Exception as e:
@@ -1236,11 +1249,18 @@ def api_telemetry_map_history():
 # --------------------------------------------------
 
 @app.route("/api/admin/users")
-@admin_required
+@login_required
 def api_admin_users():
+    """List accounts.
 
-    status = (request.args.get("status") or "").strip() or None
-    return jsonify({"users": users_service.list_users(status=status)})
+    Administrators receive full account management data. Any signed-in member
+    may read the roster but only sees name + role and no management fields.
+    """
+
+    if _is_admin(current_user()):
+        status = (request.args.get("status") or "").strip() or None
+        return jsonify({"users": users_service.list_users(status=status)})
+    return jsonify({"users": users_service.list_members()})
 
 
 @app.route("/api/admin/demo-requests")
@@ -1327,11 +1347,30 @@ def api_admin_user_role(user_id):
 # --------------------------------------------------
 
 @app.route("/api/admin/firewalls")
-@admin_required
+@login_required
 def api_admin_firewalls():
+    """List the firewall inventory.
 
+    Administrators see the full registry (host names, clone lineage, masked
+    keys). Any signed-in member may read device name, IP and live/down status
+    only - no host names, keys or clone actions.
+    """
+
+    entries = managed_firewalls_service.list_firewalls()
+    if _is_admin(current_user()):
+        return jsonify({"firewalls": entries})
     return jsonify(
-        {"firewalls": managed_firewalls_service.list_firewalls()}
+        {
+            "firewalls": [
+                {
+                    "id": entry["id"],
+                    "device_name": entry["device_name"],
+                    "host_ip": entry["host_ip"],
+                    "status": entry["status"],
+                }
+                for entry in entries
+            ]
+        }
     )
 
 

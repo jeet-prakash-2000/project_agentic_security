@@ -72,6 +72,22 @@ def list_users(status=None):
     return [_public(user) for user in users]
 
 
+def list_members():
+    """Read-only roster for non-admin users: name and role only.
+
+    No e-mail, status or account management fields are exposed so members can
+    only see the platform's people directory.
+    """
+    return [
+        {
+            "id": user.id,
+            "name": user.name,
+            "role": user.role or "Security Analyst",
+        }
+        for user in _repo().list_users()
+    ]
+
+
 def list_admins():
     return [_public(user) for user in _repo().list_admins()]
 

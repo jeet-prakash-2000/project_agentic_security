@@ -27,6 +27,45 @@ from services import timeutil
 
 log = logging.getLogger("assessment")
 
+
+class AssessmentUnavailableError(Exception):
+    """Raised when a firewall must be reached for a live assessment but is not.
+
+    Carries a human-readable message the UI surfaces to the user so a stopped
+    or offline firewall VM produces a clear message instead of a silent hang.
+    """
+
+
+def _would_run_live():
+    """True when ``_live_assessment`` would really call the Azure function."""
+    if not settings.LIVE_ENABLED:
+        return False
+    key = (settings.FUNCTION_KEY or "").strip()
+    return bool(key and not key.startswith("PLACEHOLDER"))
+
+
+def _ensure_firewall_reachable(firewall_id):
+    """Fast pre-flight before a live assessment.
+
+    Only acts when a live function call would actually be attempted. When the
+    target firewall's management host is known and does not answer a short TCP
+    probe, raise ``AssessmentUnavailableError`` immediately (instead of waiting
+    on the function timeout) with a clear, user-facing message.
+    """
+    if not _would_run_live():
+        return
+    from services import managed_firewalls_service
+
+    host_ip = managed_firewalls_service.resolve_device_host(firewall_id)
+    if not host_ip:
+        return
+    if not managed_firewalls_service.probe_host(host_ip, force=True):
+        raise AssessmentUnavailableError(
+            "{0} is not reachable at {1}. The firewall VM appears to be "
+            "stopped or offline. Start the VM and once it is back online, "
+            "run the assessment again.".format(firewall_id or "vmpafw01", host_ip)
+        )
+
 UI_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 FUNCTIONS_ROOT = os.path.abspath(
@@ -317,10 +356,13 @@ def _stamp(data, source):
     return data
 
 
-def get_full_assessment(firewall_id="vmpafw01", force=False):
+def get_full_assessment(firewall_id="vmpafw01", force=False, require_reachable=False):
 
     firewall_id = firewall_id or "vmpafw01"
     now = time.time()
+
+    if require_reachable:
+        _ensure_firewall_reachable(firewall_id)
 
     cached = _cache["assessment"].get(firewall_id)
 

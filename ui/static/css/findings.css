@@ -597,6 +597,57 @@
 .empty-state h3 { margin: 0 0 6px; font-size: 16px; color: var(--text); }
 .empty-state p { margin: 0; color: var(--text-3); font-size: 13px; }
 
+/* Assessment blocked (firewall unreachable) */
+.assessment-unavailable {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 28px 30px;
+    margin-top: 4px;
+}
+
+.assessment-unavailable-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(239, 68, 68, 0.14);
+    color: #ff9a9a;
+}
+
+.assessment-unavailable-icon svg {
+    width: 26px;
+    height: 26px;
+}
+
+.assessment-unavailable-body {
+    flex: 1;
+    min-width: 240px;
+}
+
+.assessment-unavailable-body h3 {
+    margin: 0 0 6px;
+    font-size: 17px;
+    color: var(--text);
+}
+
+.assessment-unavailable-body p {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text-2);
+}
+
+.assessment-unavailable-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 /* ============================================================
    RESPONSIVE
    ============================================================ */

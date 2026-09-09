@@ -105,6 +105,39 @@ def _probe_many(host_ips):
     return results
 
 
+def probe_host(host_ip, force=False):
+    """Return True when ``host_ip`` answers on a management port.
+
+    When ``force`` is True the short in-memory probe cache is bypassed so a
+    caller that just wants a fresh read (e.g. before running a live
+    assessment) is not served a stale result.
+    """
+    host_ip = (host_ip or "").strip()
+    if force:
+        _probe_cache.pop(host_ip, None)
+    return _probe_host(host_ip)
+
+
+def resolve_device_host(firewall_id):
+    """Return the management host IP for a firewall logical name.
+
+    Prefers an exact match in the inventory registry. Mirrors such as
+    ``vmpafw02`` that share the real system fall back to the registered
+    default (``vmpafw01``) host. Returns ``None`` when no host is known.
+    """
+    firewall_id = (firewall_id or "").strip()
+    if not firewall_id:
+        return None
+    repo = _repo()
+    for candidate in (firewall_id, "vmpafw01"):
+        if not candidate:
+            continue
+        entry = repo.by_device_name(candidate)
+        if entry and (entry.host_ip or "").strip():
+            return entry.host_ip.strip()
+    return None
+
+
 def _needs_probe(entry, now):
     if not (entry.host_ip or "").strip():
         return False

@@ -1,12 +1,15 @@
 (function () {
     "use strict";
 
-    // ---- User accounts & approvals (administrators only) ----
+    // ---- User accounts (administrators manage; members view name + role) ----
 
     var usersBody = document.getElementById("usersBody");
     if (!usersBody) return;
 
     var selfCard = document.getElementById("userAccountsCard");
+    var isUsersAdmin = selfCard
+        ? selfCard.getAttribute("data-is-admin") === "true"
+        : false;
     var selfUserId = selfCard ? (selfCard.getAttribute("data-self-user") || "") : "";
     var pendingChip = document.getElementById("pendingCountChip");
 
@@ -24,31 +27,39 @@
     function renderUsers(users) {
         var pending = 0;
         var rows = users.map(function (user) {
-            if (user.status === "pending") pending += 1;
-            var actions = "";
-            if (user.status === "pending") {
-                actions =
-                    '<button class="btn btn-sm btn-primary" data-action="approve" data-id="' + user.id + '">Approve</button>' +
-                    '<button class="btn btn-sm btn-danger" data-action="reject" data-id="' + user.id + '">Reject</button>';
-            } else if (selfUserId && user.id === selfUserId) {
-                actions = '<span class="users-none">This is you</span>';
-            } else {
-                actions =
-                    '<button class="btn btn-sm btn-danger" data-action="remove" data-id="' + user.id + '">Remove</button>';
+            if (isUsersAdmin) {
+                if (user.status === "pending") pending += 1;
+                var actions = "";
+                if (user.status === "pending") {
+                    actions =
+                        '<button class="btn btn-sm btn-primary" data-action="approve" data-id="' + user.id + '">Approve</button>' +
+                        '<button class="btn btn-sm btn-danger" data-action="reject" data-id="' + user.id + '">Reject</button>';
+                } else if (selfUserId && user.id === selfUserId) {
+                    actions = '<span class="users-none">This is you</span>';
+                } else {
+                    actions =
+                        '<button class="btn btn-sm btn-danger" data-action="remove" data-id="' + user.id + '">Remove</button>';
+                }
+                return (
+                    "<tr>" +
+                    "<td>" + escapeHtml(user.name || "") + "</td>" +
+                    "<td>" + escapeHtml(user.email || "") + "</td>" +
+                    "<td>" + escapeHtml(user.role || "") + "</td>" +
+                    "<td><span class=\"" + chipClass(user.status) + "\">" + escapeHtml(chipLabel(user.status)) + "</span></td>" +
+                    "<td class=\"users-actions\">" + actions + "</td>" +
+                    "</tr>"
+                );
             }
             return (
                 "<tr>" +
                 "<td>" + escapeHtml(user.name || "") + "</td>" +
-                "<td>" + escapeHtml(user.email || "") + "</td>" +
                 "<td>" + escapeHtml(user.role || "") + "</td>" +
-                "<td><span class=\"" + chipClass(user.status) + "\">" + escapeHtml(chipLabel(user.status)) + "</span></td>" +
-                "<td class=\"users-actions\">" + actions + "</td>" +
                 "</tr>"
             );
         }).join("");
 
         usersBody.innerHTML = rows ||
-            '<tr><td colspan="5" class="users-empty">No accounts yet.</td></tr>';
+            '<tr><td colspan="' + (isUsersAdmin ? 5 : 2) + '" class="users-empty">No accounts yet.</td></tr>';
 
         if (pendingChip) pendingChip.textContent = "Pending " + pending;
     }
@@ -70,7 +81,7 @@
             .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error("Failed to load accounts")); })
             .then(function (data) { renderUsers(data.users || []); })
             .catch(function (err) {
-                usersBody.innerHTML = '<tr><td colspan="5" class="users-empty">' + escapeHtml(err.message) + '</td></tr>';
+                usersBody.innerHTML = '<tr><td colspan="' + (isUsersAdmin ? 5 : 2) + '" class="users-empty">' + escapeHtml(err.message) + '</td></tr>';
             });
     }
 
@@ -87,40 +98,42 @@
         });
     }
 
-    usersBody.addEventListener("click", function (event) {
-        var button = event.target.closest("[data-action]");
-        if (!button) return;
-        var action = button.getAttribute("data-action");
-        var userId = button.getAttribute("data-id");
-        var row = button.closest("tr");
-        var userName = row ? row.cells[0].textContent.trim() : "account";
+    if (isUsersAdmin) {
+        usersBody.addEventListener("click", function (event) {
+            var button = event.target.closest("[data-action]");
+            if (!button) return;
+            var action = button.getAttribute("data-action");
+            var userId = button.getAttribute("data-id");
+            var row = button.closest("tr");
+            var userName = row ? row.cells[0].textContent.trim() : "account";
 
-        if (action === "remove") {
-            if (!window.confirm(
-                "Remove \"" + userName + "\"? They will no longer be able to sign in. " +
-                "The account and its data are retained in the database but hidden from the platform."
-            )) return;
-            postJson("/api/admin/users/" + encodeURIComponent(userId) + "/remove")
+            if (action === "remove") {
+                if (!window.confirm(
+                    "Remove \"" + userName + "\"? They will no longer be able to sign in. " +
+                    "The account and its data are retained in the database but hidden from the platform."
+                )) return;
+                postJson("/api/admin/users/" + encodeURIComponent(userId) + "/remove")
+                    .then(function () {
+                        window.showToast("Account removed. Sign-in is disabled.", "success");
+                        loadUsers();
+                    })
+                    .catch(function (err) {
+                        window.showToast(err.message, "error");
+                    });
+                return;
+            }
+
+            var verb = action === "approve" ? "approve" : "reject";
+            postJson("/api/admin/users/" + encodeURIComponent(userId) + "/" + verb)
                 .then(function () {
-                    window.showToast("Account removed. Sign-in is disabled.", "success");
+                    window.showToast("Account " + verb + "d.", "success");
                     loadUsers();
                 })
                 .catch(function (err) {
                     window.showToast(err.message, "error");
                 });
-            return;
-        }
-
-        var verb = action === "approve" ? "approve" : "reject";
-        postJson("/api/admin/users/" + encodeURIComponent(userId) + "/" + verb)
-            .then(function () {
-                window.showToast("Account " + verb + "d.", "success");
-                loadUsers();
-            })
-            .catch(function (err) {
-                window.showToast(err.message, "error");
-            });
-    });
+        });
+    }
 
     var inviteBtn = document.getElementById("inviteBtn");
     if (inviteBtn) {
@@ -151,7 +164,7 @@
     loadUsers();
 })();
 
-// ---- Firewall inventory (administrators only) ----
+// ---- Firewall inventory (administrators manage; members view read-only) ----
 
 (function () {
     "use strict";
@@ -159,6 +172,10 @@
     var body = document.getElementById("fwInventoryBody");
     if (!body) return;
 
+    var card = document.getElementById("fwInventoryCard");
+    var isFwAdmin = card
+        ? card.getAttribute("data-is-admin") === "true"
+        : false;
     var countChip = document.getElementById("fwCountChip");
 
     function escapeHtml(value) {
@@ -184,33 +201,34 @@
         return name;
     }
 
-    function removeCloneRows() {
-        var rows = body.querySelectorAll("tr.fw-clone-row");
-        for (var i = 0; i < rows.length; i += 1) rows[i].remove();
-    }
-
     function renderFirewalls(firewalls) {
         var rows = firewalls.map(function (fw) {
-            var cloneButton = fw.clone_of
-                ? ""
-                : '<button class="btn btn-sm btn-ghost" data-action="clone" data-id="' + fw.id + '">Clone</button>';
-            return (
-                "<tr data-id=\"" + fw.id + "\">" +
+            var cells =
                 "<td>" + deviceHtml(fw) + "</td>" +
                 "<td class=\"fw-ip\">" + escapeHtml(fw.host_ip || "—") + "</td>" +
-                "<td>" + statusHtml(fw.status) + "</td>" +
-                "<td class=\"users-actions\">" +
-                cloneButton +
-                '<button class="btn btn-sm btn-danger" data-action="remove" data-id="' + fw.id + '">Remove</button>' +
-                "</td>" +
-                "</tr>"
-            );
+                "<td>" + statusHtml(fw.status) + "</td>";
+            if (isFwAdmin) {
+                var cloneButton = fw.clone_of
+                    ? ""
+                    : '<button class="btn btn-sm btn-ghost" data-action="clone" data-id="' + fw.id + '">Clone</button>';
+                cells +=
+                    "<td class=\"users-actions\">" +
+                    cloneButton +
+                    '<button class="btn btn-sm btn-danger" data-action="remove" data-id="' + fw.id + '">Remove</button>' +
+                    "</td>";
+            }
+            return "<tr data-id=\"" + fw.id + "\">" + cells + "</tr>";
         }).join("");
 
         body.innerHTML = rows ||
-            '<tr><td colspan="4" class="users-empty">No firewalls registered yet.</td></tr>';
+            '<tr><td colspan="' + (isFwAdmin ? 4 : 3) + '" class="users-empty">No firewalls registered yet.</td></tr>';
 
         if (countChip) countChip.textContent = "Total " + firewalls.length;
+    }
+
+    function removeCloneRows() {
+        var rows = body.querySelectorAll("tr.fw-clone-row");
+        for (var i = 0; i < rows.length; i += 1) rows[i].remove();
     }
 
     function beginClone(fw, anchorRow) {
@@ -281,7 +299,7 @@
             .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error("Failed to load firewall inventory")); })
             .then(function (data) { renderFirewalls(data.firewalls || []); })
             .catch(function (err) {
-                body.innerHTML = '<tr><td colspan="4" class="users-empty">' + escapeHtml(err.message) + '</td></tr>';
+                body.innerHTML = '<tr><td colspan="' + (isFwAdmin ? 4 : 3) + '" class="users-empty">' + escapeHtml(err.message) + '</td></tr>';
             });
     }
 
@@ -328,53 +346,55 @@
         });
     }
 
-    body.addEventListener("click", function (event) {
-        var button = event.target.closest("[data-action]");
-        if (!button) return;
-        var action = button.getAttribute("data-action");
-        var id = button.getAttribute("data-id");
-        var anchorRow = button.closest("tr");
-        var deviceName = anchorRow && anchorRow.querySelector(".fw-device")
-            ? anchorRow.querySelector(".fw-device").textContent.trim()
-            : "";
+    if (isFwAdmin) {
+        body.addEventListener("click", function (event) {
+            var button = event.target.closest("[data-action]");
+            if (!button) return;
+            var action = button.getAttribute("data-action");
+            var id = button.getAttribute("data-id");
+            var anchorRow = button.closest("tr");
+            var deviceName = anchorRow && anchorRow.querySelector(".fw-device")
+                ? anchorRow.querySelector(".fw-device").textContent.trim()
+                : "";
 
-        if (action === "clone") {
-            var firewalls = Array.prototype.map.call(
-                body.querySelectorAll("tr[data-id]"),
-                function (tr) {
-                    return {
-                        id: tr.getAttribute("data-id"),
-                        device_name: tr.querySelector(".fw-device") ? tr.querySelector(".fw-device").textContent.trim() : ""
-                    };
+            if (action === "clone") {
+                var firewalls = Array.prototype.map.call(
+                    body.querySelectorAll("tr[data-id]"),
+                    function (tr) {
+                        return {
+                            id: tr.getAttribute("data-id"),
+                            device_name: tr.querySelector(".fw-device") ? tr.querySelector(".fw-device").textContent.trim() : ""
+                        };
+                    }
+                );
+                var fw = null;
+                for (var i = 0; i < firewalls.length; i += 1) {
+                    if (firewalls[i].id === id) { fw = firewalls[i]; break; }
                 }
-            );
-            var fw = null;
-            for (var i = 0; i < firewalls.length; i += 1) {
-                if (firewalls[i].id === id) { fw = firewalls[i]; break; }
+                if (!fw) return;
+                beginClone(fw, anchorRow);
+                return;
             }
-            if (!fw) return;
-            beginClone(fw, anchorRow);
-            return;
-        }
 
-        if (action === "remove") {
-            if (!window.confirm("Remove \"" + deviceName + "\" from the firewall inventory?")) return;
-            fetch("/api/admin/firewalls/" + encodeURIComponent(id), { method: "DELETE" })
-                .then(function (res) {
-                    return res.json().then(function (data) {
-                        if (!res.ok) throw new Error(data.error || "Request failed");
-                        return data;
+            if (action === "remove") {
+                if (!window.confirm("Remove \"" + deviceName + "\" from the firewall inventory?")) return;
+                fetch("/api/admin/firewalls/" + encodeURIComponent(id), { method: "DELETE" })
+                    .then(function (res) {
+                        return res.json().then(function (data) {
+                            if (!res.ok) throw new Error(data.error || "Request failed");
+                            return data;
+                        });
+                    })
+                    .then(function () {
+                        window.showToast("Firewall removed from the inventory.", "success");
+                        loadFirewalls();
+                    })
+                    .catch(function (err) {
+                        window.showToast(err.message, "error");
                     });
-                })
-                .then(function () {
-                    window.showToast("Firewall removed from the inventory.", "success");
-                    loadFirewalls();
-                })
-                .catch(function (err) {
-                    window.showToast(err.message, "error");
-                });
-        }
-    });
+            }
+        });
+    }
 
     loadFirewalls();
 })();

@@ -10,34 +10,41 @@
     <div>
         <span class="hero-eyebrow">Configuration</span>
         <h1>Settings</h1>
-        <p>Manage user accounts and firewall inventory.</p>
+        <p>{% if is_admin %}Manage user accounts and firewall inventory.{% else %}View user accounts and firewall inventory.{% endif %}</p>
     </div>
 </div>
 
-<section class="settings-grid">
+<section class="settings-grid" data-is-admin="{{ 'true' if is_admin else 'false' }}">
 
-    {% if is_admin %}
     <div class="settings-card card settings-card-wide">
         <div class="settings-card-head">
             <span class="settings-icon settings-icon-blue">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
             </span>
             <div>
-                <h3>User Accounts &amp; Approvals</h3>
-                <p>Provision accounts and control who can sign in</p>
+                <h3>User Accounts</h3>
+                <p>{% if is_admin %}Provision accounts and control who can sign in{% else %}Platform roster{% endif %}</p>
             </div>
+            {% if is_admin %}
             <span class="status-chip status-on" id="pendingCountChip">Pending 0</span>
+            {% endif %}
         </div>
         <div class="settings-body">
-            <div class="users-table-wrap" id="userAccountsCard" data-self-user="{{ current_user.id if current_user else '' }}">
+            <div class="users-table-wrap" id="userAccountsCard"
+                 data-self-user="{{ current_user.id if current_user else '' }}"
+                 data-is-admin="{{ 'true' if is_admin else 'false' }}">
                 <table class="users-table">
                     <thead>
                         <tr>
                             <th>Name</th>
+                            {% if is_admin %}
                             <th>Email</th>
+                            {% endif %}
                             <th>Role</th>
+                            {% if is_admin %}
                             <th>Status</th>
                             <th>Actions</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody id="usersBody">
@@ -46,6 +53,7 @@
                 </table>
             </div>
 
+            {% if is_admin %}
             <div class="invite-user">
                 <strong>Add an account</strong>
                 <div class="invite-user-row">
@@ -63,11 +71,10 @@
                 </div>
                 <p class="users-hint">Accounts are created here by an administrator and can sign in right away. Self-registration on the sign-in page is disabled. Use <strong>Remove</strong> to stop a user from signing in — the account and its data are retained in the database but stay hidden from the workspace, reports and insights.</p>
             </div>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
 
-    {% if is_admin %}
     <div class="settings-card card settings-card-wide">
         <div class="settings-card-head">
             <span class="settings-icon settings-icon-cyan">
@@ -75,19 +82,21 @@
             </span>
             <div>
                 <h3>Firewall Inventory</h3>
-                <p>Registered firewalls with live status — clone an original device to model a similar one</p>
+                <p>{% if is_admin %}Registered firewalls with live status — clone an original device to model a similar one{% else %}Registered firewalls and their live status{% endif %}</p>
             </div>
             <span class="status-chip status-on" id="fwCountChip">Total 0</span>
         </div>
         <div class="settings-body">
-            <div class="users-table-wrap">
+            <div class="users-table-wrap" id="fwInventoryCard" data-is-admin="{{ 'true' if is_admin else 'false' }}">
                 <table class="users-table">
                     <thead>
                         <tr>
                             <th>Device Name</th>
                             <th>IP</th>
                             <th>Status</th>
+                            {% if is_admin %}
                             <th>Actions</th>
+                            {% endif %}
                         </tr>
                     </thead>
                     <tbody id="fwInventoryBody">
@@ -96,6 +105,7 @@
                 </table>
             </div>
 
+            {% if is_admin %}
             <div class="invite-user">
                 <strong>Add a firewall</strong>
                 <div class="invite-user-row invite-user-row--fw">
@@ -107,28 +117,14 @@
                 </div>
                 <p class="users-hint">Device name is the firewall's logical name. Live/down is checked automatically against the host IP. Use <strong>Clone</strong> on an original device to register a copy under a new device name — the clone name is entered right here in the list. Cloned firewalls cannot be cloned again.</p>
             </div>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
-
-    {% if not is_admin %}
-    <div class="settings-card card settings-card-wide">
-        <div class="settings-card-head">
-            <span class="settings-icon settings-icon-red">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 9-8 11-4.5-2-8-6-8-11V5l8-3z"/><path d="M9 12l2 2 4-4"/></svg>
-            </span>
-            <div>
-                <h3>Administrator access required</h3>
-                <p>User account approval and firewall inventory management are restricted to administrators.</p>
-            </div>
-        </div>
-    </div>
-    {% endif %}
 
 </section>
 
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/settings.js') }}?v=4"></script>
+<script src="{{ url_for('static', filename='js/settings.js') }}?v=5"></script>
 {% endblock %}
