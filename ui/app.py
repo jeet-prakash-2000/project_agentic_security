@@ -144,12 +144,30 @@ def render_with_css(template_name, **context):
 # HELPERS
 # --------------------------------------------------
 
+def _is_managed_device(name):
+    """True when ``name`` is registered in the managed firewall inventory."""
+    name = (name or "").strip()
+    if not name:
+        return False
+    try:
+        return any(
+            entry["device_name"] == name
+            for entry in managed_firewalls_service.list_firewalls()
+        )
+    except Exception:
+        return False
+
+
 def _firewall_param():
-    """Read the selected firewall from the query string (validated)."""
+    """Read the selected firewall from the query string (validated).
+
+    Accepts a known logical firewall (``FIREWALLS``) or any device registered
+    in the managed firewall inventory; falls back to ``vmpafw01``.
+    """
     fw = (request.args.get("firewall") or "").strip()
-    if fw not in assessment_service.FIREWALLS:
-        return "vmpafw01"
-    return fw
+    if fw in assessment_service.FIREWALLS or _is_managed_device(fw):
+        return fw
+    return "vmpafw01"
 
 
 def _dashboard_firewall_param():
@@ -159,14 +177,7 @@ def _dashboard_firewall_param():
         return "all"
     if not fw or fw in assessment_service.FIREWALLS:
         return fw or "vmpafw01"
-    try:
-        names = {
-            entry["device_name"]
-            for entry in managed_firewalls_service.list_firewalls()
-        }
-    except Exception:
-        names = set()
-    if fw in names:
+    if _is_managed_device(fw):
         return fw
     return "vmpafw01"
 

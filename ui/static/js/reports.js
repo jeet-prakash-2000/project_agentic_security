@@ -168,15 +168,15 @@
         function outside(e) {
             if (!wrap.contains(e.target)) close();
         }
-        function open() {
+        function open(filter) {
             document.removeEventListener("click", outside);
-            list.innerHTML = comboRows(input.value);
+            list.innerHTML = comboRows(filter ? input.value : "");
             list.hidden = false;
             input.setAttribute("aria-expanded", "true");
             document.addEventListener("click", outside);
         }
-        input.addEventListener("focus", open);
-        input.addEventListener("input", open);
+        input.addEventListener("focus", function () { open(false); });
+        input.addEventListener("input", function () { open(true); });
         list.addEventListener("mousedown", function (e) { e.preventDefault(); });
         list.addEventListener("click", function (e) {
             var row = e.target.closest(".rep-combo-row");

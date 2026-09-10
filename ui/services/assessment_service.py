@@ -237,6 +237,27 @@ def _apply_firewall(data, firewall_id):
     return data
 
 
+def _parent_firewall(firewall_id):
+    """Return the source device a clone's data comes from.
+
+    Registered clones mirror the firewall they were cloned from (``clone_of``);
+    any other name is its own source. This keeps a clone's dashboard/report
+    numbers identical to its parent while presenting the clone's own name.
+    """
+    firewall_id = (firewall_id or "").strip()
+    if not firewall_id or firewall_id == "vmpafw01":
+        return firewall_id or "vmpafw01"
+    try:
+        from services import managed_firewalls_service
+
+        entry = managed_firewalls_service.get_by_device_name(firewall_id)
+    except Exception:
+        entry = None
+    parent = (entry or {}).get("clone_of")
+    return (parent or firewall_id).strip() or firewall_id
+
+
+
 def _severity_breakdown(findings):
     severity = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     for f in findings:
@@ -374,6 +395,20 @@ def get_full_assessment(firewall_id="vmpafw01", force=False, require_reachable=F
     ):
 
         return cached
+
+    # Registered clones mirror the firewall they were cloned from; present the
+    # parent's data under the clone's own logical name.
+    parent = _parent_firewall(firewall_id)
+    if parent and parent != firewall_id:
+        import copy
+
+        parent_data = get_full_assessment(
+            parent, force=force, require_reachable=require_reachable
+        )
+        data = _apply_firewall(copy.deepcopy(parent_data), firewall_id)
+        _cache["assessment"][firewall_id] = data
+        _cache["ts"][firewall_id] = now
+        return data
 
     # vmpafw02 mirrors vmpafw01 (same system, different logical name).
     if firewall_id != "vmpafw01" and "vmpafw01" in _cache["assessment"]:

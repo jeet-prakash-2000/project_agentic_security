@@ -165,6 +165,15 @@ def list_firewalls():
     return [_public(entry) for entry in entries]
 
 
+def get_by_device_name(device_name):
+    """Return one registered firewall by logical device name, or ``None``."""
+    device_name = (device_name or "").strip()
+    if not device_name:
+        return None
+    return _public(_repo().by_device_name(device_name))
+
+
+
 def _persist_probe(entry):
     live = _probe_host(entry.host_ip)
     entry.status = "live" if live else "down"

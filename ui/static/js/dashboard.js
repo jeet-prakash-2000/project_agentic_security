@@ -371,15 +371,20 @@
         return fw === "all" ? "Full Inventory" : fw;
     }
 
+    function scopeSub(fw) {
+        if (fw === "all") return "Cumulative across every managed firewall";
+        var entry = (state.inventory || []).filter(function (e) {
+            return e && e.device_name === fw;
+        })[0];
+        if (entry && entry.clone_of) return "Clone of " + entry.clone_of + " \u00b7 data from parent firewall";
+        return "Single firewall";
+    }
+
     function updateScope(fw) {
         var nameEl = document.getElementById("dashScopeName");
         var subEl = document.getElementById("dashScopeSub");
         if (nameEl) nameEl.textContent = scopeLabel(fw);
-        if (subEl) {
-            subEl.textContent = fw === "all"
-                ? "Cumulative across every managed firewall"
-                : "Single firewall";
-        }
+        if (subEl) subEl.textContent = scopeSub(fw);
         document.body.classList.toggle("dash-estate", fw === "all");
 
         var assess = document.getElementById("quickAssess");
@@ -497,15 +502,15 @@
         var outside = function (e) {
             if (!wrap.contains(e.target)) close();
         };
-        var open = function () {
+        var open = function (filter) {
             document.removeEventListener("click", outside);
-            list.innerHTML = comboRows(input.value);
+            list.innerHTML = comboRows(filter ? input.value : "");
             list.hidden = false;
             input.setAttribute("aria-expanded", "true");
             document.addEventListener("click", outside);
         };
-        input.addEventListener("focus", open);
-        input.addEventListener("input", open);
+        input.addEventListener("focus", function () { open(false); });
+        input.addEventListener("input", function () { open(true); });
         list.addEventListener("mousedown", function (e) { e.preventDefault(); });
         list.addEventListener("click", function (e) {
             var row = e.target.closest(".rep-combo-row");
@@ -535,6 +540,8 @@
             .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error("failed")); })
             .then(function (data) {
                 state.inventory = (data && data.firewalls) || [];
+                if (list && !list.hidden) list.innerHTML = comboRows("");
+                updateScope(state.firewall);
             })
             .catch(function () { state.inventory = []; });
     }
