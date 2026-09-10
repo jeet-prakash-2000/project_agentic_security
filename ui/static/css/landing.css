@@ -802,6 +802,18 @@ img { display: block; }
 .ld-feature h3 { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 9px; }
 .ld-feature p { font-size: 14.5px; color: var(--slate); }
 
+.ld-feature-caps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.ld-feature-caps li {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--red);
+    background: var(--red-soft);
+    border: 1px solid rgba(228, 0, 43, 0.16);
+    border-radius: 999px;
+    padding: 4px 10px;
+    letter-spacing: 0.01em;
+}
+
 /* ---------------- BENEFITS ---------------- */
 .ld-benefit-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 42px; max-width: 980px; margin: 0 auto; }
 
@@ -958,6 +970,7 @@ img { display: block; }
 }
 
 .ld-form-privacy { font-size: 12px; color: var(--muted); text-align: center; }
+.ld-demo-form-card > .ld-form-privacy { margin-top: 16px; }
 
 .ld-demo-success { text-align: center; padding: 30px 8px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
