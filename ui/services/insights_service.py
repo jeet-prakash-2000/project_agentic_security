@@ -12,6 +12,7 @@ import uuid
 
 from database.db import get_session
 from database.repositories import InsightsRepository
+from services import agents_service
 
 _lock = threading.Lock()
 
@@ -110,6 +111,18 @@ def summarize(user_id=None):
         reverse=True,
     )
 
+    # Prefer the current registry name/type so renamed agents show their new
+    # label even on conversations recorded under the previous name.
+    registry = {}
+    try:
+        registry = {
+            agent.get("id"): agent
+            for agent in agents_service.list_agents()
+            if agent.get("id")
+        }
+    except Exception:
+        registry = {}
+
     by_agent = {}
     series_map = {}
     total = {
@@ -128,12 +141,13 @@ def summarize(user_id=None):
     recent = []
     for conversation in conversations:
         agent_id = conversation.get("agent_id") or "unknown"
+        registered = registry.get(agent_id) or {}
         agent = by_agent.setdefault(
             agent_id,
             {
                 "agent_id": agent_id,
-                "agent_name": conversation.get("agent_name", agent_id),
-                "agent_type": conversation.get("agent_type", ""),
+                "agent_name": registered.get("name") or conversation.get("agent_name", agent_id),
+                "agent_type": registered.get("type") or conversation.get("agent_type", ""),
                 "model": conversation.get("model", ""),
                 "conversations": 0,
                 "turns": 0,
@@ -192,7 +206,8 @@ def summarize(user_id=None):
         recent.append(
             {
                 "id": conversation.get("id", ""),
-                "agent_name": conversation.get("agent_name", ""),
+                "agent_name": (registry.get(agent_id) or {}).get("name")
+                or conversation.get("agent_name", ""),
                 "model": conversation.get("model", ""),
                 "created": conversation.get("created"),
                 "updated": conversation.get("updated"),

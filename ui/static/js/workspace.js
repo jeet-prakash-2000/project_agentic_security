@@ -1267,7 +1267,7 @@
 
     function cloudAgentLabel() {
         if (state.activeAgent) return state.activeAgent.name;
-        return "Incident-Response-Agent-Cloud-Security";
+        return "Cloud Security Ops Agent";
     }
 
     function cloudAssistMessage(content, tool, usage) {
@@ -2035,7 +2035,7 @@
         },
         agentName: function () {
             if (state.activeAgent && state.activeAgent.name) return state.activeAgent.name;
-            return "NetSec-Execution-Agent";
+            return "Firewall Execution Agent";
         },
         user: function (content) {
             ensureActiveId();
@@ -2050,7 +2050,7 @@
                 role: "assistant",
                 content: "",
                 html: html,
-                cardTitle: cardTitle || "NetSec Execution",
+                cardTitle: cardTitle || "Firewall Execution",
                 agentName: this.agentName(),
                 ts: now()
             };

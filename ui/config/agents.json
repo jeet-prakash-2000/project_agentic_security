@@ -13,7 +13,7 @@
     },
     {
       "id": "incident-response-agent-cloud-security",
-      "name": "Incident-Response-Agent-Cloud-Security",
+      "name": "Cloud Security Ops Agent",
       "type": "Cloud Incident Response",
       "model": "gpt-5.1",
       "agent_endpoint": "https://cloudsec-incident-containment-agent-01.services.ai.azure.com/api/projects/CloudSec-Incident-Containment-Agent",
@@ -24,7 +24,7 @@
     },
     {
       "id": "netsec-execution-agent",
-      "name": "NetSec-Execution-Agent",
+      "name": "Firewall Execution Agent",
       "type": "Network Security Execution",
       "model": "gpt-5.1",
       "agent_endpoint": "https://network-security-agents.services.ai.azure.com/api/projects/network-security-agents-project",

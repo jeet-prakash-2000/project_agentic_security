@@ -93,7 +93,7 @@ def run_playbook(user_id, playbook_id, commit=None):
     client = PanosClient()
     if not client.configured:
         raise ValueError(
-            "The NetSec Execution agent is not connected to a firewall. "
+            "The Firewall Execution Agent is not connected to a firewall. "
             "Missing environment configuration: {0}.".format(
                 ", ".join(client.missing_config())
             )
@@ -145,7 +145,7 @@ def run_row(playbook_id, row, commit=None):
     client = PanosClient()
     if not client.configured:
         raise ValueError(
-            "The NetSec Execution agent is not connected to a firewall. "
+            "The Firewall Execution Agent is not connected to a firewall. "
             "Missing environment configuration: {0}.".format(
                 ", ".join(client.missing_config())
             )

@@ -54,7 +54,7 @@ class AgentGateway:
                     if status else ""
                 )
                 raise RuntimeError(
-                    "The Cloud Incident Response agent is unreachable, so the "
+                    "The Cloud Security Ops Agent is unreachable, so the "
                     "request was answered by a fallback model without cloud "
                     "tools{suffix}. Verify the agent endpoint, name, and API "
                     "key, then try again.".format(suffix=suffix)

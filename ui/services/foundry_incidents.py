@@ -237,7 +237,7 @@ def run(action, params=None, agent_id=None, conversation_id=None, user_id="anony
 
     agent = _get_cloud_agent(agent_id)
     if agent is None:
-        raise ValueError("No connected Cloud Incident Response agent is configured.")
+        raise ValueError("No connected Cloud Security Ops Agent is configured.")
 
     prompt = build_prompt(action, params)
     result = foundry_client.chat(
@@ -252,7 +252,7 @@ def run(action, params=None, agent_id=None, conversation_id=None, user_id="anony
             if status else ""
         )
         raise RuntimeError(
-            "The Cloud Incident Response agent is unreachable, so the request "
+            "The Cloud Security Ops Agent is unreachable, so the request "
             "was answered by a fallback model without cloud tools.{0} Verify "
             "the agent endpoint, name, and API key, then try again.".format(
                 suffix

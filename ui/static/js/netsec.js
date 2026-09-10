@@ -1,4 +1,4 @@
-/* NetSec Execution Agent - chat-first manual & bulk firewall operations.
+/* Firewall Execution Agent - chat-first manual & bulk firewall operations.
  *
  * Loaded before workspace.js. It exposes window.NetsecPanel, the namespace
  * workspace.js calls for agent detection, activation and chat action runs
@@ -150,7 +150,7 @@
             : "configuration";
         return '<div class="ws-mcq-card">' +
             '<div class="ws-mcq-head"><strong>Firewall not connected</strong>' +
-            "<span>The NetSec Execution agent could not reach a Palo Alto firewall.</span></div>" +
+            "<span>The Firewall Execution agent could not reach a Palo Alto firewall.</span></div>" +
             '<div class="ns-block">' + noteHtml(
                 "The platform is missing " + missingHtml +
                 ". Set these environment variables on the App Service, then reload this page."
@@ -246,10 +246,10 @@
             return bridge.assistantHtml(
                 '<div class="ws-mcq-card"><div class="ws-mcq-head"><strong>' + esc(describeRow(pb, (data.op || "create"), (data.row || {}))) + "</strong></div>" +
                 '<div class="ns-block">' + noteHtml(esc(data.error)) + "</div></div>",
-                pb ? pb.title : "NetSec Execution"
+                pb ? pb.title : "Firewall Execution"
             );
         }
-        return bridge.assistantHtml(resultsHtml(data), data.playbook_title || (pb ? pb.title : "NetSec Execution"));
+        return bridge.assistantHtml(resultsHtml(data), data.playbook_title || (pb ? pb.title : "Firewall Execution"));
     }
 
     /* ================================================================
@@ -259,7 +259,7 @@
     function chooserCardHtml(info) {
         var configured = !!(info && info.configured);
         var html = '<div class="ws-mcq-card ns-card">' +
-            cardHead("NetSec Execution Agent", "How do you want to make firewall changes?") +
+            cardHead("Firewall Execution Agent", "How do you want to make firewall changes?") +
             '<div class="ns-block"><div class="ns-mode-row">' + (configured
                 ? modeNote(info)
                 : '<span class="ns-pill ns-pill-off">OFFLINE</span><span class="ns-note-text">Firewall not configured - manual and bulk operations are unavailable until the NETSEC_FW_* environment variables are set.</span>') + "</div></div>";
@@ -286,10 +286,10 @@
         if (!bridge) { toast("Chat is still loading."); return; }
         var userMsg = bridge.user("Action");
         loadInfo().then(function (info) {
-            var asstMsg = bridge.assistantHtml(chooserCardHtml(info), "NetSec Execution");
+            var asstMsg = bridge.assistantHtml(chooserCardHtml(info), "Firewall Execution");
             persist([userMsg, asstMsg]);
         }).catch(function (err) {
-            var asstMsg = bridge.assistantHtml(connErrorHtml(null), "NetSec Execution");
+            var asstMsg = bridge.assistantHtml(connErrorHtml(null), "Firewall Execution");
             persist([userMsg, asstMsg]);
             toast(err.message, "error");
         });
@@ -330,14 +330,14 @@
         var userMsg = bridge.user("Manual operation");
         loadInfo().then(function (info) {
             if (!info.configured) {
-                var errMsg = bridge.assistantHtml(connErrorHtml(info), "NetSec Execution");
+                var errMsg = bridge.assistantHtml(connErrorHtml(info), "Firewall Execution");
                 persist([userMsg, errMsg]);
                 return;
             }
             var asstMsg = bridge.assistantHtml(manualTypesCardHtml(info), "Manual operation");
             persist([userMsg, asstMsg]);
         }).catch(function (err) {
-            var errMsg = bridge.assistantHtml(connErrorHtml(null), "NetSec Execution");
+            var errMsg = bridge.assistantHtml(connErrorHtml(null), "Firewall Execution");
             persist([userMsg, errMsg]);
             toast(err.message, "error");
         });
@@ -396,7 +396,7 @@
             var pb = playbookById(pbId);
             if (!pb) { toast("Unknown object type."); return; }
             if (!state.info || !state.info.configured) {
-                chat().assistantHtml(connErrorHtml(state.info), "NetSec Execution");
+                chat().assistantHtml(connErrorHtml(state.info), "Firewall Execution");
                 return;
             }
             var bridge = chat();
@@ -526,7 +526,7 @@
             var asstMsg = bridge.assistantHtml(bulkFileCardHtml(info), "Bulk operation");
             persist([userMsg, asstMsg]);
         }).catch(function (err) {
-            var errMsg = bridge.assistantHtml(connErrorHtml(null), "NetSec Execution");
+            var errMsg = bridge.assistantHtml(connErrorHtml(null), "Firewall Execution");
             persist([userMsg, errMsg]);
             toast(err.message, "error");
         });
