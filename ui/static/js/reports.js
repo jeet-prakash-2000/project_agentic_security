@@ -13,6 +13,9 @@
         inventory: []
     };
 
+    var requested = new URLSearchParams(window.location.search).get("firewall");
+    if (requested) state.firewall = requested;
+
     function escapeHtml(value) {
         return String(value == null ? "" : value)
             .replace(/&/g, "&amp;")

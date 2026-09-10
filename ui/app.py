@@ -152,6 +152,25 @@ def _firewall_param():
     return fw
 
 
+def _dashboard_firewall_param():
+    """Dashboard selection: a managed device, or ``all`` for full inventory."""
+    fw = (request.args.get("firewall") or "").strip()
+    if fw.lower() in ("all", "estate", "full", "full inventory"):
+        return "all"
+    if not fw or fw in assessment_service.FIREWALLS:
+        return fw or "vmpafw01"
+    try:
+        names = {
+            entry["device_name"]
+            for entry in managed_firewalls_service.list_firewalls()
+        }
+    except Exception:
+        names = set()
+    if fw in names:
+        return fw
+    return "vmpafw01"
+
+
 def _relabel_firewall(data, firewall_id):
     """Relabel the firewall hostname to the selected logical name."""
     if isinstance(data, dict):
@@ -355,7 +374,7 @@ def dashboard():
         not_assessed="-",
         base_model=(connected or {}).get("model", "gpt-5.1"),
         firewalls=assessment_service.FIREWALLS,
-        firewall_id=_firewall_param()
+        firewall_id=_dashboard_firewall_param()
     )
 
 # --------------------------------------------------
@@ -1234,7 +1253,7 @@ def api_dashboard():
     try:
 
         return jsonify(
-            dashboard_service.get_dashboard(firewall_id=_firewall_param())
+            dashboard_service.get_dashboard(firewall_id=_dashboard_firewall_param())
         )
 
     except Exception as e:

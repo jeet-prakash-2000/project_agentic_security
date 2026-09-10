@@ -66,18 +66,18 @@
     flex-wrap: wrap;
 }
 
-.fw-pick {
+.dash-fw-search {
     display: inline-flex;
     align-items: center;
     gap: 9px;
-    padding: 6px 8px 6px 14px;
+    padding: 5px 6px 5px 14px;
     background: rgba(255, 255, 255, 0.9);
     border: 1px solid var(--border);
     border-radius: 999px;
     box-shadow: var(--shadow-soft);
 }
 
-.fw-pick > span {
+.dash-fw-label {
     font-size: 9.5px;
     font-weight: 700;
     text-transform: uppercase;
@@ -85,19 +85,176 @@
     color: var(--muted);
 }
 
-.fw-pick select {
-    border: none;
-    outline: none;
-    background-color: transparent;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23556170' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right center;
-    padding: 3px 24px 3px 2px;
-    font-family: inherit;
+.dash-fw-search .rep-combobox {
+    width: 220px;
+}
+
+.dash-fw-search .rep-combo-input {
+    border-radius: 999px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.dash-fw-search .rep-combo-list {
+    border-radius: 12px;
+}
+
+.dash-scope {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: -12px 0 22px;
+    padding: 9px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--glass-soft);
     font-size: 13px;
+    color: var(--text-2);
+}
+
+.dash-scope-label {
+    font-size: 10px;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+}
+
+.dash-scope strong {
     color: var(--text);
+    font-weight: 700;
+}
+
+.dash-scope-sub {
+    color: var(--muted);
+    font-size: 12.5px;
+}
+
+.dash-scope-sub::before {
+    content: "\00b7";
+    margin-right: 9px;
+    color: var(--border);
+}
+
+body.dash-estate .dash-scope {
+    border-color: rgba(228, 0, 43, 0.35);
+    background: rgba(228, 0, 43, 0.06);
+}
+
+/* Firewall inventory search combobox (shared markup with Reports) */
+
+.rep-combobox {
+    position: relative;
+}
+
+.rep-combo-search {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: var(--muted);
+    pointer-events: none;
+}
+
+.rep-combo-input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    padding: 7px 30px 7px 30px;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--text);
+    outline: none;
+}
+
+.rep-combo-input::placeholder {
+    color: var(--muted);
+}
+
+.rep-combo-input:focus {
+    outline: 2px solid var(--crimson);
+    outline-offset: -1px;
+    border-color: var(--crimson);
+}
+
+.rep-combo-clear {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
     cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.rep-combo-clear:hover {
+    background: var(--border-soft);
+    color: var(--text);
+}
+
+.rep-combo-clear svg {
+    width: 12px;
+    height: 12px;
+}
+
+.rep-combo-list {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-glass);
+    max-height: 230px;
+    overflow: auto;
+}
+
+.rep-combo-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.rep-combo-row:hover {
+    background: var(--border-soft);
+}
+
+.rep-combo-row.is-active {
+    background: rgba(228, 0, 43, 0.08);
+}
+
+.rep-combo-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-weight: 600;
+    font-size: 12.5px;
+    color: var(--text);
+}
+
+.rep-combo-sub {
+    font-size: 11px;
+    color: var(--muted);
 }
 
 .hero-chip {

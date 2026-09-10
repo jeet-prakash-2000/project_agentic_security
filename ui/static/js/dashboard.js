@@ -14,6 +14,14 @@
         "Logging & Monitoring"
     ];
 
+    var COLORS = { vmpafw01: "#E4002B", vmpafw02: "#2563EB" };
+
+    var DEFAULT_FW = "vmpafw01";
+    var state = {
+        firewall: DEFAULT_FW,
+        inventory: []
+    };
+
     function setSource(source) {
         if (!sourceBadge) return;
         var label = source === "live" ? "Live Data" : "Sample Data";
@@ -26,6 +34,14 @@
         var d = document.createElement("div");
         d.textContent = value == null ? "" : String(value);
         return d.innerHTML;
+    }
+
+    function findingsUrl(key, value) {
+        var url = "/findings?" + key + "=" + encodeURIComponent(value);
+        if (state.firewall && state.firewall !== "all") {
+            url += "&firewall=" + encodeURIComponent(state.firewall);
+        }
+        return url;
     }
 
     function parseDate(ts) {
@@ -110,7 +126,7 @@
                 if (statusEl) statusEl.textContent = statusText(pct);
             });
             seg.addEventListener("click", function () {
-                window.location.href = "/findings?status=" + encodeURIComponent(seg.getAttribute("data-status"));
+                window.location.href = findingsUrl("status", seg.getAttribute("data-status"));
             });
         });
 
@@ -134,7 +150,7 @@
             pills.innerHTML = pillHtml;
             pills.querySelectorAll(".donut-pill").forEach(function (pill) {
                 pill.addEventListener("click", function () {
-                    window.location.href = "/findings?status=" + encodeURIComponent(pill.getAttribute("data-status"));
+                    window.location.href = findingsUrl("status", pill.getAttribute("data-status"));
                 });
             });
         }
@@ -155,7 +171,7 @@
         ];
         var html = "";
         sev.forEach(function (s) {
-            html += '<a class="sev-tile" href="/findings?severity=' + s.status + '" title="' + s.label + ': ' + s.count + ' findings">' +
+            html += '<a class="sev-tile" href="' + findingsUrl("severity", s.status) + '" title="' + s.label + ': ' + s.count + ' findings">' +
                 '<span class="sev-tile-color" style="background:' + s.color + '"></span>' +
                 '<span class="sev-tile-count">' + s.count + "</span>" +
                 '<span class="sev-tile-label">' + s.label + "</span>" +
@@ -211,7 +227,7 @@
         CATEGORY_ORDER.forEach(function (cat) {
             var n = counts[cat] || 0;
             var h = max ? Math.round(n / max * 100) : 0;
-            html += '<a class="vbar" href="/findings?domain=' + encodeURIComponent(cat) + '" title="' + escapeHtml(cat) + ": " + n + '">' +
+            html += '<a class="vbar" href="' + findingsUrl("domain", cat) + '" title="' + escapeHtml(cat) + ": " + n + '">' +
                 '<span class="vbar-count">' + n + "</span>" +
                 '<span class="vbar-track"><span class="vbar-fill" style="height:' + h + '%"></span></span>' +
                 '<span class="vbar-label">' + escapeHtml(shortLabel(cat)) + "</span>" +
@@ -229,58 +245,70 @@
     // COMPLIANCE TREND
     // ============================================================
 
-    function renderTrendStats(history, firewallId) {
+    function buildTrendSeries(history, firewallId) {
+        var snapshots = (history || []).filter(function (s) {
+            return s && typeof s.compliance_pct === "number";
+        });
+        if (firewallId !== "all") {
+            return [{
+                name: firewallId,
+                points: snapshots
+                    .filter(function (s) {
+                        return (s.firewall_name || "vmpafw01") === firewallId;
+                    })
+                    .map(function (s) { return { ts: s.ts, value: s.compliance_pct }; })
+                    .sort(function (a, b) { return a.ts - b.ts; })
+            }];
+        }
+        var byTs = {};
+        snapshots.forEach(function (s) {
+            if (s.ts == null) return;
+            if (!byTs[s.ts]) byTs[s.ts] = [];
+            byTs[s.ts].push(s.compliance_pct);
+        });
+        var points = Object.keys(byTs).map(function (ts) {
+            var values = byTs[ts];
+            var avg = values.reduce(function (a, b) { return a + b; }, 0) / values.length;
+            return { ts: Number(ts), value: Math.round(avg * 10) / 10 };
+        }).sort(function (a, b) { return a.ts - b.ts; });
+        return [{ name: "Full Inventory", points: points }];
+    }
+
+    function renderTrendStats(history, firewallId, complianceScore) {
         var el = document.getElementById("trendStats");
         if (!el) return;
-        var target = firewallId || "vmpafw01";
-        var snapshots = (history || []).filter(function (s) {
-            return s && typeof s.compliance_pct === "number" && (s.firewall_name || "vmpafw01") === target;
-        });
-        if (!snapshots.length) return;
-        var latest = snapshots[snapshots.length - 1];
-        var prev = snapshots.length > 1 ? snapshots[snapshots.length - 2] : null;
-        var current = latest.compliance_pct;
-        var prevScore = prev ? prev.compliance_pct : null;
-        var improvement = prevScore != null ? Math.round((current - prevScore) * 10) / 10 : null;
+        var series = buildTrendSeries(history, firewallId);
+        var points = (series[0] && series[0].points) || [];
+        var current = points.length
+            ? points[points.length - 1].value
+            : (typeof complianceScore === "number" ? complianceScore : null);
+        if (current == null) return;
+        var prev = points.length > 1 ? points[points.length - 2].value : null;
+        var improvement = prev != null ? Math.round((current - prev) * 10) / 10 : null;
         var impCls = improvement == null ? "" : improvement > 0 ? "good" : improvement < 0 ? "bad" : "flat";
         var impText = improvement == null ? "\u2014" : (improvement > 0 ? "+" : "") + improvement + "%";
 
         el.innerHTML =
             '<span class="trend-stat"><span>Current Score</span><strong>' + current + "%</strong></span>" +
-            '<span class="trend-stat"><span>Previous Scan</span><strong>' + (prevScore != null ? prevScore + "%" : "\u2014") + "</strong></span>" +
+            '<span class="trend-stat"><span>Previous Scan</span><strong>' + (prev != null ? prev + "%" : "\u2014") + "</strong></span>" +
             '<span class="trend-stat"><span>Improvement</span><strong class="' + impCls + '">' + impText + "</strong></span>";
     }
 
-    function renderComplianceTrend(history) {
+    function renderComplianceTrend(history, firewallId) {
         var el = document.getElementById("trendChart");
         if (!el) return;
 
-        var snapshots = (history || []).filter(function (s) {
-            return s && typeof s.compliance_pct === "number";
+        var series = buildTrendSeries(history, firewallId).filter(function (s) {
+            return s.points.length > 0;
         });
-        if (!snapshots.length) {
+        if (!series.length) {
             el.innerHTML = '<p class="trend-summary">No history yet. Run an assessment to start tracking compliance.</p>';
             return;
         }
 
-        var groups = {};
-        snapshots.forEach(function (s) {
-            var fw = s.firewall_name || "vmpafw01";
-            if (!groups[fw]) groups[fw] = [];
-            groups[fw].push(s);
-        });
-        var firewalls = Object.keys(groups).sort();
-
-        var times = [];
-        var seen = {};
-        snapshots.forEach(function (s) {
-            if (s.ts != null && !seen[s.ts]) { seen[s.ts] = true; times.push(s.ts); }
-        });
-        times.sort(function (a, b) { return a - b; });
-        if (times.length > 12) {
-            var cut = times.length - 12;
-            times = times.slice(cut);
-        }
+        var points = series[0].points;
+        var times = points.map(function (p) { return p.ts; });
+        if (times.length > 12) times = times.slice(times.length - 12);
         var n = times.length;
 
         var W = 900, H = 160;
@@ -296,8 +324,7 @@
             return PAD_TOP + (1 - (v - min) / (max - min)) * (H - PAD_TOP - PAD_BOTTOM);
         }
 
-        var COLORS = { vmpafw01: "#E4002B", vmpafw02: "#2563EB" };
-        var used = {};
+        var color = firewallId === "all" ? "#E4002B" : (COLORS[firewallId] || "#E4002B");
 
         var html = '<svg class="trend-line-svg" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" role="img" aria-label="Compliance score over time">';
 
@@ -308,23 +335,17 @@
             html += '<text x="' + (PAD_LEFT - 8) + '" y="' + (gy + 3).toFixed(1) + '" class="trend-axis-label" text-anchor="end">' + gv + "</text>";
         }
 
-        firewalls.forEach(function (fw) {
-            var color = COLORS[fw] || "#111827";
-            used[fw] = color;
-            var pts = (groups[fw] || []).filter(function (s) { return times.indexOf(s.ts) !== -1; })
-                .sort(function (a, b) { return a.ts - b.ts; });
-            if (pts.length === 0) return;
-            if (pts.length === 1) {
-                var p = pts[0];
-                html += '<circle cx="' + x(p.ts).toFixed(1) + '" cy="' + y(p.compliance_pct).toFixed(1) + '" r="4" fill="' + color + '"><title>' + escapeHtml((p.firewall_name || fw) + ": " + p.compliance_pct + "%") + "</title></circle>";
-                return;
-            }
-            var line = "M" + pts.map(function (s) { return x(s.ts).toFixed(1) + " " + y(s.compliance_pct).toFixed(1); }).join(" L");
+        var pts = points.filter(function (p) { return times.indexOf(p.ts) !== -1; });
+        if (pts.length === 1) {
+            var p = pts[0];
+            html += '<circle cx="' + x(p.ts).toFixed(1) + '" cy="' + y(p.value).toFixed(1) + '" r="4" fill="' + color + '"><title>' + escapeHtml(series[0].name + ": " + p.value + "%") + "</title></circle>";
+        } else if (pts.length > 1) {
+            var line = "M" + pts.map(function (p) { return x(p.ts).toFixed(1) + " " + y(p.value).toFixed(1); }).join(" L");
             html += '<path d="' + line + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
-            pts.forEach(function (s) {
-                html += '<circle cx="' + x(s.ts).toFixed(1) + '" cy="' + y(s.compliance_pct).toFixed(1) + '" r="2.6" fill="' + color + '" vector-effect="non-scaling-stroke"><title>' + escapeHtml((s.firewall_name || fw) + ": " + s.compliance_pct + "%") + "</title></circle>";
+            pts.forEach(function (p) {
+                html += '<circle cx="' + x(p.ts).toFixed(1) + '" cy="' + y(p.value).toFixed(1) + '" r="2.6" fill="' + color + '" vector-effect="non-scaling-stroke"><title>' + escapeHtml(series[0].name + ": " + p.value + "%") + "</title></circle>";
             });
-        });
+        }
 
         html += "</svg>";
         html += '<div class="trend-labels">';
@@ -337,11 +358,7 @@
         });
         html += "</div>";
 
-        var legend = "";
-        firewalls.forEach(function (fw) {
-            legend += '<span class="trend-legend-item"><i style="background:' + used[fw] + '"></i>' + escapeHtml(fw) + "</span>";
-        });
-        if (legend) html += '<div class="trend-legend">' + legend + "</div>";
+        html += '<div class="trend-legend"><span class="trend-legend-item"><i style="background:' + color + '"></i>' + escapeHtml(series[0].name) + "</span></div>";
 
         el.innerHTML = html;
     }
@@ -349,6 +366,51 @@
     // ============================================================
     // MAIN
     // ============================================================
+
+    function scopeLabel(fw) {
+        return fw === "all" ? "Full Inventory" : fw;
+    }
+
+    function updateScope(fw) {
+        var nameEl = document.getElementById("dashScopeName");
+        var subEl = document.getElementById("dashScopeSub");
+        if (nameEl) nameEl.textContent = scopeLabel(fw);
+        if (subEl) {
+            subEl.textContent = fw === "all"
+                ? "Cumulative across every managed firewall"
+                : "Single firewall";
+        }
+        document.body.classList.toggle("dash-estate", fw === "all");
+
+        var assess = document.getElementById("quickAssess");
+        var summary = document.getElementById("quickSummary");
+        var report = document.getElementById("quickReport");
+        var query = fw === "all" ? "" : "?firewall=" + encodeURIComponent(fw);
+        if (assess) {
+            assess.href = fw === "all" ? "/workspace" : "/run-assessment" + query;
+        }
+        if (summary) summary.href = "/reports" + query;
+        if (report) report.href = "/workspace";
+
+        var assessText = document.getElementById("quickAssessText");
+        if (assessText) {
+            assessText.textContent = fw === "all"
+                ? "Assess every managed firewall in the AI Workspace"
+                : "Execute a compliance assessment for " + fw;
+        }
+        var summaryText = document.getElementById("quickSummaryText");
+        if (summaryText) {
+            summaryText.textContent = fw === "all"
+                ? "Review summaries for the whole estate"
+                : "Review generated summaries for " + fw;
+        }
+        var reportText = document.getElementById("quickReportText");
+        if (reportText) {
+            reportText.textContent = fw === "all"
+                ? "Create an estate-wide assessment workbook"
+                : "Create a workbook for " + fw;
+        }
+    }
 
     function applyNetsecData(data) {
         var c = data.compliance || {};
@@ -358,22 +420,123 @@
         renderSeverityGrid(data.findings || {});
         renderRecentFindings(data.recent_findings || []);
         renderVerticalBars(data.findings_list || []);
-        renderTrendStats(data.history || [], fw);
-        renderComplianceTrend(data.history || []);
+        renderTrendStats(data.history || [], fw, c.compliance_score);
+        renderComplianceTrend(data.history || [], fw);
+        updateScope(fw);
     }
 
     function load() {
-        var sel = document.getElementById("firewallSelect");
-        var fw = sel ? sel.value : "vmpafw01";
-        fetch("/api/dashboard?firewall=" + encodeURIComponent(fw))
+        fetch("/api/dashboard?firewall=" + encodeURIComponent(state.firewall))
             .then(function (r) { return r.json(); })
             .then(function (data) { applyNetsecData(data); })
             .catch(function () { window.showToast("Dashboard data unavailable.", "error"); });
     }
 
-    var firewallSelect = document.getElementById("firewallSelect");
-    if (firewallSelect) {
-        firewallSelect.addEventListener("change", function () { load(); });
+    // ---- Firewall inventory search combobox ----
+
+    var input = document.getElementById("dashFwInput");
+    var list = document.getElementById("dashFwList");
+    var clear = document.getElementById("dashFwClear");
+    var wrap = document.getElementById("dashCombobox");
+
+    if (input) {
+        var initial = (input.value || "").trim();
+        if (initial) state.firewall = initial;
+    }
+
+    function reflectFirewallUI() {
+        if (!input) return;
+        if (state.firewall === "all") {
+            input.value = "";
+            input.placeholder = "Full Inventory — search estate";
+        } else {
+            input.value = state.firewall;
+            input.placeholder = "";
+        }
+        if (clear) clear.hidden = state.firewall === "all";
+    }
+
+    function inventorySource() {
+        return (state.inventory || []).filter(function (e) { return e && e.device_name; });
+    }
+
+    function comboRows(query) {
+        var q = String(query || "").trim().toLowerCase();
+        var out = '<li class="rep-combo-row' + (state.firewall === "all" ? " is-active" : "") +
+            '" role="option" data-value="all">' +
+            '<span class="rep-combo-name">Full Inventory</span>' +
+            '<span class="rep-combo-sub">Cumulative data for every managed firewall</span></li>';
+        inventorySource().forEach(function (fw) {
+            var name = fw.device_name || "";
+            if (!name) return;
+            var hay = (name + " " + (fw.host_ip || "") + " " + (fw.clone_of || "")).toLowerCase();
+            if (q && hay.indexOf(q) === -1) return;
+            var bits = [fw.host_ip || "", fw.status ? (fw.status === "live" ? "Live" : "Down") : ""];
+            if (fw.clone_of) bits.push("Clone of " + fw.clone_of);
+            var sub = bits.filter(Boolean).join(" \u00b7 ") || "Managed device";
+            out += '<li class="rep-combo-row' + (state.firewall === name ? " is-active" : "") +
+                '" role="option" data-value="' + escapeHtml(name) + '">' +
+                '<span class="rep-combo-name">' + escapeHtml(name) + "</span>" +
+                '<span class="rep-combo-sub">' + escapeHtml(sub) + "</span></li>";
+        });
+        return out;
+    }
+
+    function setFirewall(value) {
+        state.firewall = value || "all";
+        reflectFirewallUI();
+        load();
+    }
+
+    if (wrap && input && list) {
+        var close = function () {
+            list.hidden = true;
+            input.setAttribute("aria-expanded", "false");
+            document.removeEventListener("click", outside);
+        };
+        var outside = function (e) {
+            if (!wrap.contains(e.target)) close();
+        };
+        var open = function () {
+            document.removeEventListener("click", outside);
+            list.innerHTML = comboRows(input.value);
+            list.hidden = false;
+            input.setAttribute("aria-expanded", "true");
+            document.addEventListener("click", outside);
+        };
+        input.addEventListener("focus", open);
+        input.addEventListener("input", open);
+        list.addEventListener("mousedown", function (e) { e.preventDefault(); });
+        list.addEventListener("click", function (e) {
+            var row = e.target.closest(".rep-combo-row");
+            if (!row) return;
+            setFirewall(row.getAttribute("data-value") || "all");
+            close();
+        });
+        if (clear) {
+            clear.addEventListener("click", function () {
+                setFirewall("all");
+                close();
+            });
+        }
+        input.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") { close(); return; }
+            if (e.key === "Enter") {
+                e.preventDefault();
+                var first = list.querySelector(".rep-combo-row");
+                if (first) setFirewall(first.getAttribute("data-value") || "all");
+                close();
+            }
+        });
+    }
+
+    function loadInventory() {
+        fetch("/api/firewall-inventory", { headers: { "Accept": "application/json" } })
+            .then(function (res) { return res.ok ? res.json() : Promise.reject(new Error("failed")); })
+            .then(function (data) {
+                state.inventory = (data && data.firewalls) || [];
+            })
+            .catch(function () { state.inventory = []; });
     }
 
     if (window.showToast) {
@@ -387,5 +550,8 @@
         });
     }
 
+    reflectFirewallUI();
+    updateScope(state.firewall);
+    loadInventory();
     load();
 })();

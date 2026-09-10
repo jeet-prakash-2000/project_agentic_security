@@ -66,20 +66,35 @@ def _agent_health_card(agent, stats):
 
 
 def _trend_history(history):
-    """Ensure the trend has snapshots for both firewalls.
+    """Ensure the trend has snapshots for every managed firewall.
 
-    vmpafw02 mirrors vmpafw01, so when no dedicated vmpafw02 snapshots exist
-    yet, synthesize them from the vmpafw01 series (relabelled).
+    Devices without their own snapshot series mirror vmpafw01 so the chart
+    never renders an empty estate view.
     """
     history = list(history or [])
-    has_fw02 = any((s.get("firewall_name") or "vmpafw01") == "vmpafw02" for s in history)
-    if not has_fw02:
-        history += [
-            dict(s, firewall_name="vmpafw02")
+    if not history:
+        return history
+    named = set(
+        (s.get("firewall_name") or "vmpafw01")
+        for s in history
+    )
+    extra = []
+    for fw in assessment_service.FIREWALLS:
+        if fw in named:
+            continue
+        extra += [
+            dict(s, firewall_name=fw)
             for s in history
             if (s.get("firewall_name") or "vmpafw01") == "vmpafw01"
         ]
-    return history
+    return history + extra
+
+
+def _estate_findings(devices):
+    findings = []
+    for device in devices or []:
+        findings.extend(device.get("findings") or [])
+    return findings
 
 
 def get_dashboard(firewall_id="vmpafw01"):
@@ -87,18 +102,48 @@ def get_dashboard(firewall_id="vmpafw01"):
     connected = agents_service.get_connected_agent()
     stats = assessment_service.get_assessment_stats()
 
-    try:
-        assessment = assessment_service.get_full_assessment(firewall_id)
-    except Exception:
-        assessment = {}
+    if firewall_id == "all":
+        try:
+            estate = assessment_service.get_estate_assessment()
+        except Exception:
+            estate = {}
 
-    summary = assessment.get("summary", {})
-    findings = assessment.get("findings", [])
+        cumulative = estate.get("cumulative") or {}
+        devices = estate.get("devices") or []
 
-    total_controls = int(summary.get("total_controls", 0))
-    compliant = int(summary.get("compliant", 0))
-    non_compliant = int(summary.get("non_compliant", 0))
-    not_assessed = int(summary.get("not_assessed", 0))
+        total_controls = int(cumulative.get("total_controls", 0))
+        compliant = int(cumulative.get("total_compliant", 0))
+        non_compliant = int(cumulative.get("total_non_compliant", 0))
+        not_assessed = int(cumulative.get("total_not_assessed", 0))
+        findings = _estate_findings(devices)
+        source = estate.get("_source", "sample")
+        history = _trend_history(assessment_service.get_history())
+    else:
+        try:
+            assessment = assessment_service.get_full_assessment(firewall_id)
+        except Exception:
+            assessment = {}
+
+        summary = assessment.get("summary", {})
+        findings = assessment.get("findings", [])
+
+        total_controls = int(summary.get("total_controls", 0))
+        compliant = int(summary.get("compliant", 0))
+        non_compliant = int(summary.get("non_compliant", 0))
+        not_assessed = int(summary.get("not_assessed", 0))
+        source = assessment.get("_source", "sample")
+
+        base_history = _trend_history(assessment_service.get_history())
+        history = [
+            s for s in base_history
+            if (s.get("firewall_name") or "vmpafw01") == firewall_id
+        ]
+        if not history:
+            history = [
+                dict(s, firewall_name=firewall_id)
+                for s in base_history
+                if (s.get("firewall_name") or "vmpafw01") == "vmpafw01"
+            ]
 
     compliance_score = (
         round(compliant / total_controls * 100) if total_controls else 0
@@ -167,7 +212,7 @@ def get_dashboard(firewall_id="vmpafw01"):
             "non_compliant": non_compliant,
             "not_assessed": not_assessed,
             "compliance_score": compliance_score,
-            "source": assessment.get("_source", "sample"),
+            "source": source,
         },
         "findings": {
             "critical": severity_counts["critical"],
@@ -186,7 +231,7 @@ def get_dashboard(firewall_id="vmpafw01"):
         "assessments_run": int((stats or {}).get("assessments_run", 0)),
         "avg_health": avg_health,
         "agents": health_cards,
-        "history": _trend_history(assessment_service.get_history()),
+        "history": history,
         "firewalls": list(assessment_service.FIREWALLS),
         "firewall_id": firewall_id,
         "generated_at": time.time(),

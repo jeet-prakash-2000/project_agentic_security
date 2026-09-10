@@ -13,20 +13,29 @@
         <p>Compliance score, findings and risk domains across your firewall estate — refreshed in real time.</p>
     </div>
     <div class="dash-meta">
-        <label class="fw-pick" title="Select firewall">
-            <span>Firewall</span>
-            <select id="firewallSelect">
-                {% for fw in firewalls or ['vmpafw01', 'vmpafw02'] %}
-                <option value="{{ fw }}" {{ 'selected' if fw == firewall_id else '' }}>{{ fw }}</option>
-                {% endfor %}
-            </select>
-        </label>
+        <div class="dash-fw-search">
+            <span class="dash-fw-label">Firewall</span>
+            <div class="rep-combobox" id="dashCombobox">
+                <svg class="rep-combo-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                <input type="text" id="dashFwInput" class="rep-combo-input" value="{{ 'all' if firewall_id == 'all' else (firewall_id or 'vmpafw01') }}" autocomplete="off" role="combobox" aria-expanded="false" aria-label="Search firewall inventory">
+                <button type="button" class="rep-combo-clear" id="dashFwClear" hidden aria-label="Clear firewall filter">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                </button>
+                <ul class="rep-combo-list" id="dashFwList" role="listbox" hidden></ul>
+            </div>
+        </div>
         <span class="hero-chip" id="dataSourceBadge">Connecting…</span>
         <button class="hero-chip-btn" id="refreshBtn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 4v6h6"/><path d="M3.5 15a9 9 0 102.6-8L1 10"/></svg>
             Refresh
         </button>
     </div>
+</div>
+
+<div class="dash-scope" id="dashScope">
+    <span class="dash-scope-label">Showing</span>
+    <strong id="dashScopeName">vmpafw01</strong>
+    <span class="dash-scope-sub" id="dashScopeSub">Single firewall</span>
 </div>
 
 <section class="dash-grid-2">
@@ -51,33 +60,33 @@
 <section class="quick-actions">
     <div class="section-head"><h3>Quick Actions</h3></div>
     <div class="quick-grid">
-        <a href="{{ url_for('run_assessment') }}" class="quick-card">
+        <a href="{{ url_for('run_assessment') }}" class="quick-card" id="quickAssess">
             <span class="quick-icon quick-icon-blue">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6l7-3z"/><path d="M12 8v4M12 15.5v.5"/></svg>
             </span>
             <div class="quick-body">
                 <h4>Run Assessment</h4>
-                <p>Execute a full compliance assessment</p>
+                <p id="quickAssessText">Execute a full compliance assessment</p>
             </div>
             <span class="quick-arrow">→</span>
         </a>
-        <a href="{{ url_for('reports') }}" class="quick-card">
+        <a href="{{ url_for('reports') }}" class="quick-card" id="quickSummary">
             <span class="quick-icon quick-icon-purple">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
             </span>
             <div class="quick-body">
                 <h4>Executive Summary</h4>
-                <p>Review generated summaries in Reports Center</p>
+                <p id="quickSummaryText">Review generated summaries in Reports Center</p>
             </div>
             <span class="quick-arrow">→</span>
         </a>
-        <a href="{{ url_for('workspace') }}" class="quick-card">
+        <a href="{{ url_for('workspace') }}" class="quick-card" id="quickReport">
             <span class="quick-icon quick-icon-green">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h8l4 4V21.5H6V2.5z"/><path d="M14 2.5v4h4"/><path d="M9 12h6M9 16h6"/></svg>
             </span>
             <div class="quick-body">
                 <h4>Generate Report</h4>
-                <p>Create an assessment workbook in AI Workspace</p>
+                <p id="quickReportText">Create an assessment workbook in AI Workspace</p>
             </div>
             <span class="quick-arrow">→</span>
         </a>
@@ -112,5 +121,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/finding_enrichment.js') }}?v=7"></script>
-<script src="{{ url_for('static', filename='js/dashboard.js') }}?v=8"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}?v=9"></script>
 {% endblock %}
