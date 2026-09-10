@@ -82,7 +82,7 @@ def _record_tool_report(name, result):
         report_history_service.append_report({
             "name": "Executive_Summary_{0}".format(time.strftime("%b_%Y")),
             "type": "Executive Summary",
-            "generated_by": (agent or {}).get("name", "Firewall Auditor"),
+            "generated_by": (agent or {}).get("name", "Firewall Audit Agent"),
             "ts": time.time(),
             "status": "Completed",
             "size": "—",
@@ -95,7 +95,7 @@ def _record_tool_report(name, result):
         report_history_service.append_report({
             "name": "Assessment_Workbook_{0}".format(time.strftime("%b_%Y")),
             "type": "Workbook",
-            "generated_by": (agent or {}).get("name", "Firewall Auditor"),
+            "generated_by": (agent or {}).get("name", "Firewall Audit Agent"),
             "ts": time.time(),
             "status": "Completed",
             "size": size,

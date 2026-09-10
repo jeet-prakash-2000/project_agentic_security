@@ -33,6 +33,14 @@ ADMIN_ROLE = "Admin"
 # Legacy owner markers used before real user accounts existed.
 LEGACY_OWNERS = ("anonymous", "demo")
 
+# Legacy agent display names mapped to their current registry name. Historical
+# rows keep the name recorded at the time they were written; this mapping lets
+# startup normalise them so every surface shows the current agent name.
+AGENT_NAME_ALIASES = {
+    "Firewall-Audit-Agent": "Firewall Audit Agent",
+    "Firewall Auditor": "Firewall Audit Agent",
+}
+
 
 def ensure_admin_user():
     """Create the seeded administrator account (idempotent)."""
@@ -169,6 +177,82 @@ def seed_agents_from_config():
     return seeded
 
 
+def reconcile_agent_names():
+    """Rewrite legacy agent display names in historical rows (idempotent).
+
+    ``seed_agents_from_config`` refreshes the ``agents`` registry, but snapshot
+    copies written earlier (insights, telemetry history, generated reports and
+    stored chat messages) keep the old label. This normalises those rows so the
+    rename shows up in every database-backed surface, not just the registry.
+    """
+    from sqlalchemy import text
+
+    from database.db import get_session, remove_session
+
+    renames = {
+        "agents": ["name"],
+        "insights": ["agent_name", "agent_type"],
+        "telemetry_history": ["agent_name"],
+        "reports_history": ["generated_by"],
+    }
+
+    session = get_session()
+    changed = 0
+    try:
+        for old, new in AGENT_NAME_ALIASES.items():
+            params = {"old": old, "new": new}
+            for table, columns in renames.items():
+                for column in columns:
+                    result = session.execute(
+                        text(
+                            "UPDATE {0} SET {1} = :new WHERE {1} = :old".format(
+                                table, column
+                            )
+                        ),
+                        params,
+                    )
+                    changed += result.rowcount or 0
+
+            # Stored chat messages carry the attribution inside the ``meta``
+            # JSON payload rather than a dedicated column.
+            result = session.execute(
+                text(
+                    "UPDATE messages SET meta = "
+                    "jsonb_set(meta::jsonb, '{agentName}', to_jsonb(:new))::json "
+                    "WHERE meta->>'agentName' = :old"
+                ),
+                params,
+            )
+            changed += result.rowcount or 0
+
+            # Telemetry map snapshots embed the agent label inside each node.
+            result = session.execute(
+                text(
+                    "UPDATE telemetry_history AS th SET nodes = sub.nodes::json "
+                    "FROM ("
+                    "  SELECT id, jsonb_agg("
+                    "    CASE WHEN elem->>'label' = :old "
+                    "      THEN jsonb_set(elem, '{label}', to_jsonb(:new)) "
+                    "      ELSE elem END"
+                    "  ) AS nodes "
+                    "  FROM telemetry_history, jsonb_array_elements(nodes::jsonb) AS elem "
+                    "  GROUP BY id "
+                    "  HAVING bool_or(elem->>'label' = :old)"
+                    ") AS sub "
+                    "WHERE th.id = sub.id"
+                ),
+                params,
+            )
+            changed += result.rowcount or 0
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        remove_session()
+    return changed
+
+
 def run_bootstrap():
     """Seed the administrator, agent registry and reclaim legacy rows."""
     try:
@@ -181,6 +265,13 @@ def run_bootstrap():
         seed_agents_from_config()
     except Exception as exc:
         log.warning("Agent registry seed failed: %s", exc)
+
+    try:
+        renamed = reconcile_agent_names()
+        if renamed:
+            log.info("Normalised %s legacy agent name row(s).", renamed)
+    except Exception as exc:
+        log.warning("Agent name reconciliation failed: %s", exc)
 
     try:
         from services import managed_firewalls_service

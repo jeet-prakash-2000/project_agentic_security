@@ -3,8 +3,8 @@
     {
       "id": "conv-mt0ttwqb-2mm4d8",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "user_id": "anonymous",
       "created": 1787188439.3727107,
@@ -27,8 +27,8 @@
     {
       "id": "conv-mt0l4bpe-gcnxdx",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "user_id": "anonymous",
       "created": 1787173855.2149715,
@@ -51,8 +51,8 @@
     {
       "id": "conv-mt0k3pe4-kkt9yl",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "user_id": "anonymous",
       "created": 1787172090.725779,
@@ -75,8 +75,8 @@
     {
       "id": "conv-agent-002",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "user_id": "anonymous",
       "created": 1787170538.8319495,
@@ -99,8 +99,8 @@
     {
       "id": "conv-agent-001",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "user_id": "anonymous",
       "created": 1787170483.9434948,
@@ -123,8 +123,8 @@
     {
       "id": "conv-mt0ikwxi-fmpb8v",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "user_id": "anonymous",
       "created": 1787169510.9473126,
@@ -140,7 +140,7 @@
           "cache_write_tokens": 0,
           "reasoning_tokens": 0,
           "latency_ms": 3533,
-          "reply_preview": "Hello!  \n\nI\u2019m your Firewall Auditor, focused on Palo Alto firewall compliance and security posture.\n\nWhat would you like to do today?\n\nSome options:\n- Get a **management-ready security posture summary** of your firewall  \n- Run a **fresh compliance assessment** across all 44 controls  \n- Dive into *"
+          "reply_preview": "Hello!  \n\nI\u2019m your Firewall Audit Agent, focused on Palo Alto firewall compliance and security posture.\n\nWhat would you like to do today?\n\nSome options:\n- Get a **management-ready security posture summary** of your firewall  \n- Run a **fresh compliance assessment** across all 44 controls  \n- Dive into *"
         },
         {
           "timestamp": 1787169540.7341743,
@@ -159,8 +159,8 @@
     {
       "id": "conv-verify-0001",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "user_id": "anonymous",
       "created": 1787169243.9053047,
@@ -183,8 +183,8 @@
     {
       "id": "conv-mt0i3c9p-8cj1c7",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "user_id": "anonymous",
       "created": 1787168711.8174264,
@@ -207,8 +207,8 @@
     {
       "id": "conv-mt0hmj9m-e9dznp",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "user_id": "anonymous",
       "created": 1787167937.2364752,
@@ -231,8 +231,8 @@
     {
       "id": "conv-test-0001",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "user_id": "anonymous",
       "created": 1787167862.6373167,
@@ -248,15 +248,15 @@
           "cache_write_tokens": 0,
           "reasoning_tokens": 0,
           "latency_ms": 3929,
-          "reply_preview": "I\u2019m the **Firewall Auditor**, an AI security agent specialized in assessing **Palo Alto Networks firewalls**\u2014specifically your device **vmpafw01 (PAN-OS 10.2.10-h9)**.\n\nWhat I do:\n- Run **compliance assessments** across 44 controls (inventory, health/HA, security policy, threat prevention, segmentat"
+          "reply_preview": "I\u2019m the **Firewall Audit Agent**, an AI security agent specialized in assessing **Palo Alto Networks firewalls**\u2014specifically your device **vmpafw01 (PAN-OS 10.2.10-h9)**.\n\nWhat I do:\n- Run **compliance assessments** across 44 controls (inventory, health/HA, security policy, threat prevention, segmentat"
         }
       ]
     },
     {
       "id": "conv-mss0naib-68xqbj",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786655673.7449656,
       "updated": 1786675948.0729446,
@@ -302,8 +302,8 @@
     {
       "id": "conv-msrxwvs8-63mxl0",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786651059.5596638,
       "updated": 1786659771.796152,
@@ -361,8 +361,8 @@
     {
       "id": "conv-fe928e136ff8",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786649750.7990513,
       "updated": 1786649750.7990513,
@@ -384,8 +384,8 @@
     {
       "id": "conv-msrvy4hp-qh0ocj",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786647750.6691797,
       "updated": 1786650216.6600225,
@@ -455,8 +455,8 @@
     {
       "id": "conv-2fda7312aaf6",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786647494.8983684,
       "updated": 1786647494.8983684,
@@ -471,15 +471,15 @@
           "cache_write_tokens": 0,
           "reasoning_tokens": 0,
           "latency_ms": 4322,
-          "reply_preview": "Hello, I\u2019m your Firewall Auditor assistant, ready to help assess and improve your Palo Alto firewall security posture."
+          "reply_preview": "Hello, I\u2019m your Firewall Audit Agent assistant, ready to help assess and improve your Palo Alto firewall security posture."
         }
       ]
     },
     {
       "id": "conv-a9495cb06d85",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786647292.594728,
       "updated": 1786647292.594728,
@@ -494,15 +494,15 @@
           "cache_write_tokens": 0,
           "reasoning_tokens": 0,
           "latency_ms": 5660,
-          "reply_preview": "Hello\u2014I'm your Firewall Auditor, ready to help assess and improve your Palo Alto Networks security posture."
+          "reply_preview": "Hello\u2014I'm your Firewall Audit Agent, ready to help assess and improve your Palo Alto Networks security posture."
         }
       ]
     },
     {
       "id": "conv-mspbgu5g-4j9koi",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786492446.2235174,
       "updated": 1786497396.1658177,
@@ -632,8 +632,8 @@
     {
       "id": "conv-mspafaxe-2ao53a",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786490714.551664,
       "updated": 1786491183.5390494,
@@ -667,8 +667,8 @@
     {
       "id": "conv-4ae41c66f4ab",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786487123.6197243,
       "updated": 1786487123.6197243,
@@ -690,8 +690,8 @@
     {
       "id": "conv-5bed69b09768",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786486927.007464,
       "updated": 1786486927.007464,
@@ -713,8 +713,8 @@
     {
       "id": "conv-msp7hyz4-6hinz1",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786485823.9680936,
       "updated": 1786489511.8720775,
@@ -820,8 +820,8 @@
     {
       "id": "conv-msp7abdx-5n8eer",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786485458.435844,
       "updated": 1786485458.435844,
@@ -843,8 +843,8 @@
     {
       "id": "conv-4db677077e18",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786485287.3530886,
       "updated": 1786485287.3530886,
@@ -866,8 +866,8 @@
     {
       "id": "conv-msp6syea-dqr86q",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786484693.9320056,
       "updated": 1786485071.3476014,
@@ -925,8 +925,8 @@
     {
       "id": "conv-fe7f1a848d58",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786484478.625702,
       "updated": 1786484478.625702,
@@ -941,15 +941,15 @@
           "cache_write_tokens": 0,
           "reasoning_tokens": 0,
           "latency_ms": 5328,
-          "reply_preview": "Hello.\n\nI\u2019m your Firewall Auditor for the Palo Alto firewall `vmpafw01` (PAN-OS 10.2.10-h9).  \nI work off a 44-control compliance framework covering:\n\n- Inventory & health\n- HA & resilience\n- Security policy & threat prevention\n- Network segmentation\n- VPN\n- Logging & monitoring\n- Administration & a"
+          "reply_preview": "Hello.\n\nI\u2019m your Firewall Audit Agent for the Palo Alto firewall `vmpafw01` (PAN-OS 10.2.10-h9).  \nI work off a 44-control compliance framework covering:\n\n- Inventory & health\n- HA & resilience\n- Security policy & threat prevention\n- Network segmentation\n- VPN\n- Logging & monitoring\n- Administration & a"
         }
       ]
     },
     {
       "id": "conv-6981628ff518",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786484170.7647753,
       "updated": 1786484170.7647753,
@@ -971,8 +971,8 @@
     {
       "id": "conv-ad4f787b26aa",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786484158.3569326,
       "updated": 1786484158.3569326,
@@ -994,8 +994,8 @@
     {
       "id": "conv-55446ab0377e",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786484130.5120583,
       "updated": 1786484130.5120583,
@@ -1017,8 +1017,8 @@
     {
       "id": "conv-7eb385d5f2af",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786483780.3471239,
       "updated": 1786483780.3471239,
@@ -1040,8 +1040,8 @@
     {
       "id": "conv-msp5bcra-n3ttue",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786483415.9200313,
       "updated": 1786484214.8958716,
@@ -1092,15 +1092,15 @@
           "cache_write_tokens": 0,
           "reasoning_tokens": 0,
           "latency_ms": 3711,
-          "reply_preview": "## Hello\n\nI\u2019m the Firewall Auditor for your Palo Alto firewall (**vmpafw01, PAN\u2011OS 10.2.10\u2011h9**).  \n\nYou\u2019ve asked about:\n- VPN  \n- HA (High Availability)  \n- Routing  \n\nIf you tell me what you want to focus on (for example: *\u201csecure remote access VPN\u201d*, *\u201ccheck HA failover readiness\u201d*, or *\u201cverify B"
+          "reply_preview": "## Hello\n\nI\u2019m the Firewall Audit Agent for your Palo Alto firewall (**vmpafw01, PAN\u2011OS 10.2.10\u2011h9**).  \n\nYou\u2019ve asked about:\n- VPN  \n- HA (High Availability)  \n- Routing  \n\nIf you tell me what you want to focus on (for example: *\u201csecure remote access VPN\u201d*, *\u201ccheck HA failover readiness\u201d*, or *\u201cverify B"
         }
       ]
     },
     {
       "id": "conv-42cd897ef814",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786483336.0307136,
       "updated": 1786483336.0307136,
@@ -1122,8 +1122,8 @@
     {
       "id": "conv-8039e118e9b7",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786483323.4591901,
       "updated": 1786483323.4591901,
@@ -1145,8 +1145,8 @@
     {
       "id": "conv-5f4b88e0e6a1",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786483264.3049393,
       "updated": 1786483264.3049393,
@@ -1168,8 +1168,8 @@
     {
       "id": "conv-msp4597p-c8sysm",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786480517.2678764,
       "updated": 1786480517.2678764,
@@ -1191,8 +1191,8 @@
     {
       "id": "conv-msp3hvsj-qhrsps",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786479185.7484298,
       "updated": 1786479185.7484298,
@@ -1214,8 +1214,8 @@
     {
       "id": "conv-msowq5i4-unq4nv",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786470145.0318203,
       "updated": 1786470260.4663131,
@@ -1249,8 +1249,8 @@
     {
       "id": "conv-accea3c4e70f",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786440143.6537626,
       "updated": 1786440143.6537626,
@@ -1272,8 +1272,8 @@
     {
       "id": "conv-e0211d78809e",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786438332.5674996,
       "updated": 1786438332.5674996,
@@ -1295,8 +1295,8 @@
     {
       "id": "conv-62c8907daab4",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786428209.9606013,
       "updated": 1786428219.716781,
@@ -1330,8 +1330,8 @@
     {
       "id": "conv-test-001",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
-      "agent_type": "Firewall Auditor",
+      "agent_name": "Firewall Audit Agent",
+      "agent_type": "Firewall Audit Agent",
       "model": "gpt-5.1",
       "created": 1786298316.8884542,
       "updated": 1786298372.9864187,

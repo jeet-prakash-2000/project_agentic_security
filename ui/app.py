@@ -498,7 +498,7 @@ def executive_report():
             {
                 "name": result["filename"].replace(".pdf", ""),
                 "type": "Executive Summary",
-                "generated_by": (agent or {}).get("name", "Firewall Auditor"),
+                "generated_by": (agent or {}).get("name", "Firewall Audit Agent"),
                 "firewall": _firewall_param(),
                 "ts": time.time(),
                 "status": "Completed",
@@ -567,7 +567,7 @@ def generate_excel():
                     timeutil.ist_now().strftime("%b_%Y")
                 ),
                 "type": "Workbook",
-                "generated_by": (agent or {}).get("name", "Firewall Auditor"),
+                "generated_by": (agent or {}).get("name", "Firewall Audit Agent"),
                 "firewall": _firewall_param(),
                 "ts": time.time(),
                 "status": "Completed",
@@ -813,7 +813,7 @@ def api_summary():
         report_history_service.append_report({
             "name": result["filename"].replace(".pdf", ""),
             "type": "Executive Summary",
-            "generated_by": (agent or {}).get("name", "Firewall Auditor"),
+            "generated_by": (agent or {}).get("name", "Firewall Audit Agent"),
             "firewall": _firewall_param(),
             "ts": time.time(),
             "status": "Completed",
@@ -856,7 +856,7 @@ def api_excel():
         report_history_service.append_report({
             "name": "Assessment_Workbook_{0}".format(timeutil.ist_now().strftime("%b_%Y")),
             "type": "Workbook",
-            "generated_by": (agent or {}).get("name", "Firewall Auditor"),
+            "generated_by": (agent or {}).get("name", "Firewall Audit Agent"),
             "firewall": _firewall_param(),
             "ts": time.time(),
             "status": "Completed",
@@ -894,7 +894,7 @@ def download_workbook():
         report_history_service.append_report({
             "name": "Assessment_Workbook_{0}".format(timeutil.ist_now().strftime("%b_%Y")),
             "type": "Workbook",
-            "generated_by": (agent or {}).get("name", "Firewall Auditor"),
+            "generated_by": (agent or {}).get("name", "Firewall Audit Agent"),
             "firewall": _firewall_param(),
             "ts": time.time(),
             "status": "Completed",
@@ -1556,7 +1556,7 @@ def api_estate_excel():
         report_history_service.append_report({
             "name": result.get("filename", "").replace(".xlsx", ""),
             "type": "Workbook",
-            "generated_by": (agent or {}).get("name", "Firewall Auditor"),
+            "generated_by": (agent or {}).get("name", "Firewall Audit Agent"),
             "firewall": "estate",
             "ts": time.time(),
             "status": "Completed",

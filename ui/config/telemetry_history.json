@@ -4,11 +4,11 @@
       "ts": 1785921401.3697863,
       "label": "Aug 05, 09:16",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
+      "agent_name": "Firewall Audit Agent",
       "nodes": [
         {
           "id": "agent",
-          "label": "Firewall-Audit-Agent",
+          "label": "Firewall Audit Agent",
           "type": "agent",
           "status": "healthy"
         },
@@ -90,11 +90,11 @@
       "ts": 1786094201.3697863,
       "label": "Aug 07, 09:16",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
+      "agent_name": "Firewall Audit Agent",
       "nodes": [
         {
           "id": "agent",
-          "label": "Firewall-Audit-Agent",
+          "label": "Firewall Audit Agent",
           "type": "agent",
           "status": "healthy"
         },
@@ -182,11 +182,11 @@
       "ts": 1786439801.376247,
       "label": "Aug 11, 09:16",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
+      "agent_name": "Firewall Audit Agent",
       "nodes": [
         {
           "id": "agent",
-          "label": "Firewall-Audit-Agent",
+          "label": "Firewall Audit Agent",
           "type": "agent",
           "status": "healthy"
         },
@@ -274,11 +274,11 @@
       "ts": 1786472335.8952217,
       "label": "Aug 11, 18:18",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
+      "agent_name": "Firewall Audit Agent",
       "nodes": [
         {
           "id": "agent",
-          "label": "Firewall-Audit-Agent",
+          "label": "Firewall Audit Agent",
           "type": "agent",
           "status": "healthy"
         },
@@ -366,11 +366,11 @@
       "ts": 1786479286.7512918,
       "label": "Aug 11, 20:14",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
+      "agent_name": "Firewall Audit Agent",
       "nodes": [
         {
           "id": "agent",
-          "label": "Firewall-Audit-Agent",
+          "label": "Firewall Audit Agent",
           "type": "agent",
           "status": "healthy"
         },
@@ -458,11 +458,11 @@
       "ts": 1786479411.2701023,
       "label": "Aug 11, 20:16",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
+      "agent_name": "Firewall Audit Agent",
       "nodes": [
         {
           "id": "agent",
-          "label": "Firewall-Audit-Agent",
+          "label": "Firewall Audit Agent",
           "type": "agent",
           "status": "healthy"
         },
@@ -550,11 +550,11 @@
       "ts": 1786481958.9245877,
       "label": "Aug 11, 20:59",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
+      "agent_name": "Firewall Audit Agent",
       "nodes": [
         {
           "id": "agent",
-          "label": "Firewall-Audit-Agent",
+          "label": "Firewall Audit Agent",
           "type": "agent",
           "status": "healthy"
         },
@@ -642,11 +642,11 @@
       "ts": 1786494391.693867,
       "label": "Aug 12, 00:26",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
+      "agent_name": "Firewall Audit Agent",
       "nodes": [
         {
           "id": "agent",
-          "label": "Firewall-Audit-Agent",
+          "label": "Firewall Audit Agent",
           "type": "agent",
           "status": "healthy"
         },
@@ -734,11 +734,11 @@
       "ts": 1786649137.8476932,
       "label": "Aug 13, 19:25",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
+      "agent_name": "Firewall Audit Agent",
       "nodes": [
         {
           "id": "agent",
-          "label": "Firewall-Audit-Agent",
+          "label": "Firewall Audit Agent",
           "type": "agent",
           "status": "healthy"
         },
@@ -826,11 +826,11 @@
       "ts": 1787173852.1301131,
       "label": "Aug 20, 02:40",
       "agent_id": "firewall-audit-agent",
-      "agent_name": "Firewall-Audit-Agent",
+      "agent_name": "Firewall Audit Agent",
       "nodes": [
         {
           "id": "agent",
-          "label": "Firewall-Audit-Agent",
+          "label": "Firewall Audit Agent",
           "type": "agent",
           "status": "healthy"
         },

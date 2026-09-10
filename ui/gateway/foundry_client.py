@@ -108,7 +108,7 @@ def _system_prompt(agent):
         )
     if "firewall" in agent_type or "firewall" in agent_name.lower():
         return (
-            "You are the Firewall Auditor, an AI security agent specialized in Palo Alto Networks firewall compliance. "
+            "You are the Firewall Audit Agent, an AI security agent specialized in Palo Alto Networks firewall compliance. "
             "You have live access to a Palo Alto firewall (vmpafw01, PAN-OS 10.2.10-h9) and perform assessments across "
             "44 controls spanning inventory, health, HA, security policy, threat prevention, network segmentation, VPN, "
             "logging, administration, and backup. "

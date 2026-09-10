@@ -513,7 +513,7 @@
     function renderAssistantMessage(msg, index) {
         var row = buildRow("assistant");
         if (typeof index === "number") row.dataset.index = String(index);
-        var agentName = msg.agentName || (state.activeAgent ? state.activeAgent.name : "Firewall Auditor");
+        var agentName = resolveAgentName(msg.agentName) || (state.activeAgent ? state.activeAgent.name : "Firewall Audit Agent");
         var avatar = document.createElement("div");
         avatar.className = "ws-msg-avatar";
         avatar.innerHTML = '<span class="agent-avatar agent-avatar-blue">' + escapeHtml(avatarFor(agentName)) + "</span>";
@@ -571,7 +571,7 @@
     function appendTyping(agentName) {
         var row = buildRow("assistant");
         row.dataset.typing = "true";
-        var name = agentName || (state.activeAgent ? state.activeAgent.name : "Firewall Auditor");
+        var name = resolveAgentName(agentName) || (state.activeAgent ? state.activeAgent.name : "Firewall Audit Agent");
         var avatar = document.createElement("div");
         avatar.className = "ws-msg-avatar";
         avatar.innerHTML = '<span class="agent-avatar agent-avatar-blue">' + escapeHtml(avatarFor(name)) + "</span>";
@@ -741,13 +741,13 @@
                 appendMessage({
                     role: "assistant",
                     content: "No firewalls are registered in the inventory yet. An administrator can add devices from Settings > Firewall Inventory.",
-                    agentName: "Firewall Auditor",
+                    agentName: "Firewall Audit Agent",
                     ts: now()
                 });
                 renderConversationList();
                 return;
             }
-            appendMessage({ role: "assistant", content: "", html: fwPickerCardHtml(intent), cardTitle: "Select Firewall", agentName: "Firewall Auditor", ts: now() });
+            appendMessage({ role: "assistant", content: "", html: fwPickerCardHtml(intent), cardTitle: "Select Firewall", agentName: "Firewall Audit Agent", ts: now() });
             renderConversationList();
             scrollToBottom();
 
@@ -818,7 +818,7 @@
 
     function busy(node) {
         if (sendBtn) sendBtn.disabled = true;
-        return node || appendTyping("Firewall Auditor");
+        return node || appendTyping("Firewall Audit Agent");
     }
 
     function idle(node) {
@@ -948,7 +948,7 @@
                     content: "",
                     html: estateCardHtml(data),
                     cardTitle: "Full Inventory \u2014 Cumulative Compliance",
-                    agentName: "Firewall Auditor",
+                    agentName: "Firewall Audit Agent",
                     ts: now()
                 });
                 renderConversationList();
@@ -958,7 +958,7 @@
                 appendMessage({
                     role: "assistant",
                     content: (err && err.message) || "Full inventory assessment failed. Try again.",
-                    agentName: "Firewall Auditor",
+                    agentName: "Firewall Audit Agent",
                     ts: now()
                 });
                 renderConversationList();
@@ -1010,7 +1010,7 @@
             content: "",
             html: estateSummaryHtml(estateCache),
             cardTitle: "Executive Summary \u2014 Full Inventory",
-            agentName: "Firewall Auditor",
+            agentName: "Firewall Audit Agent",
             ts: now()
         });
         renderConversationList();
@@ -1041,7 +1041,7 @@
                 appendMessage({
                     role: "assistant",
                     content: (err && err.message) || "Full inventory workbook generation failed.",
-                    agentName: "Firewall Auditor",
+                    agentName: "Firewall Audit Agent",
                     ts: now()
                 });
             });
@@ -1105,7 +1105,7 @@
                 backButtonHtml() +
                 '</div>';
 
-            appendMessage({ role: "assistant", content: "", html: html, cardTitle: "Compliance Assessment", agentName: "Firewall Auditor", ts: now() });
+            appendMessage({ role: "assistant", content: "", html: html, cardTitle: "Compliance Assessment", agentName: "Firewall Audit Agent", ts: now() });
             renderConversationList();
         });
     }
@@ -1170,7 +1170,7 @@
             appendMessage({ role: "user", content: section.label, ts: now() });
             renderConversationList();
         }
-        var typing = appendTyping("Firewall Auditor");
+        var typing = appendTyping("Firewall Audit Agent");
         sendBtn.disabled = true;
 
         var dataPromise = section.endpoint
@@ -1183,7 +1183,7 @@
             var sectionData = results[0];
             var assess = results[1];
             var html = buildSectionHtml(section, sectionData, assess);
-            appendMessage({ role: "assistant", content: "", html: html, cardTitle: section.label, agentName: "Firewall Auditor", ts: now() });
+            appendMessage({ role: "assistant", content: "", html: html, cardTitle: section.label, agentName: "Firewall Audit Agent", ts: now() });
             renderConversationList();
         }).finally(function () { sendBtn.disabled = false; promptInput.focus(); });
     }
@@ -1608,15 +1608,43 @@
             name.indexOf("incident") !== -1 || id.indexOf("cloud") !== -1;
     }
 
+    function normalizeAgentKey(value) {
+        return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    // Historical labels that no longer match a registry name/type/id.
+    var LEGACY_AGENT_ALIASES = {
+        firewallauditor: "firewall-audit-agent"
+    };
+
+    function resolveAgentName(name) {
+        var raw = String(name || "").trim();
+        if (!raw) return "";
+        var key = normalizeAgentKey(raw);
+        if (LEGACY_AGENT_ALIASES[key]) key = normalizeAgentKey(LEGACY_AGENT_ALIASES[key]);
+        for (var i = 0; i < state.agents.length; i++) {
+            var a = state.agents[i];
+            if (normalizeAgentKey(a.name) === key ||
+                normalizeAgentKey(a.id) === key ||
+                normalizeAgentKey(a.type) === key) {
+                return a.name || raw;
+            }
+        }
+        return raw;
+    }
+
     function agentFromMessages(msgs) {
         msgs = msgs || [];
         for (var i = msgs.length - 1; i >= 0; i--) {
             var name = String((msgs[i] && msgs[i].agentName) || "").trim();
             if (!name) continue;
-            var lower = name.toLowerCase();
+            var key = normalizeAgentKey(name);
+            if (LEGACY_AGENT_ALIASES[key]) key = normalizeAgentKey(LEGACY_AGENT_ALIASES[key]);
             for (var j = 0; j < state.agents.length; j++) {
                 var a = state.agents[j];
-                if (String(a.name || "").toLowerCase() === lower || String(a.id || "").toLowerCase() === lower) {
+                if (normalizeAgentKey(a.name) === key ||
+                    normalizeAgentKey(a.id) === key ||
+                    normalizeAgentKey(a.type) === key) {
                     return a;
                 }
             }
@@ -1635,7 +1663,7 @@
         state.activeAgent = agent;
         state.activeAgentId = agent.id || null;
 
-        if (chatAgentTitle) chatAgentTitle.textContent = agent.name || "Firewall Auditor";
+        if (chatAgentTitle) chatAgentTitle.textContent = agent.name || "Firewall Audit Agent";
         if (chatAgentSub) chatAgentSub.textContent = ((agent.model ? agent.model + " \u00b7 " : "") + (agent.type || "Copilot")).trim();
         if (chatAgentAvatar) chatAgentAvatar.textContent = avatarFor(agent.name);
 
@@ -1878,7 +1906,7 @@
     function buildAssistantReply(prompt) {
         var lower = prompt.toLowerCase();
         if (lower.indexOf("hello") !== -1 || lower.indexOf("hi ") !== -1 || lower.indexOf("hey") !== -1)
-            return "Hello. I'm the Firewall Auditor agent, connected to your Palo Alto firewall (vmpafw01, PAN-OS 10.2.10-h9). Ask me about your security posture, inventory, compliance status, or any firewall configuration.";
+            return "Hello. I'm the Firewall Audit Agent, connected to your Palo Alto firewall (vmpafw01, PAN-OS 10.2.10-h9). Ask me about your security posture, inventory, compliance status, or any firewall configuration.";
         if (lower.indexOf("thanks") !== -1 || lower.indexOf("thank you") !== -1)
             return "You're welcome. I'm here whenever you need to review your security posture.";
         return null;
