@@ -11,7 +11,7 @@
     flex-wrap: wrap;
     margin-bottom: 28px;
     padding: 28px 32px 26px;
-    overflow: hidden;
+    overflow: visible;
     border-radius: 24px;
     border: 1px solid rgba(228, 0, 43, 0.12);
     box-shadow: var(--shadow-glass);
@@ -26,6 +26,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
+    border-radius: inherit;
     background-image:
         linear-gradient(rgba(228, 0, 43, 0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(228, 0, 43, 0.03) 1px, transparent 1px);

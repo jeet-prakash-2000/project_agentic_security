@@ -467,10 +467,13 @@
 
     function comboRows(query) {
         var q = String(query || "").trim().toLowerCase();
-        var out = '<li class="rep-combo-row' + (state.firewall === "all" ? " is-active" : "") +
-            '" role="option" data-value="all">' +
-            '<span class="rep-combo-name">Full Inventory</span>' +
-            '<span class="rep-combo-sub">Cumulative data for every managed firewall</span></li>';
+        var out = "";
+        if (!q || q.indexOf("all") !== -1 || q.indexOf("full") !== -1 || q.indexOf("device") !== -1 || q.indexOf("inventory") !== -1) {
+            out += '<li class="rep-combo-row' + (state.firewall === "all" ? " is-active" : "") +
+                '" role="option" data-value="all">' +
+                '<span class="rep-combo-name">Full Inventory</span>' +
+                '<span class="rep-combo-sub">Cumulative data for every managed firewall</span></li>';
+        }
         inventorySource().forEach(function (fw) {
             var name = fw.device_name || "";
             if (!name) return;
