@@ -1594,9 +1594,12 @@
 
     function isFirewallAgent(agent) {
         if (!agent) return false;
+        if (isNetsecAgent(agent) || isCloudAgent(agent)) return false;
         var type = String(agent.type || "").toLowerCase();
         var name = String(agent.name || "").toLowerCase();
-        return type.indexOf("firewall") !== -1 || name.indexOf("firewall") !== -1;
+        var id = String(agent.id || "").toLowerCase();
+        return id.indexOf("firewall-audit") !== -1 ||
+            type.indexOf("firewall") !== -1 || name.indexOf("firewall") !== -1;
     }
 
     function isCloudAgent(agent) {
